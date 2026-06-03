@@ -1,0 +1,23 @@
+{
+  "name": "predictor26",
+  "version": "1.0.0",
+  "description": "Angular and Express prediction app workspace.",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c green,cyan \"npm run dev --workspace api\" \"npm run start --workspace web\"",
+    "dev:api": "npm run dev --workspace api",
+    "dev:web": "npm run start --workspace web",
+    "build": "npm run build --workspaces",
+    "build:api": "npm run build --workspace api",
+    "build:web": "npm run build --workspace web",
+    "start:api": "npm run start --workspace api",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
