@@ -25,3 +25,7 @@ Development URLs:
 ## Architecture
 
 See `docs/ARCHITECTURE.md`.
+
+## Product Requirements
+
+Meeting notes and implementation checklist are in `docs/REQUIREMENTS.md`.
