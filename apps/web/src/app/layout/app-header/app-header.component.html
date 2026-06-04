@@ -1,5 +1,8 @@
 <header class="site-header">
-  <a class="brand" routerLink="/" aria-label="Predictor26 home">Predictor26</a>
+  <a class="brand" routerLink="/" aria-label="Predictor26 home">
+    <img class="brand-icon" src="icons/predictor26-icon.svg" alt="" width="34" height="34" />
+    <span>Predictor26</span>
+  </a>
 
   <nav class="account-nav" aria-label="Account">
     @if (appState.currentUser(); as user) {

@@ -8,9 +8,14 @@
 }
 
 .auth-panel {
+  position: relative;
+  overflow: hidden;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  background: #ffffff;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.94)),
+    url("/icons/predictor26-icon.svg") right -28px bottom -34px / 170px 170px no-repeat,
+    #ffffff;
   padding: 24px;
 }
 
@@ -79,6 +84,8 @@ h1 {
 }
 
 .submit-button {
+  width: 60%;
+  justify-self: center;
   border: 0;
   border-radius: 8px;
   background: #111827;
@@ -87,6 +94,10 @@ h1 {
   font: inherit;
   font-weight: 700;
   padding: 12px 14px;
+
+  @media (max-width: 420px) {
+    width: 100%;
+  }
 }
 
 .submit-button:disabled {

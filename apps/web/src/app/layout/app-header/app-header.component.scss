@@ -15,11 +15,21 @@
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   color: #111827;
   font-size: 1rem;
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.brand-icon {
+  display: block;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
 }
 
 .account-nav {
