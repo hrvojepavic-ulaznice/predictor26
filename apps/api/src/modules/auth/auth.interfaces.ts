@@ -3,6 +3,14 @@ export interface LoginRequest {
   readonly password: string;
 }
 
+export interface RegisterRequest {
+  readonly username: string;
+  readonly name: string;
+  readonly lastname: string;
+  readonly password: string;
+  readonly acceptedRules: boolean;
+}
+
 export interface AuthUserResponse {
   readonly id: number;
   readonly username: string;
@@ -15,3 +23,5 @@ export interface LoginResponse {
   readonly token: string;
   readonly user: AuthUserResponse;
 }
+
+export type RegisterResponse = LoginResponse;

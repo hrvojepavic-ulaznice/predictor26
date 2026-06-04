@@ -7,13 +7,140 @@
   margin: 48px auto;
 }
 
-h1 {
-  margin: 0 0 12px;
-  color: #111827;
-  font-size: 1.5rem;
+.register-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.94)),
+    url("/icons/predictor26-icon.svg") right -62px bottom -48px / 220px 220px no-repeat,
+    #ffffff;
+  padding: 24px;
 }
 
-p {
+h1 {
+  margin: 0 0 24px;
+  color: #111827;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.register-form {
+  display: grid;
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span,
+.rules-field {
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #111827;
+  font: inherit;
+  padding: 11px 12px;
+  transition:
+    border-color 160ms ease,
+    outline-color 160ms ease;
+}
+
+.field input:focus {
+  border-color: #111827;
+  outline: 2px solid #d1d5db;
+  outline-offset: 1px;
+}
+
+.field input.form-field-invalid {
+  border-color: #dc2626;
+}
+
+.field input.form-field-invalid:focus {
+  border-color: #dc2626;
+  outline-color: #fecaca;
+}
+
+.rules-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rules-field label {
+  line-height: 1.4;
+}
+
+.rules-link {
+  border: 0;
+  background: transparent;
+  color: #111827;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rules-link:hover,
+.rules-link:focus-visible {
+  color: #374151;
+}
+
+.rules-field input {
+  width: 18px;
+  height: 18px;
   margin: 0;
-  color: #4b5563;
+  accent-color: #111827;
+  outline-offset: 2px;
+}
+
+.rules-field input.form-field-invalid {
+  outline: 2px solid #dc2626;
+}
+
+.form-error {
+  min-height: 1.2em;
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.form-error-visible {
+  opacity: 1;
+}
+
+.submit-button {
+  width: 60%;
+  justify-self: center;
+  border: 0;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 12px 14px;
+
+  @media (max-width: 420px) {
+    width: 100%;
+  }
+}
+
+.submit-button:disabled {
+  cursor: default;
+  opacity: 0.72;
 }

@@ -1,4 +1,54 @@
 <section class="register-page" aria-labelledby="register-title">
-  <h1 id="register-title">Register</h1>
-  <p>Registration will be added after login is complete.</p>
+  <div class="register-panel">
+    <h1 id="register-title">Register</h1>
+
+    <form class="register-form" [formGroup]="registerForm" (ngSubmit)="register()">
+      <label class="field">
+        <span>Username</span>
+        <input appFormFieldState="invalid" type="text" formControlName="username" autocomplete="username" maxlength="40" />
+      </label>
+
+      <label class="field">
+        <span>First name</span>
+        <input appFormFieldState="invalid" type="text" formControlName="name" autocomplete="given-name" maxlength="80" />
+      </label>
+
+      <label class="field">
+        <span>Last name</span>
+        <input appFormFieldState="invalid" type="text" formControlName="lastname" autocomplete="family-name" maxlength="80" />
+      </label>
+
+      <label class="field">
+        <span>Password</span>
+        <input appFormFieldState="invalid" type="password" formControlName="password" autocomplete="new-password" maxlength="128" />
+      </label>
+
+      <label class="field">
+        <span>Confirm password</span>
+        <input appFormFieldState="invalid" type="password" formControlName="confirmPassword" autocomplete="new-password" maxlength="128" />
+      </label>
+
+      <div class="rules-field">
+        <input id="acceptedRules" appFormFieldState="invalid" type="checkbox" formControlName="acceptedRules" />
+        <label for="acceptedRules">
+          I accept the
+          <button class="rules-link" type="button" (click)="openRulesModal()">rules</button>.
+        </label>
+      </div>
+
+      <p class="form-error" [class.form-error-visible]="errorMessage()">{{ errorMessage() || '&nbsp;' }}</p>
+
+      <button class="submit-button" type="submit" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Registering...' : 'Register' }}
+      </button>
+    </form>
+  </div>
 </section>
+
+@if (isRulesModalOpen()) {
+  <app-rules-modal
+    animate.enter="modal-enter"
+    animate.leave="modal-leave"
+    (closeModal)="closeRulesModal()"
+  />
+}

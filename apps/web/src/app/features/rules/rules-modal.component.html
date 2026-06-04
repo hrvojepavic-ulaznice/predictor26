@@ -1,0 +1,25 @@
+<div class="modal-backdrop" role="presentation">
+  <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+    <header class="modal-header">
+      <h2 id="rules-title">Rules</h2>
+      <button class="icon-button" type="button" aria-label="Close rules" (click)="close()">×</button>
+    </header>
+
+    <div class="modal-content">
+      <ul>
+        <li>Exact score predictions award 1 point.</li>
+        <li>Correct match outcome predictions award points equal to the selected odds coefficient.</li>
+        <li>Points accumulate match by match across the competition.</li>
+        <li>Users are ranked first by total points.</li>
+        <li>The World Cup winner tiebreaker is the second ranking criterion.</li>
+        <li>If users are still tied, prize money is split according to the configured prize distribution.</li>
+        <li>Predictions must be submitted before the first match of each round.</li>
+        <li>After the deadline, all users can see all predictions for that round.</li>
+      </ul>
+    </div>
+
+    <footer class="modal-footer">
+      <button class="close-button" type="button" (click)="close()">Close</button>
+    </footer>
+  </section>
+</div>
