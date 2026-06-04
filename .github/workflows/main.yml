@@ -50,11 +50,11 @@ jobs:
           scp \
             -o StrictHostKeyChecking=no \
             release.tar.gz \
-            deploy@${{ secrets.PI_HOST }}:/tmp/
+            webdev@${{ secrets.PI_HOST }}:/tmp/
 
       - name: Deploy
         run: |
           ssh \
             -o StrictHostKeyChecking=no \
-            deploy@${{ secrets.PI_HOST }} \
+            webdev@${{ secrets.PI_HOST }} \
             "/opt/predictor26/deploy.sh"
