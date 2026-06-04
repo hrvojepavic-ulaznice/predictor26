@@ -1,0 +1,13 @@
+<header class="site-header">
+  <a class="brand" routerLink="/" aria-label="Predictor26 home">Predictor26</a>
+
+  <nav class="account-nav" aria-label="Account">
+    @if (appState.currentUser(); as user) {
+      <span class="user-name">{{ user.username }}</span>
+      <button class="nav-link nav-button" type="button" (click)="logout()">Logout</button>
+    } @else {
+      <a class="nav-link" routerLink="/login">Login</a>
+      <a class="nav-link nav-link-primary" routerLink="/register">Register</a>
+    }
+  </nav>
+</header>

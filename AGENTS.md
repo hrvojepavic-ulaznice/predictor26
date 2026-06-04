@@ -52,9 +52,11 @@ Frontend conventions:
 - Prefer standalone components and lazy feature routes.
 - Prefer signals for component and service state.
 - Services own writable signals privately and expose readonly state.
+- `AppStateService` in `app/core/state` is the frontend source of truth for auth session state. It stores the login token and user in `localStorage` so refreshes keep the user logged in, and logout must clear that stored session.
 - API-specific HTTP methods should live in provider classes under `core/services/providers`.
 - Feature components orchestrate UI and call services; they should not contain raw endpoint strings or query mapping.
 - Shared components should be reusable and avoid domain-specific data fetching.
+- Avoid viewport-unit height/layout sizing such as `vh`, `dvh`, `svh`, `lvh`, `vw`, and similar units unless there is a specific, justified need. Prefer natural document flow, content-based sizing, flex/grid behavior, and explicit component spacing so empty pages do not create layout shift or unwanted scrollbars.
 
 ## Backend Architecture
 
@@ -89,6 +91,7 @@ Backend conventions:
 - Controllers translate HTTP requests/responses and call services.
 - Services own business rules and transaction boundaries.
 - Repositories call database query helpers and map rows to domain objects.
+- User roles are `super_admin`, `admin`, and `user`. The seeded `super_admin` account is created during database bootstrap if missing, and future admin promotion should update a normal user's role to `admin`.
 - Interfaces/DTOs live beside the feature when feature-specific, or in `shared/interfaces` when reused.
 - SQL and SQLite-specific details stay in `database/queries` or repositories, never in controllers.
 - Keep endpoint response interfaces explicit so the Angular API providers can import or mirror stable contracts later.

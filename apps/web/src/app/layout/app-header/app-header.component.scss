@@ -1,0 +1,89 @@
+:host {
+  display: block;
+  background: rgba(248, 250, 252, 0.92);
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.site-header {
+  width: min(1120px, calc(100% - 32px));
+  min-height: 64px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand {
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.account-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.nav-link,
+.user-name {
+  border-radius: 8px;
+  color: #374151;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.nav-link {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 10px 12px;
+}
+
+.nav-link:hover,
+.nav-link:focus-visible {
+  background: #eef2f7;
+  color: #111827;
+}
+
+.nav-link-primary {
+  background: #111827;
+  color: #ffffff;
+}
+
+.nav-link-primary:hover,
+.nav-link-primary:focus-visible {
+  background: #1f2937;
+  color: #ffffff;
+}
+
+.user-name {
+  max-width: 220px;
+  overflow: hidden;
+  padding: 10px 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .site-header {
+    width: min(100% - 24px, 1120px);
+    min-height: 60px;
+  }
+
+  .account-nav {
+    gap: 4px;
+  }
+
+  .nav-link {
+    padding: 9px 10px;
+  }
+}

@@ -1,23 +1,7 @@
-<main class="shell">
-  <section class="hero">
-    <p class="eyebrow">Predictor26</p>
-    <h1>Angular, Express, TypeScript, SQLite.</h1>
-    <p class="summary">
-      The workspace is ready for the product build: frontend in Angular, API in Express,
-      and local persistence through SQLite.
-    </p>
-  </section>
+<div class="app-shell">
+  <app-header />
 
-  <section class="status-panel" aria-label="System status">
-    <div>
-      <span>API</span>
-      <strong>{{ apiStatus() }}</strong>
-    </div>
-    <div>
-      <span>Database</span>
-      <strong>{{ databaseStatus() }}</strong>
-    </div>
-  </section>
-</main>
-
-<router-outlet />
+  <main class="app-main">
+    <router-outlet />
+  </main>
+</div>
