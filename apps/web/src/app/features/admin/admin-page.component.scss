@@ -107,6 +107,38 @@ h1 {
   opacity: 0.72;
 }
 
+.tool-icon-calendar::before {
+  top: 11px;
+  left: 9px;
+  width: 26px;
+  height: 22px;
+  border-radius: 4px;
+}
+
+.tool-icon-calendar::after {
+  top: 17px;
+  right: 13px;
+  left: 13px;
+  height: 3px;
+  background: #eef2ff;
+}
+
+.tool-icon-calendar span:first-child,
+.tool-icon-calendar span:last-child {
+  top: 8px;
+  width: 4px;
+  height: 8px;
+  border-radius: 3px;
+}
+
+.tool-icon-calendar span:first-child {
+  left: 15px;
+}
+
+.tool-icon-calendar span:last-child {
+  right: 15px;
+}
+
 .tool-content {
   display: grid;
   min-width: 0;

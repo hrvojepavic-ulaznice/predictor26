@@ -1,0 +1,113 @@
+<section class="admin-matches-page" aria-labelledby="admin-matches-title">
+  <header class="page-header">
+    <div>
+      <p class="section-label">Admin</p>
+      <h1 id="admin-matches-title">Matches</h1>
+      <a class="back-link" routerLink="/admin">Back to admin tools</a>
+    </div>
+
+    <button class="import-button" type="button" [disabled]="importing()" (click)="importMatches()">
+      {{ scheduleActionLabel() }}
+    </button>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="status-message status-error">{{ message }}</p>
+  }
+
+  @if (importMessage(); as message) {
+    <p class="status-message">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Loading matches...</p>
+  } @else {
+    <div class="filters" aria-label="Match filters">
+      <label class="filter-option">
+        <input
+          type="radio"
+          name="match-filter"
+          [checked]="selectedFilter() === 'active'"
+          (change)="setFilter('active')"
+        />
+        <span>Show all active</span>
+      </label>
+
+      <label class="filter-option">
+        <input
+          type="radio"
+          name="match-filter"
+          [checked]="selectedFilter() === 'required'"
+          (change)="setFilter('required')"
+        />
+        <span>Requires action ({{ requiredActionCount() }})</span>
+      </label>
+
+      <label class="filter-option">
+        <input
+          type="radio"
+          name="match-filter"
+          [checked]="selectedFilter() === 'inactive'"
+          (change)="setFilter('inactive')"
+        />
+        <span>Show inactive</span>
+      </label>
+    </div>
+
+    <div class="match-groups">
+      @for (group of groupedMatches(); track group.label) {
+        <section class="match-group" [attr.aria-labelledby]="'admin-group-' + group.label">
+          <h2 [id]="'admin-group-' + group.label">{{ group.label }}</h2>
+
+          <div class="match-list">
+            @for (match of group.matches; track match.id) {
+              <article class="match-row" [class.match-row-required]="isRequiredAction(match)">
+                <div class="match-meta">
+                  <span>
+                    Match {{ match.matchNumber }}
+                    @if (isRequiredAction(match)) {
+                      <span class="required-badge" aria-label="Requires action">!</span>
+                    }
+                  </span>
+                  <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
+                  <span>{{ match.city }} · {{ match.venue }}</span>
+                </div>
+
+                <div class="teams">
+                  <span class="team-name">{{ match.homeTeam.flag }} {{ match.homeTeam.name }}</span>
+                  <span class="versus">vs</span>
+                  <span class="team-name">{{ match.awayTeam.flag }} {{ match.awayTeam.name }}</span>
+                </div>
+
+                <div class="score-form" aria-label="Final score">
+                  <input
+                    type="text"
+                    maxlength="2"
+                    pattern="[0-9]*"
+                    inputmode="numeric"
+                    aria-label="Home final score"
+                    [value]="drafts()[match.id]?.home ?? ''"
+                    (input)="updateDraft(match.id, 'home', $any($event.target).value)"
+                  />
+                  <span>:</span>
+                  <input
+                    type="text"
+                    maxlength="2"
+                    pattern="[0-9]*"
+                    inputmode="numeric"
+                    aria-label="Away final score"
+                    [value]="drafts()[match.id]?.away ?? ''"
+                    (input)="updateDraft(match.id, 'away', $any($event.target).value)"
+                  />
+                  <span class="save-state">{{ savingIds().has(match.id) ? 'Saving' : match.finalScore ? 'Saved' : '' }}</span>
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+      } @empty {
+        <p class="status-message">No matches for this filter.</p>
+      }
+    </div>
+  }
+</section>

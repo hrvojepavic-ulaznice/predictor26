@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { adminGuard } from '@guards/admin.guard';
+import { authGuard } from '@guards/auth.guard';
 import { guestGuard } from '@guards/guest.guard';
 import { LoginPageComponent } from '@features/auth/login/login-page.component';
 import { RegisterPageComponent } from '@features/auth/register/register-page.component';
@@ -22,6 +23,12 @@ export const routes: Routes = [
     component: RegisterPageComponent
   },
   {
+    path: 'predictions',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/predictions/predictions-page.component').then((component) => component.PredictionsPageComponent)
+  },
+  {
     path: 'admin',
     canActivate: [adminGuard],
     loadComponent: () => import('./features/admin/admin-page.component').then((component) => component.AdminPageComponent)
@@ -31,5 +38,13 @@ export const routes: Routes = [
     canActivate: [adminGuard],
     loadComponent: () =>
       import('./features/admin/users/admin-users-page.component').then((component) => component.AdminUsersPageComponent)
+  },
+  {
+    path: 'admin/matches',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./features/admin/matches/admin-matches-page.component').then(
+        (component) => component.AdminMatchesPageComponent
+      )
   }
 ];

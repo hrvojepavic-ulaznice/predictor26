@@ -1,0 +1,20 @@
+import { MatchResponse, ScoreResponse } from '../matches/matches.interfaces.js';
+
+export interface AdminMatchesResponse {
+  readonly matches: MatchResponse[];
+}
+
+export interface ImportMatchesResponse {
+  readonly imported: number;
+  readonly matches: MatchResponse[];
+}
+
+export interface UpdateFinalScoreRequest {
+  readonly homeScore: number | null;
+  readonly awayScore: number | null;
+}
+
+export interface UpdateFinalScoreResponse {
+  readonly match: MatchResponse;
+  readonly finalScore: ScoreResponse | null;
+}

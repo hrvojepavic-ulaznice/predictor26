@@ -7,6 +7,7 @@
   <nav class="account-nav" aria-label="Account">
     @if (appState.currentUser(); as user) {
       <span class="user-name">{{ user.username }}</span>
+      <a class="nav-link" routerLink="/predictions">Post prediction</a>
       @if (user.role === 'super_admin' || user.role === 'admin') {
         <a class="nav-link" routerLink="/admin">Admin</a>
       }

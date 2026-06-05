@@ -10,6 +10,7 @@ export function openDatabase() {
   const db = new Database(config.databasePath);
 
   db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS app_metadata (
@@ -34,10 +35,43 @@ export function openDatabase() {
     );
 
     INSERT INTO app_metadata (key, value)
-    VALUES ('schema_version', '3')
+    VALUES ('schema_version', '4')
     ON CONFLICT(key) DO UPDATE SET
       value = excluded.value,
       updated_at = CURRENT_TIMESTAMP;
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS matches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      match_number INTEGER NOT NULL UNIQUE,
+      stage TEXT NOT NULL,
+      group_name TEXT,
+      round_label TEXT NOT NULL,
+      kickoff_at TEXT NOT NULL,
+      source_time_zone TEXT NOT NULL,
+      home_team_name TEXT NOT NULL,
+      away_team_name TEXT NOT NULL,
+      home_team_flag TEXT,
+      away_team_flag TEXT,
+      venue TEXT NOT NULL,
+      city TEXT NOT NULL,
+      final_home_score INTEGER CHECK(final_home_score IS NULL OR final_home_score >= 0),
+      final_away_score INTEGER CHECK(final_away_score IS NULL OR final_away_score >= 0),
+      imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS predictions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+      home_score INTEGER NOT NULL CHECK(home_score >= 0),
+      away_score INTEGER NOT NULL CHECK(away_score >= 0),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, match_id)
+    );
   `);
 
   db.prepare(
