@@ -25,6 +25,19 @@ export class AppStateService {
     localStorage.setItem(sessionStorageKey, JSON.stringify(session));
   }
 
+  updateCurrentUser(user: AuthUser): void {
+    const session = this.sessionSignal();
+
+    if (!session || session.user.id !== user.id) {
+      return;
+    }
+
+    this.setSession({
+      token: session.token,
+      user
+    });
+  }
+
   clearSession(): void {
     this.sessionSignal.set(null);
     localStorage.removeItem(sessionStorageKey);

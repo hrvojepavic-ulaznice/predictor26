@@ -4,6 +4,7 @@ import cors from 'cors';
 import express from 'express';
 
 import { config } from './config/index.js';
+import { adminUsersRoutes } from './modules/admin-users/admin-users.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { healthRoutes } from './modules/health/health.routes.js';
 
@@ -13,6 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api', authRoutes);
+app.use('/api', adminUsersRoutes);
 app.use('/api', healthRoutes);
 
 app.listen(config.port, () => {

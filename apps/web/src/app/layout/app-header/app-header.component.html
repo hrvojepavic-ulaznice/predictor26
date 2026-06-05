@@ -7,6 +7,9 @@
   <nav class="account-nav" aria-label="Account">
     @if (appState.currentUser(); as user) {
       <span class="user-name">{{ user.username }}</span>
+      @if (user.role === 'super_admin' || user.role === 'admin') {
+        <a class="nav-link" routerLink="/admin">Admin</a>
+      }
       <button class="nav-link nav-button" type="button" (click)="logout()">Logout</button>
     } @else {
       <a class="nav-link" routerLink="/login">Login</a>

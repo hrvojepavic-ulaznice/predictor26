@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 
+import { adminGuard } from '@guards/admin.guard';
 import { guestGuard } from '@guards/guest.guard';
 import { LoginPageComponent } from '@features/auth/login/login-page.component';
 import { RegisterPageComponent } from '@features/auth/register/register-page.component';
@@ -19,5 +20,16 @@ export const routes: Routes = [
     path: 'register',
     canActivate: [guestGuard],
     component: RegisterPageComponent
+  },
+  {
+    path: 'admin',
+    canActivate: [adminGuard],
+    loadComponent: () => import('./features/admin/admin-page.component').then((component) => component.AdminPageComponent)
+  },
+  {
+    path: 'admin/users',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./features/admin/users/admin-users-page.component').then((component) => component.AdminUsersPageComponent)
   }
 ];

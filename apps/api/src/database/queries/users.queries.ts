@@ -9,6 +9,8 @@ export interface UserRow {
   readonly role: 'super_admin' | 'admin' | 'user';
 }
 
+export type UserRole = UserRow['role'];
+
 export interface CreateUserInput {
   readonly username: string;
   readonly firstName: string;
@@ -30,6 +32,42 @@ export async function getUserByUsername(username: string): Promise<UserRow | und
       `
       )
       .get(username) as UserRow | undefined;
+  } finally {
+    db.close();
+  }
+}
+
+export async function getUserById(id: number): Promise<UserRow | undefined> {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+        SELECT id, username, first_name, last_name, password_hash, role
+        FROM users
+        WHERE id = ?
+      `
+      )
+      .get(id) as UserRow | undefined;
+  } finally {
+    db.close();
+  }
+}
+
+export async function listUsers(): Promise<UserRow[]> {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+        SELECT id, username, first_name, last_name, password_hash, role
+        FROM users
+        ORDER BY username COLLATE NOCASE ASC
+      `
+      )
+      .all() as UserRow[];
   } finally {
     db.close();
   }
@@ -69,6 +107,32 @@ export async function createUser(input: CreateUserInput): Promise<UserRow> {
     }
 
     return user;
+  } finally {
+    db.close();
+  }
+}
+
+export async function updateUserRole(id: number, role: Exclude<UserRole, 'super_admin'>): Promise<UserRow | undefined> {
+  const db = openDatabase();
+
+  try {
+    db.prepare(
+      `
+        UPDATE users
+        SET role = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND role != 'super_admin'
+      `
+    ).run(role, id);
+
+    return db
+      .prepare(
+        `
+        SELECT id, username, first_name, last_name, password_hash, role
+        FROM users
+        WHERE id = ?
+      `
+      )
+      .get(id) as UserRow | undefined;
   } finally {
     db.close();
   }

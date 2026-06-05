@@ -1,0 +1,55 @@
+<section class="admin-users-page" aria-labelledby="admin-users-title">
+  <header class="page-header">
+    <div>
+      <p class="section-label">Admin</p>
+      <h1 id="admin-users-title">User roles</h1>
+      <a class="back-link" routerLink="/admin">Back to admin tools</a>
+    </div>
+
+    <div class="summary" aria-label="Current admin count">
+      <span class="summary-value">{{ adminCount() }}</span>
+      <span class="summary-label">admins</span>
+    </div>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="status-message status-error">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Loading users...</p>
+  } @else {
+    <div class="users-list" role="list" aria-label="Registered users">
+      @for (user of users(); track user.id) {
+        <article class="user-row" role="listitem">
+          <div class="user-main">
+            <span class="user-name">{{ user.name }} {{ user.lastname }}</span>
+            <span class="user-username">&#64;{{ user.username }}</span>
+          </div>
+
+          <span class="role-badge" [class.role-badge-admin]="user.role !== 'user'">
+            {{ user.role === 'super_admin' ? 'Super admin' : user.role === 'admin' ? 'Admin' : 'User' }}
+          </span>
+
+          <button
+            class="role-switch"
+            type="button"
+            role="switch"
+            [attr.aria-checked]="user.role === 'admin' || user.role === 'super_admin'"
+            [disabled]="user.role === 'super_admin' || updatingUserIds().has(user.id)"
+            (click)="toggleAdmin(user)"
+          >
+            <span class="switch-track">
+              <span class="switch-thumb"></span>
+            </span>
+            <span class="switch-label">
+              {{ user.role === 'admin' || user.role === 'super_admin' ? 'Admin enabled' : 'Admin disabled' }}
+            </span>
+          </button>
+        </article>
+      } @empty {
+        <p class="status-message">No users found.</p>
+      }
+    </div>
+  }
+</section>

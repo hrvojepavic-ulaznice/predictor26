@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { AppStateService } from '@core/state/app-state.service';
 
@@ -11,8 +11,10 @@ import { AppStateService } from '@core/state/app-state.service';
 })
 export class AppHeaderComponent {
   protected readonly appState = inject(AppStateService);
+  private readonly router = inject(Router);
 
   protected logout(): void {
     this.appState.clearSession();
+    void this.router.navigateByUrl('/');
   }
 }
