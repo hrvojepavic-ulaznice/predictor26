@@ -12,13 +12,16 @@ jobs:
 
       - name: Package
         run: |
-          tar \
-            --exclude=.git \
-            --exclude=node_modules \
-            --exclude=dist \
-            --exclude=.angular \
-            --exclude=coverage \
-            -czf release.tar.gz .
+          tar -czf release.tar.gz \
+              --exclude=.git \
+              --exclude=node_modules \
+              --exclude=dist \
+              --exclude=.angular \
+              --exclude=coverage \
+              apps \
+              package.json \
+              package-lock.json \
+              tsconfig.json
 
       - name: SSH
         run: |
