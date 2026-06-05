@@ -18,31 +18,35 @@ export interface CreateUserInput {
 }
 
 export async function getUserByUsername(username: string): Promise<UserRow | undefined> {
-  const db = await openDatabase();
+  const db = openDatabase();
 
   try {
-    return await db.get<UserRow>(
+    return db
+      .prepare(
       `
         SELECT id, username, first_name, last_name, password_hash, role
         FROM users
         WHERE username = ?
-      `,
-      username
-    );
+      `
+      )
+      .get(username) as UserRow | undefined;
   } finally {
-    await db.close();
+    db.close();
   }
 }
 
 export async function createUser(input: CreateUserInput): Promise<UserRow> {
-  const db = await openDatabase();
+  const db = openDatabase();
 
   try {
-    const result = await db.run(
+    const result = db
+      .prepare(
       `
         INSERT INTO users (username, first_name, last_name, password_hash, role)
         VALUES (?, ?, ?, ?, ?)
-      `,
+      `
+      )
+      .run(
       input.username,
       input.firstName,
       input.lastName,
@@ -50,14 +54,15 @@ export async function createUser(input: CreateUserInput): Promise<UserRow> {
       input.role
     );
 
-    const user = await db.get<UserRow>(
+    const user = db
+      .prepare(
       `
         SELECT id, username, first_name, last_name, password_hash, role
         FROM users
         WHERE id = ?
-      `,
-      result.lastID
-    );
+      `
+      )
+      .get(result.lastInsertRowid) as UserRow | undefined;
 
     if (!user) {
       throw new Error('Created user could not be loaded.');
@@ -65,6 +70,6 @@ export async function createUser(input: CreateUserInput): Promise<UserRow> {
 
     return user;
   } finally {
-    await db.close();
+    db.close();
   }
 }

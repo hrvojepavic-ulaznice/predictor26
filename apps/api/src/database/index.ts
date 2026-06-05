@@ -1,21 +1,17 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { open } from 'sqlite';
-import sqlite3 from 'sqlite3';
+import Database from 'better-sqlite3';
 
 import { config } from '../config/index.js';
 
-export async function openDatabase() {
+export function openDatabase() {
   mkdirSync(dirname(config.databasePath), { recursive: true });
 
-  const db = await open({
-    filename: config.databasePath,
-    driver: sqlite3.Database
-  });
+  const db = new Database(config.databasePath);
 
-  await db.exec('PRAGMA journal_mode = WAL');
+  db.pragma('journal_mode = WAL');
 
-  await db.exec(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS app_metadata (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL,
@@ -23,9 +19,9 @@ export async function openDatabase() {
     );
   `);
 
-  await ensureUsersTableSupportsAdminRole(db);
+  ensureUsersTableSupportsAdminRole(db);
 
-  await db.exec(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT NOT NULL UNIQUE CHECK(length(username) BETWEEN 3 AND 40),
@@ -44,12 +40,13 @@ export async function openDatabase() {
       updated_at = CURRENT_TIMESTAMP;
   `);
 
-  await db.run(
+  db.prepare(
     `
       INSERT INTO users (username, first_name, last_name, password_hash, role)
       VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(username) DO NOTHING
-    `,
+    `
+  ).run(
     'super_admin',
     'admin',
     'admin',
@@ -60,16 +57,18 @@ export async function openDatabase() {
   return db;
 }
 
-async function ensureUsersTableSupportsAdminRole(db: Awaited<ReturnType<typeof open>>) {
-  const existingTable = await db.get<{ sql: string }>(
-    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'"
-  );
+export type AppDatabase = ReturnType<typeof openDatabase>;
+
+function ensureUsersTableSupportsAdminRole(db: Database.Database) {
+  const existingTable = db
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'")
+    .get() as { sql: string } | undefined;
 
   if (!existingTable || existingTable.sql.includes("'admin'")) {
     return;
   }
 
-  await db.exec(`
+  db.exec(`
     PRAGMA foreign_keys = OFF;
 
     BEGIN TRANSACTION;
