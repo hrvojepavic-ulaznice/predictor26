@@ -1,13 +1,15 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { MatchWithPrediction } from '@models/match.models';
 import { MatchesApiProvider } from '@services/providers/matches-api.provider';
+import { PredictionPointsComponent } from '@shared/components/prediction-points/prediction-points.component';
+import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
 
 @Component({
   selector: 'app-my-tips-page',
-  imports: [DatePipe, DecimalPipe, RouterLink],
+  imports: [DatePipe, OddsFormatPipe, PredictionPointsComponent, RouterLink],
   templateUrl: './my-tips-page.component.html',
   styleUrl: './my-tips-page.component.scss'
 })

@@ -86,9 +86,9 @@
 
                 <div class="odds" aria-label="Match odds">
                   @if (match.odds) {
-                    <span>{{ match.odds.homeWin | number: '1.2-2' }}</span>
-                    <span>{{ match.odds.draw | number: '1.2-2' }}</span>
-                    <span>{{ match.odds.awayWin | number: '1.2-2' }}</span>
+                    <span>{{ match.odds.homeWin | oddsFormat }}</span>
+                    <span>{{ match.odds.draw | oddsFormat }}</span>
+                    <span>{{ match.odds.awayWin | oddsFormat }}</span>
                   } @else {
                     <span class="odds-empty">No odds</span>
                   }

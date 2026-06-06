@@ -1,0 +1,27 @@
+:host {
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  min-width: 92px;
+  text-align: center;
+}
+
+.points-value {
+  color: #374151;
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.points-value-miss {
+  color: #b91c1c;
+}
+
+.points-value-outcome {
+  color: #c2410c;
+}
+
+.points-value-exact {
+  color: #166534;
+}

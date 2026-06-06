@@ -33,7 +33,7 @@
 
             <div class="tip-details">
               @if (prediction.odds; as odds) {
-                <span>Your pick {{ odds.outcome }} &#64; {{ odds.value | number: '1.2-2' }}</span>
+                <span>Your pick {{ odds.outcome }} &#64; {{ odds.value | oddsFormat }}</span>
               } @else {
                 <span>No locked odds</span>
               }
@@ -49,6 +49,12 @@
                 <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'MMM d, HH:mm' : '+0200' }}</time>
               }
             </div>
+
+            <app-prediction-points
+              class="points-column"
+              [prediction]="prediction"
+              [finalScore]="match.finalScore"
+            />
           </article>
         }
       } @empty {

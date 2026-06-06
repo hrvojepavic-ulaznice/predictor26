@@ -71,7 +71,9 @@ h1 {
 
 .tip-row {
   display: grid;
-  grid-template-columns: minmax(132px, 0.55fr) minmax(260px, 1.25fr) minmax(150px, 0.6fr) minmax(104px, auto);
+  grid-template-columns:
+    minmax(132px, 0.55fr) minmax(260px, 1.25fr) minmax(150px, 0.6fr) minmax(104px, auto)
+    minmax(112px, auto);
   align-items: center;
   gap: 14px;
   padding: 15px 16px;
@@ -148,11 +150,20 @@ h1 {
   font-weight: 900;
 }
 
+.points-column {
+  border-left: 1px solid #e5e7eb;
+  padding-left: 14px;
+}
+
 @media (max-width: 900px) {
   .tip-row {
     grid-template-columns: 1fr;
     justify-items: center;
     text-align: center;
+  }
+
+  .tip-row + .tip-row {
+    border-top: 6px double #e5e7eb;
   }
 
   .match-meta,
@@ -172,6 +183,14 @@ h1 {
 
   .team-name:last-child {
     text-align: left;
+  }
+
+  .points-column {
+    width: 100%;
+    border-top: 1px solid #e5e7eb;
+    border-left: 0;
+    padding-top: 12px;
+    padding-left: 0;
   }
 }
 

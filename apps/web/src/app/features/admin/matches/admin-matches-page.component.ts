@@ -1,9 +1,10 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { Match } from '@models/match.models';
 import { AdminMatchesApiProvider } from '@services/providers/admin-matches-api.provider';
+import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
 import { isValidScore, ScoreDraft, updateScoreDraft } from '@shared/utils/score-draft.utils';
 
 interface MatchGroup {
@@ -15,7 +16,7 @@ type MatchFilter = 'active' | 'required' | 'inactive';
 
 @Component({
   selector: 'app-admin-matches-page',
-  imports: [DatePipe, DecimalPipe, RouterLink],
+  imports: [DatePipe, OddsFormatPipe, RouterLink],
   templateUrl: './admin-matches-page.component.html',
   styleUrl: './admin-matches-page.component.scss'
 })

@@ -1,10 +1,12 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
 
 import { MatchWithPrediction } from '@models/match.models';
 import { MatchesApiProvider } from '@services/providers/matches-api.provider';
+import { PredictionPointsComponent } from '@shared/components/prediction-points/prediction-points.component';
+import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
 import { isValidScore, ScoreDraft, updateScoreDraft } from '@shared/utils/score-draft.utils';
 
 interface MatchGroup {
@@ -23,7 +25,7 @@ interface MatchSection {
 
 @Component({
   selector: 'app-predictions-page',
-  imports: [DatePipe, DecimalPipe],
+  imports: [DatePipe, OddsFormatPipe, PredictionPointsComponent],
   templateUrl: './predictions-page.component.html',
   styleUrl: './predictions-page.component.scss'
 })
