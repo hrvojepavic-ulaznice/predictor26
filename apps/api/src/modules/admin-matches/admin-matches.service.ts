@@ -23,7 +23,7 @@ import {
 import { importOddsPortalFriendlySchedule } from './oddsportal-schedule-importer.js';
 import { importWorldCupSchedule } from './world-cup-schedule-importer.js';
 
-const useOddsPortalFriendlyTestSource = true;
+const useOddsPortalFriendlyTestSource = false;
 const oddsPortalSourceUrl = useOddsPortalFriendlyTestSource ? friendlyInternationalOddsPortalUrl : worldCupOddsPortalUrl;
 
 export type UpdateFinalScoreResult =

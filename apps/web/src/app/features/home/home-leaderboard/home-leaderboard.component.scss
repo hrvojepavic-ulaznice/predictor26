@@ -1,0 +1,186 @@
+:host {
+  display: block;
+}
+
+.leaderboard {
+  display: grid;
+  gap: 14px;
+  margin-inline: min(0px, max(-320px, calc((1120px - 100vw + 32px) / 2)));
+}
+
+.leaderboard-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.section-label {
+  margin: 0 0 6px;
+  color: #4b5563;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+
+.status-message {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.status-error {
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 12px 14px;
+}
+
+.table-shell {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.leaderboard-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e5e7eb;
+  border-left: 1px solid #e5e7eb;
+  padding: 11px 12px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+th:first-child,
+td:first-child {
+  border-left: 0;
+}
+
+thead th {
+  background: #f9fafb;
+  color: #374151;
+  font-size: 0.76rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+tbody tr:last-child th,
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.user-heading,
+.user-cell {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  width: 170px;
+  min-width: 150px;
+  max-width: 170px;
+  border-right: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.user-heading {
+  z-index: 2;
+  background: #f9fafb;
+}
+
+.user-cell {
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.92rem;
+  font-weight: 850;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.round-heading {
+  min-width: 150px;
+}
+
+.total-heading,
+.total-cell {
+  border-left: 2px solid #d1d5db;
+}
+
+.total-cell {
+  color: #166534;
+  font-weight: 900;
+}
+
+td {
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 750;
+}
+
+.empty-cell {
+  color: #6b7280;
+  font-weight: 650;
+  text-align: left;
+}
+
+@media (max-width: 760px) {
+  .leaderboard {
+    gap: 12px;
+    margin-right: -12px;
+    margin-left: 0;
+  }
+
+  .table-shell {
+    border-right: 0;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  th:last-child,
+  td:last-child {
+    border-right: 1px solid #e5e7eb;
+  }
+
+  h2 {
+    font-size: 1.18rem;
+  }
+
+  .leaderboard-table {
+    min-width: 640px;
+  }
+
+  th,
+  td {
+    padding: 8px 9px;
+  }
+
+  thead th {
+    font-size: 0.68rem;
+  }
+
+  td,
+  .user-cell {
+    font-size: 0.82rem;
+  }
+
+  .user-heading,
+  .user-cell {
+    width: 130px;
+    min-width: 120px;
+    max-width: 130px;
+  }
+}

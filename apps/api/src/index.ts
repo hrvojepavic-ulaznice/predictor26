@@ -8,6 +8,7 @@ import { adminMatchesRoutes } from './modules/admin-matches/admin-matches.routes
 import { adminUsersRoutes } from './modules/admin-users/admin-users.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { healthRoutes } from './modules/health/health.routes.js';
+import { leaderboardRoutes } from './modules/leaderboard/leaderboard.routes.js';
 import { matchesRoutes } from './modules/matches/matches.routes.js';
 
 const app = express();
@@ -17,6 +18,7 @@ app.use(express.json());
 
 app.use('/api', authRoutes);
 app.use('/api', matchesRoutes);
+app.use('/api', leaderboardRoutes);
 app.use('/api', adminMatchesRoutes);
 app.use('/api', adminUsersRoutes);
 app.use('/api', healthRoutes);

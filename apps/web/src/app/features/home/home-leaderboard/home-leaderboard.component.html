@@ -1,0 +1,52 @@
+<section class="leaderboard" aria-labelledby="leaderboard-title">
+  <header class="leaderboard-header">
+    <div>
+      <p class="section-label">Overview</p>
+      <h2 id="leaderboard-title">Prediction table</h2>
+    </div>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="status-message status-error">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Loading prediction table...</p>
+  } @else if (leaderboard(); as table) {
+    <div class="table-shell">
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th class="user-heading" rowspan="2" scope="col">User</th>
+            @for (round of table.rounds; track round) {
+              <th class="round-heading" colspan="2" scope="colgroup">{{ round }}</th>
+            }
+            <th class="total-heading" rowspan="2" scope="col">Total</th>
+          </tr>
+          <tr>
+            @for (round of table.rounds; track round) {
+              <th scope="col">Tips</th>
+              <th scope="col">Pts</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of table.users; track user.id) {
+            <tr>
+              <th class="user-cell" scope="row">{{ user.displayName }}</th>
+              @for (round of user.rounds; track round.label) {
+                <td>{{ round.submittedCount }}/{{ round.expectedCount }}</td>
+                <td>{{ round.points | number: '1.0-2' }}</td>
+              }
+              <td class="total-cell">{{ user.totalPoints | number: '1.0-2' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-cell" [attr.colspan]="table.rounds.length * 2 + 2">No registered users yet.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

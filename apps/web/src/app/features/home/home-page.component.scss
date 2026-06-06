@@ -146,37 +146,6 @@
   line-height: 1.35;
 }
 
-.info-box {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border: 1px solid #dbeafe;
-  border-radius: 8px;
-  background: #eff6ff;
-  color: #1e3a8a;
-  padding: 14px 16px;
-}
-
-.info-marker {
-  display: inline-grid;
-  width: 24px;
-  height: 24px;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 999px;
-  background: #2563eb;
-  color: #ffffff;
-  font-size: 0.82rem;
-  font-weight: 900;
-}
-
-.info-box p {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1.45;
-}
-
 @media (max-width: 520px) {
   .home-page {
     width: min(100% - 24px, 1120px);
@@ -186,9 +155,5 @@
   .action-card {
     min-height: 106px;
     padding: 16px;
-  }
-
-  .info-box {
-    align-items: flex-start;
   }
 }
