@@ -202,6 +202,25 @@ export function upsertImportedMatches(matches: readonly MatchImportInput[]): num
   }
 }
 
+export function deleteMatchesAfterMatchNumber(matchNumber: number): number {
+  const db = openDatabase();
+
+  try {
+    const result = db
+      .prepare(
+        `
+          DELETE FROM matches
+          WHERE match_number > ?
+        `
+      )
+      .run(matchNumber);
+
+    return result.changes;
+  } finally {
+    db.close();
+  }
+}
+
 export function updateFinalScore(
   matchId: number,
   finalHomeScore: number | null,

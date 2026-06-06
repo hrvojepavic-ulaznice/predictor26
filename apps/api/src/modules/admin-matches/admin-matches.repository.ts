@@ -1,5 +1,6 @@
 import {
   backfillMissingPredictionOdds,
+  deleteMatchesAfterMatchNumber,
   listMatches,
   MatchOddsInput,
   MatchImportInput,
@@ -14,6 +15,10 @@ export function findAdminMatches() {
 
 export function importMatches(matches: readonly MatchImportInput[]) {
   return upsertImportedMatches(matches);
+}
+
+export function pruneMatchesAfter(matchNumber: number) {
+  return deleteMatchesAfterMatchNumber(matchNumber);
 }
 
 export function setFinalScore(matchId: number, homeScore: number | null, awayScore: number | null) {

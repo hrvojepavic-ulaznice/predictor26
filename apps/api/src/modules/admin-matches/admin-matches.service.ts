@@ -10,11 +10,21 @@ import {
   backfillPredictionOdds,
   findAdminMatches,
   importMatches,
+  pruneMatchesAfter,
   setFinalScore,
   setMatchOdds
 } from './admin-matches.repository.js';
-import { ImportedMatchOdds, importOddsPortalOdds } from './oddsportal-odds-importer.js';
+import {
+  friendlyInternationalOddsPortalUrl,
+  ImportedMatchOdds,
+  importOddsPortalOdds,
+  worldCupOddsPortalUrl
+} from './oddsportal-odds-importer.js';
+import { importOddsPortalFriendlySchedule } from './oddsportal-schedule-importer.js';
 import { importWorldCupSchedule } from './world-cup-schedule-importer.js';
+
+const useOddsPortalFriendlyTestSource = true;
+const oddsPortalSourceUrl = useOddsPortalFriendlyTestSource ? friendlyInternationalOddsPortalUrl : worldCupOddsPortalUrl;
 
 export type UpdateFinalScoreResult =
   | {
@@ -35,7 +45,14 @@ export async function getAdminMatches(): Promise<AdminMatchesResponse> {
 }
 
 export async function importSchedule(): Promise<ImportMatchesResponse> {
-  const importedMatches = await importWorldCupSchedule();
+  const importedMatches = useOddsPortalFriendlyTestSource
+    ? await importOddsPortalFriendlySchedule()
+    : await importWorldCupSchedule();
+
+  if (useOddsPortalFriendlyTestSource) {
+    pruneMatchesAfter(0);
+  }
+
   const imported = importMatches(importedMatches);
 
   return {
@@ -46,7 +63,7 @@ export async function importSchedule(): Promise<ImportMatchesResponse> {
 
 export async function syncOdds(): Promise<SyncMatchOddsResponse> {
   const matches = findAdminMatches();
-  const importedOdds = await importOddsPortalOdds();
+  const importedOdds = await importOddsPortalOdds(oddsPortalSourceUrl);
   const odds = mapImportedOddsToMatches(matches, importedOdds);
   const synced = setMatchOdds(odds);
   const backfilled = backfillPredictionOdds();

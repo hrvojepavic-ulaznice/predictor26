@@ -9,7 +9,7 @@ export interface ImportedMatchOdds {
   readonly awayWinOdds: number;
 }
 
-interface OddsPortalSportData {
+export interface OddsPortalSportData {
   readonly d?: {
     readonly rows?: OddsPortalEventRow[] | Record<string, OddsPortalEventRow>;
   };
@@ -18,10 +18,16 @@ interface OddsPortalSportData {
   };
 }
 
-interface OddsPortalEventRow {
+export interface OddsPortalEventRow {
   readonly encodeEventId?: string;
   readonly 'home-name'?: string;
   readonly 'away-name'?: string;
+  readonly 'date-start-timestamp'?: number;
+  readonly 'date-start-base'?: number;
+  readonly 'tournament-name'?: string;
+  readonly venue?: string;
+  readonly venueTown?: string;
+  readonly 'country-name'?: string;
 }
 
 interface OddsPortalOddsResponse {
@@ -38,7 +44,8 @@ interface OddsPortalOutcomeOdds {
   readonly maxOdds?: number;
 }
 
-const tournamentUrl = 'https://www.oddsportal.com/football/world/world-championship-2026/';
+export const worldCupOddsPortalUrl = 'https://www.oddsportal.com/football/world/world-championship-2026/';
+export const friendlyInternationalOddsPortalUrl = 'https://www.oddsportal.com/football/world/friendly-international/';
 const productionKey = 'J*8sQ!p$7aD_fR2yW@gHn*3bVp#sAdLd_k';
 const productionSalt = '5b9a8f2c3e6d1a4b7c8e9d0f1a2b3c4d';
 
@@ -49,16 +56,8 @@ const browserHeaders = {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
 };
 
-export async function importOddsPortalOdds(): Promise<ImportedMatchOdds[]> {
-  const pageResponse = await fetch(tournamentUrl, {
-    headers: browserHeaders
-  });
-
-  if (!pageResponse.ok) {
-    throw new Error(`OddsPortal page fetch failed with status ${pageResponse.status}.`);
-  }
-
-  const sportData = parseSportData(await pageResponse.text());
+export async function importOddsPortalOdds(sourceUrl = worldCupOddsPortalUrl): Promise<ImportedMatchOdds[]> {
+  const sportData = await fetchOddsPortalSportData(sourceUrl);
   const events = toArray(sportData.d?.rows);
   const oddsRequestUrl = sportData.oddsRequest?.url;
 
@@ -66,11 +65,11 @@ export async function importOddsPortalOdds(): Promise<ImportedMatchOdds[]> {
     throw new Error('OddsPortal odds request URL was not found.');
   }
 
-  const oddsResponse = await fetch(new URL(oddsRequestUrl, tournamentUrl), {
+  const oddsResponse = await fetch(new URL(oddsRequestUrl, sourceUrl), {
     headers: {
       ...browserHeaders,
       accept: 'application/json,text/plain,*/*',
-      referer: tournamentUrl
+      referer: sourceUrl
     }
   });
 
@@ -115,6 +114,22 @@ export async function importOddsPortalOdds(): Promise<ImportedMatchOdds[]> {
   }
 
   return importedOdds;
+}
+
+export async function fetchOddsPortalSportData(sourceUrl: string): Promise<OddsPortalSportData> {
+  const pageResponse = await fetch(sourceUrl, {
+    headers: browserHeaders
+  });
+
+  if (!pageResponse.ok) {
+    throw new Error(`OddsPortal page fetch failed with status ${pageResponse.status}.`);
+  }
+
+  return parseSportData(await pageResponse.text());
+}
+
+export function oddsPortalRows(sportData: OddsPortalSportData): OddsPortalEventRow[] {
+  return toArray(sportData.d?.rows);
 }
 
 function parseSportData(html: string): OddsPortalSportData {
