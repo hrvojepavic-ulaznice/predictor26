@@ -102,6 +102,10 @@ export class PredictionsPageComponent {
     return `${minutes}m`;
   }
 
+  protected hasTimeRemaining(deadlineAt: string): boolean {
+    return Date.parse(deadlineAt) > this.now();
+  }
+
   private loadMatches(): void {
     this.loading.set(true);
     this.errorMessage.set(null);

@@ -29,6 +29,12 @@ export const routes: Routes = [
       import('./features/predictions/predictions-page.component').then((component) => component.PredictionsPageComponent)
   },
   {
+    path: 'my-tips',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/my-tips/my-tips-page.component').then((component) => component.MyTipsPageComponent)
+  },
+  {
     path: 'admin',
     canActivate: [adminGuard],
     loadComponent: () => import('./features/admin/admin-page.component').then((component) => component.AdminPageComponent)

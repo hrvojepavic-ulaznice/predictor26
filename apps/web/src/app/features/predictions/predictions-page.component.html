@@ -35,8 +35,10 @@
               <p>
                 Predictions close at
                 <time [dateTime]="group.deadlineAt">{{ group.deadlineAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
-                <span class="deadline-separator">·</span>
-                <span>Time remaining: {{ timeRemaining(group.deadlineAt) }}</span>
+                @if (hasTimeRemaining(group.deadlineAt)) {
+                  <span class="deadline-separator">·</span>
+                  <span>Time remaining: {{ timeRemaining(group.deadlineAt) }}</span>
+                }
               </p>
             </div>
 

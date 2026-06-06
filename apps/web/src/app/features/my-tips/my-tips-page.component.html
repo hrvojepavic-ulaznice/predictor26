@@ -1,0 +1,59 @@
+<section class="my-tips-page" aria-labelledby="my-tips-title">
+  <header class="page-header">
+    <div>
+      <p class="section-label">Predictions</p>
+      <h1 id="my-tips-title">My tips</h1>
+    </div>
+
+    <a class="back-link" routerLink="/predictions">Post tips</a>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="status-message status-error">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Loading your tips...</p>
+  } @else {
+    <div class="tips-list" aria-label="Submitted tips">
+      @for (match of predictedMatches(); track match.id) {
+        @if (match.prediction; as prediction) {
+          <article class="tip-row">
+            <div class="match-meta">
+              <span>Match {{ match.matchNumber }}</span>
+              <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
+              <span>{{ matchStatus(match) }}</span>
+            </div>
+
+            <div class="teams">
+              <span class="team-name">{{ match.homeTeam.flag }} {{ match.homeTeam.name }}</span>
+              <span class="score">{{ prediction.home }}:{{ prediction.away }}</span>
+              <span class="team-name">{{ match.awayTeam.flag }} {{ match.awayTeam.name }}</span>
+            </div>
+
+            <div class="tip-details">
+              @if (prediction.odds; as odds) {
+                <span>Your pick {{ odds.outcome }} &#64; {{ odds.value | number: '1.2-2' }}</span>
+              } @else {
+                <span>No locked odds</span>
+              }
+              <span>{{ match.predictionRound }}</span>
+            </div>
+
+            <div class="result">
+              @if (match.finalScore; as finalScore) {
+                <span class="result-label">Final</span>
+                <span class="result-score">{{ finalScore.home }}:{{ finalScore.away }}</span>
+              } @else {
+                <span class="result-label">Kickoff</span>
+                <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'MMM d, HH:mm' : '+0200' }}</time>
+              }
+            </div>
+          </article>
+        }
+      } @empty {
+        <p class="status-message">You have not posted any tips yet.</p>
+      }
+    </div>
+  }
+</section>

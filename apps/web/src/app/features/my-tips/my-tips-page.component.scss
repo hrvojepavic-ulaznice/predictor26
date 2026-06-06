@@ -1,0 +1,200 @@
+:host {
+  display: block;
+}
+
+.my-tips-page {
+  width: min(1120px, calc(100% - 32px));
+  margin: 32px auto 56px;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.section-label {
+  margin: 0 0 6px;
+  color: #4b5563;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.8rem;
+  line-height: 1.15;
+}
+
+.back-link {
+  color: #1d4ed8;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  text-decoration: underline;
+}
+
+.status-message {
+  margin: 16px 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.tips-list > .status-message {
+  margin: 0;
+  padding: 15px 16px;
+}
+
+.status-error {
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 12px 14px;
+}
+
+.tips-list {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.tip-row {
+  display: grid;
+  grid-template-columns: minmax(132px, 0.55fr) minmax(260px, 1.25fr) minmax(150px, 0.6fr) minmax(104px, auto);
+  align-items: center;
+  gap: 14px;
+  padding: 15px 16px;
+}
+
+.tip-row + .tip-row {
+  border-top: 1px solid #e5e7eb;
+}
+
+.match-meta,
+.tip-details,
+.result {
+  display: grid;
+  gap: 4px;
+  color: #6b7280;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.teams {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.team-name {
+  overflow: hidden;
+  color: #111827;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.team-name:last-child {
+  text-align: right;
+}
+
+.score {
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 8px 10px;
+}
+
+.tip-details {
+  justify-items: start;
+}
+
+.tip-details span:first-child {
+  color: #166534;
+  font-weight: 850;
+}
+
+.result {
+  justify-items: end;
+  text-align: right;
+}
+
+.result-label {
+  color: #6b7280;
+  font-size: 0.76rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.result-score {
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+@media (max-width: 900px) {
+  .tip-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .match-meta,
+  .tip-details,
+  .result {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .teams {
+    width: min(100%, 560px);
+  }
+
+  .team-name:first-child {
+    text-align: right;
+  }
+
+  .team-name:last-child {
+    text-align: left;
+  }
+}
+
+@media (max-width: 520px) {
+  .my-tips-page {
+    width: min(100% - 24px, 1120px);
+    margin-top: 24px;
+  }
+
+  .page-header {
+    display: grid;
+    gap: 10px;
+  }
+
+  h1 {
+    font-size: 1.45rem;
+  }
+
+  .teams {
+    gap: 8px;
+  }
+
+  .team-name:last-child {
+    text-align: left;
+  }
+}
