@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -15,7 +15,7 @@ type MatchFilter = 'active' | 'required' | 'inactive';
 
 @Component({
   selector: 'app-admin-matches-page',
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, DecimalPipe, RouterLink],
   templateUrl: './admin-matches-page.component.html',
   styleUrl: './admin-matches-page.component.scss'
 })
@@ -26,6 +26,7 @@ export class AdminMatchesPageComponent {
   protected readonly drafts = signal<Record<number, ScoreDraft>>({});
   protected readonly loading = signal(true);
   protected readonly importing = signal(false);
+  protected readonly syncingOdds = signal(false);
   protected readonly savingIds = signal<ReadonlySet<number>>(new Set<number>());
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly importMessage = signal<string | null>(null);
@@ -42,6 +43,7 @@ export class AdminMatchesPageComponent {
         ? 'Sync World Cup schedule'
         : 'Import World Cup schedule'
   );
+  protected readonly oddsActionLabel = computed(() => (this.syncingOdds() ? 'Syncing odds...' : 'Sync odds'));
   private readonly saveTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
   constructor() {
@@ -67,6 +69,29 @@ export class AdminMatchesPageComponent {
         this.importMessage.set(null);
         this.errorMessage.set('Matches could not be imported.');
         this.importing.set(false);
+      }
+    });
+  }
+
+  protected syncOdds(): void {
+    if (this.syncingOdds()) {
+      return;
+    }
+
+    this.syncingOdds.set(true);
+    this.errorMessage.set(null);
+    this.importMessage.set(null);
+
+    this.adminMatchesApi.syncOdds().subscribe({
+      next: ({ synced, matches }) => {
+        this.setMatches(matches);
+        this.importMessage.set(`${synced} match odds synced.`);
+        this.syncingOdds.set(false);
+      },
+      error: () => {
+        this.importMessage.set(null);
+        this.errorMessage.set('Odds could not be synced from Game-365.');
+        this.syncingOdds.set(false);
       }
     });
   }

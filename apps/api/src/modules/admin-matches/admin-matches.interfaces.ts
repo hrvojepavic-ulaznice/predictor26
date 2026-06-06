@@ -9,6 +9,12 @@ export interface ImportMatchesResponse {
   readonly matches: MatchResponse[];
 }
 
+export interface SyncMatchOddsResponse {
+  readonly synced: number;
+  readonly backfilled: number;
+  readonly matches: MatchResponse[];
+}
+
 export interface UpdateFinalScoreRequest {
   readonly homeScore: number | null;
   readonly awayScore: number | null;

@@ -1,4 +1,4 @@
-import { listMatches, MatchRow } from '../../database/queries/matches.queries.js';
+import { listMatches, MatchRow, PredictionOddsOutcome, PredictionRow } from '../../database/queries/matches.queries.js';
 import {
   MatchesResponse,
   MatchWithPredictionResponse,
@@ -29,10 +29,14 @@ export async function getMatchesForUser(userId: number): Promise<MatchesResponse
       prediction:
         match.prediction_home_score === null || match.prediction_away_score === null
           ? null
-          : {
-              home: match.prediction_home_score,
-              away: match.prediction_away_score
-            }
+          : toPredictionResponse({
+              match_id: match.id,
+              home_score: match.prediction_home_score,
+              away_score: match.prediction_away_score,
+              odds_outcome: match.prediction_odds_outcome,
+              odds_value: match.prediction_odds_value,
+              odds_synced_at: match.prediction_odds_synced_at
+            })
     }))
   };
 }
@@ -56,7 +60,16 @@ export async function submitPrediction(
     return { status: 'locked' };
   }
 
-  const prediction = savePrediction(userId, matchId, input.homeScore, input.awayScore);
+  const oddsSnapshot = getPredictionOddsSnapshot(match, input.homeScore, input.awayScore);
+  const prediction = savePrediction(
+    userId,
+    matchId,
+    input.homeScore,
+    input.awayScore,
+    oddsSnapshot.outcome,
+    oddsSnapshot.value,
+    oddsSnapshot.syncedAt
+  );
 
   if (!prediction) {
     return { status: 'not_found' };
@@ -65,11 +78,23 @@ export async function submitPrediction(
   return {
     status: 'saved',
     prediction: {
-      prediction: {
-        home: prediction.home_score,
-        away: prediction.away_score
-      }
+      prediction: toPredictionResponse(prediction)
     }
+  };
+}
+
+function toPredictionResponse(prediction: PredictionRow): SavePredictionResponse['prediction'] {
+  return {
+    home: prediction.home_score,
+    away: prediction.away_score,
+    odds:
+      prediction.odds_outcome === null || prediction.odds_value === null
+        ? null
+        : {
+            outcome: prediction.odds_outcome,
+            value: prediction.odds_value,
+            syncedAt: prediction.odds_synced_at
+          }
   };
 }
 
@@ -95,6 +120,15 @@ function toMatchResponse(match: MatchRowWithLockData): Omit<MatchWithPredictionR
     },
     venue: match.venue,
     city: match.city,
+    odds:
+      match.home_win_odds === null || match.draw_odds === null || match.away_win_odds === null
+        ? null
+        : {
+            homeWin: match.home_win_odds,
+            draw: match.draw_odds,
+            awayWin: match.away_win_odds,
+            syncedAt: match.odds_synced_at
+          },
     finalScore:
       match.final_home_score === null || match.final_away_score === null
         ? null
@@ -107,6 +141,34 @@ function toMatchResponse(match: MatchRowWithLockData): Omit<MatchWithPredictionR
 
 function isValidScore(score: unknown): score is number {
   return typeof score === 'number' && Number.isInteger(score) && score >= 0 && score <= 99;
+}
+
+function getPredictionOddsSnapshot(
+  match: MatchRow,
+  homeScore: number,
+  awayScore: number
+): { readonly outcome: PredictionOddsOutcome; readonly value: number | null; readonly syncedAt: string | null } {
+  if (homeScore > awayScore) {
+    return {
+      outcome: '1',
+      value: match.home_win_odds,
+      syncedAt: match.odds_synced_at
+    };
+  }
+
+  if (homeScore === awayScore) {
+    return {
+      outcome: 'X',
+      value: match.draw_odds,
+      syncedAt: match.odds_synced_at
+    };
+  }
+
+  return {
+    outcome: '2',
+    value: match.away_win_odds,
+    syncedAt: match.odds_synced_at
+  };
 }
 
 function withPredictionLockData<T extends MatchRow>(matches: readonly T[]): Array<T & PredictionLockData> {

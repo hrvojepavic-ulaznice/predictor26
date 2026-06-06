@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 
 import { UpdateFinalScoreRequest } from './admin-matches.interfaces.js';
-import { changeFinalScore, getAdminMatches, importSchedule } from './admin-matches.service.js';
+import { changeFinalScore, getAdminMatches, importSchedule, syncOdds } from './admin-matches.service.js';
 
 interface MatchIdParams {
   readonly matchId: string;
@@ -18,6 +18,14 @@ export async function getAdminMatchesController(_req: Request, res: Response, ne
 export async function importMatchesController(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     res.json(await importSchedule());
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function syncMatchOddsController(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    res.json(await syncOdds());
   } catch (error) {
     next(error);
   }

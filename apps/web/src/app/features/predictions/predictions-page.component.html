@@ -51,7 +51,7 @@
                 <div class="section-badge">{{ section.label }}</div>
 
                 @for (match of section.matches; track match.id) {
-                  <article class="match-row">
+                  <article class="match-row" [class.match-row-saved]="match.prediction">
                     <div class="match-meta">
                       <span>Match {{ match.matchNumber }}</span>
                       <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
@@ -62,6 +62,24 @@
                       <span class="team-name">{{ match.homeTeam.flag }} {{ match.homeTeam.name }}</span>
                       <span class="versus">vs</span>
                       <span class="team-name">{{ match.awayTeam.flag }} {{ match.awayTeam.name }}</span>
+                    </div>
+
+                    <div class="odds" aria-label="Match odds">
+                      <div class="odds-values">
+                        @if (match.odds) {
+                          <span>{{ match.odds.homeWin | number: '1.2-2' }}</span>
+                          <span>{{ match.odds.draw | number: '1.2-2' }}</span>
+                          <span>{{ match.odds.awayWin | number: '1.2-2' }}</span>
+                        } @else {
+                          <span class="odds-empty">No odds</span>
+                        }
+                      </div>
+
+                      @if (match.prediction?.odds; as lockedOdds) {
+                        <div class="locked-odds">
+                          Your pick {{ lockedOdds.outcome }} &#64; {{ lockedOdds.value | number: '1.2-2' }}
+                        </div>
+                      }
                     </div>
 
                     <div class="score-form" aria-label="Prediction score">

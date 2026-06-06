@@ -14,6 +14,10 @@ export interface MatchRow {
   readonly away_team_flag: string | null;
   readonly venue: string;
   readonly city: string;
+  readonly home_win_odds: number | null;
+  readonly draw_odds: number | null;
+  readonly away_win_odds: number | null;
+  readonly odds_synced_at: string | null;
   readonly final_home_score: number | null;
   readonly final_away_score: number | null;
 }
@@ -37,6 +41,18 @@ export interface PredictionRow {
   readonly match_id: number;
   readonly home_score: number;
   readonly away_score: number;
+  readonly odds_outcome: PredictionOddsOutcome | null;
+  readonly odds_value: number | null;
+  readonly odds_synced_at: string | null;
+}
+
+export type PredictionOddsOutcome = '1' | 'X' | '2';
+
+export interface MatchOddsInput {
+  readonly matchId: number;
+  readonly homeWinOdds: number;
+  readonly drawOdds: number;
+  readonly awayWinOdds: number;
 }
 
 export function listMatches(): MatchRow[] {
@@ -60,6 +76,10 @@ export function listMatches(): MatchRow[] {
             away_team_flag,
             venue,
             city,
+            home_win_odds,
+            draw_odds,
+            away_win_odds,
+            odds_synced_at,
             final_home_score,
             final_away_score
           FROM matches
@@ -93,10 +113,17 @@ export function listMatchesWithPredictions(userId: number): Array<MatchRow & Pre
             matches.away_team_flag,
             matches.venue,
             matches.city,
+            matches.home_win_odds,
+            matches.draw_odds,
+            matches.away_win_odds,
+            matches.odds_synced_at,
             matches.final_home_score,
             matches.final_away_score,
             predictions.home_score AS prediction_home_score,
-            predictions.away_score AS prediction_away_score
+            predictions.away_score AS prediction_away_score,
+            predictions.odds_outcome AS prediction_odds_outcome,
+            predictions.odds_value AS prediction_odds_value,
+            predictions.odds_synced_at AS prediction_odds_synced_at
           FROM matches
           LEFT JOIN predictions
             ON predictions.match_id = matches.id
@@ -208,6 +235,10 @@ export function updateFinalScore(
             away_team_flag,
             venue,
             city,
+            home_win_odds,
+            draw_odds,
+            away_win_odds,
+            odds_synced_at,
             final_home_score,
             final_away_score
           FROM matches
@@ -220,30 +251,125 @@ export function updateFinalScore(
   }
 }
 
+export function updateMatchOdds(odds: readonly MatchOddsInput[]): number {
+  const db = openDatabase();
+
+  try {
+    const updateOdds = db.prepare(
+      `
+        UPDATE matches
+        SET
+          home_win_odds = ?,
+          draw_odds = ?,
+          away_win_odds = ?,
+          odds_synced_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `
+    );
+
+    const transaction = db.transaction((items: readonly MatchOddsInput[]) => {
+      for (const item of items) {
+        updateOdds.run(item.homeWinOdds, item.drawOdds, item.awayWinOdds, item.matchId);
+      }
+    });
+
+    transaction(odds);
+
+    return odds.length;
+  } finally {
+    db.close();
+  }
+}
+
+export function backfillMissingPredictionOdds(): number {
+  const db = openDatabase();
+
+  try {
+    const result = db
+      .prepare(
+        `
+          UPDATE predictions
+          SET
+            odds_outcome =
+              CASE
+                WHEN home_score > away_score THEN '1'
+                WHEN home_score = away_score THEN 'X'
+                ELSE '2'
+              END,
+            odds_value =
+              CASE
+                WHEN home_score > away_score THEN (
+                  SELECT matches.home_win_odds
+                  FROM matches
+                  WHERE matches.id = predictions.match_id
+                )
+                WHEN home_score = away_score THEN (
+                  SELECT matches.draw_odds
+                  FROM matches
+                  WHERE matches.id = predictions.match_id
+                )
+                ELSE (
+                  SELECT matches.away_win_odds
+                  FROM matches
+                  WHERE matches.id = predictions.match_id
+                )
+              END,
+            odds_synced_at = (
+              SELECT matches.odds_synced_at
+              FROM matches
+              WHERE matches.id = predictions.match_id
+            ),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE odds_value IS NULL
+            AND EXISTS (
+              SELECT 1
+              FROM matches
+              WHERE matches.id = predictions.match_id
+                AND matches.home_win_odds IS NOT NULL
+                AND matches.draw_odds IS NOT NULL
+                AND matches.away_win_odds IS NOT NULL
+            )
+        `
+      )
+      .run();
+
+    return result.changes;
+  } finally {
+    db.close();
+  }
+}
+
 export function upsertPrediction(
   userId: number,
   matchId: number,
   homeScore: number,
-  awayScore: number
+  awayScore: number,
+  oddsOutcome: PredictionOddsOutcome | null,
+  oddsValue: number | null,
+  oddsSyncedAt: string | null
 ): PredictionRow | undefined {
   const db = openDatabase();
 
   try {
     db.prepare(
       `
-        INSERT INTO predictions (user_id, match_id, home_score, away_score)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO predictions (user_id, match_id, home_score, away_score, odds_outcome, odds_value, odds_synced_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(user_id, match_id) DO UPDATE SET
           home_score = excluded.home_score,
           away_score = excluded.away_score,
+          odds_outcome = excluded.odds_outcome,
+          odds_value = excluded.odds_value,
+          odds_synced_at = excluded.odds_synced_at,
           updated_at = CURRENT_TIMESTAMP
       `
-    ).run(userId, matchId, homeScore, awayScore);
+    ).run(userId, matchId, homeScore, awayScore, oddsOutcome, oddsValue, oddsSyncedAt);
 
     return db
       .prepare(
         `
-          SELECT match_id, home_score, away_score
+          SELECT match_id, home_score, away_score, odds_outcome, odds_value, odds_synced_at
           FROM predictions
           WHERE user_id = ? AND match_id = ?
         `
@@ -257,4 +383,7 @@ export function upsertPrediction(
 interface PredictionRowNullable {
   readonly prediction_home_score: number | null;
   readonly prediction_away_score: number | null;
+  readonly prediction_odds_outcome: PredictionOddsOutcome | null;
+  readonly prediction_odds_value: number | null;
+  readonly prediction_odds_synced_at: string | null;
 }

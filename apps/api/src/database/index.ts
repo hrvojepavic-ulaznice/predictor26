@@ -35,11 +35,13 @@ export function openDatabase() {
     );
 
     INSERT INTO app_metadata (key, value)
-    VALUES ('schema_version', '4')
+    VALUES ('schema_version', '6')
     ON CONFLICT(key) DO UPDATE SET
       value = excluded.value,
       updated_at = CURRENT_TIMESTAMP;
   `);
+
+  ensureMatchesTableSupportsOdds(db);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS matches (
@@ -56,6 +58,10 @@ export function openDatabase() {
       away_team_flag TEXT,
       venue TEXT NOT NULL,
       city TEXT NOT NULL,
+      home_win_odds REAL CHECK(home_win_odds IS NULL OR home_win_odds > 1),
+      draw_odds REAL CHECK(draw_odds IS NULL OR draw_odds > 1),
+      away_win_odds REAL CHECK(away_win_odds IS NULL OR away_win_odds > 1),
+      odds_synced_at TEXT,
       final_home_score INTEGER CHECK(final_home_score IS NULL OR final_home_score >= 0),
       final_away_score INTEGER CHECK(final_away_score IS NULL OR final_away_score >= 0),
       imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -68,11 +74,16 @@ export function openDatabase() {
       match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
       home_score INTEGER NOT NULL CHECK(home_score >= 0),
       away_score INTEGER NOT NULL CHECK(away_score >= 0),
+      odds_outcome TEXT CHECK(odds_outcome IS NULL OR odds_outcome IN ('1', 'X', '2')),
+      odds_value REAL CHECK(odds_value IS NULL OR odds_value > 1),
+      odds_synced_at TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(user_id, match_id)
     );
   `);
+
+  ensurePredictionsTableSupportsOddsSnapshot(db);
 
   db.prepare(
     `
@@ -146,4 +157,50 @@ function ensureUsersTableSupportsAdminRole(db: Database.Database) {
 
     PRAGMA foreign_keys = ON;
   `);
+}
+
+function ensureMatchesTableSupportsOdds(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(matches)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columns.length === 0) {
+    return;
+  }
+
+  if (!columnNames.has('home_win_odds')) {
+    db.exec('ALTER TABLE matches ADD COLUMN home_win_odds REAL CHECK(home_win_odds IS NULL OR home_win_odds > 1)');
+  }
+
+  if (!columnNames.has('draw_odds')) {
+    db.exec('ALTER TABLE matches ADD COLUMN draw_odds REAL CHECK(draw_odds IS NULL OR draw_odds > 1)');
+  }
+
+  if (!columnNames.has('away_win_odds')) {
+    db.exec('ALTER TABLE matches ADD COLUMN away_win_odds REAL CHECK(away_win_odds IS NULL OR away_win_odds > 1)');
+  }
+
+  if (!columnNames.has('odds_synced_at')) {
+    db.exec('ALTER TABLE matches ADD COLUMN odds_synced_at TEXT');
+  }
+}
+
+function ensurePredictionsTableSupportsOddsSnapshot(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(predictions)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columns.length === 0) {
+    return;
+  }
+
+  if (!columnNames.has('odds_outcome')) {
+    db.exec("ALTER TABLE predictions ADD COLUMN odds_outcome TEXT CHECK(odds_outcome IS NULL OR odds_outcome IN ('1', 'X', '2'))");
+  }
+
+  if (!columnNames.has('odds_value')) {
+    db.exec('ALTER TABLE predictions ADD COLUMN odds_value REAL CHECK(odds_value IS NULL OR odds_value > 1)');
+  }
+
+  if (!columnNames.has('odds_synced_at')) {
+    db.exec('ALTER TABLE predictions ADD COLUMN odds_synced_at TEXT');
+  }
 }

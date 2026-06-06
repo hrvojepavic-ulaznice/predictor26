@@ -8,6 +8,23 @@ export interface MatchScore {
   readonly away: number;
 }
 
+export interface MatchOdds {
+  readonly homeWin: number;
+  readonly draw: number;
+  readonly awayWin: number;
+  readonly syncedAt: string | null;
+}
+
+export interface PredictionOdds {
+  readonly outcome: '1' | 'X' | '2';
+  readonly value: number;
+  readonly syncedAt: string | null;
+}
+
+export interface MatchPrediction extends MatchScore {
+  readonly odds: PredictionOdds | null;
+}
+
 export interface Match {
   readonly id: number;
   readonly matchNumber: number;
@@ -23,11 +40,12 @@ export interface Match {
   readonly awayTeam: MatchTeam;
   readonly venue: string;
   readonly city: string;
+  readonly odds: MatchOdds | null;
   readonly finalScore: MatchScore | null;
 }
 
 export interface MatchWithPrediction extends Match {
-  readonly prediction: MatchScore | null;
+  readonly prediction: MatchPrediction | null;
 }
 
 export interface MatchesResponse {
@@ -43,13 +61,19 @@ export interface ImportMatchesResponse {
   readonly matches: Match[];
 }
 
+export interface SyncMatchOddsResponse {
+  readonly synced: number;
+  readonly backfilled: number;
+  readonly matches: Match[];
+}
+
 export interface SavePredictionRequest {
   readonly homeScore: number;
   readonly awayScore: number;
 }
 
 export interface SavePredictionResponse {
-  readonly prediction: MatchScore;
+  readonly prediction: MatchPrediction;
 }
 
 export interface UpdateFinalScoreRequest {

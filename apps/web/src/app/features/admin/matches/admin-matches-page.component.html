@@ -6,9 +6,14 @@
       <a class="back-link" routerLink="/admin">Back to admin tools</a>
     </div>
 
-    <button class="import-button" type="button" [disabled]="importing()" (click)="importMatches()">
-      {{ scheduleActionLabel() }}
-    </button>
+    <div class="header-actions">
+      <button class="import-button" type="button" [disabled]="importing()" (click)="importMatches()">
+        {{ scheduleActionLabel() }}
+      </button>
+      <button class="import-button" type="button" [disabled]="syncingOdds() || matches().length === 0" (click)="syncOdds()">
+        {{ oddsActionLabel() }}
+      </button>
+    </div>
   </header>
 
   @if (errorMessage(); as message) {
@@ -77,6 +82,16 @@
                   <span class="team-name">{{ match.homeTeam.flag }} {{ match.homeTeam.name }}</span>
                   <span class="versus">vs</span>
                   <span class="team-name">{{ match.awayTeam.flag }} {{ match.awayTeam.name }}</span>
+                </div>
+
+                <div class="odds" aria-label="Match odds">
+                  @if (match.odds) {
+                    <span>{{ match.odds.homeWin | number: '1.2-2' }}</span>
+                    <span>{{ match.odds.draw | number: '1.2-2' }}</span>
+                    <span>{{ match.odds.awayWin | number: '1.2-2' }}</span>
+                  } @else {
+                    <span class="odds-empty">No odds</span>
+                  }
                 </div>
 
                 <div class="score-form" aria-label="Final score">

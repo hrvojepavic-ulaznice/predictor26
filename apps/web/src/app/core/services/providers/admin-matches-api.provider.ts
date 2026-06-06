@@ -4,6 +4,7 @@ import { inject, Injectable } from '@angular/core';
 import {
   AdminMatchesResponse,
   ImportMatchesResponse,
+  SyncMatchOddsResponse,
   UpdateFinalScoreRequest,
   UpdateFinalScoreResponse
 } from '@models/match.models';
@@ -20,6 +21,10 @@ export class AdminMatchesApiProvider {
 
   importMatches() {
     return this.http.post<ImportMatchesResponse>('/api/admin/matches/import', {});
+  }
+
+  syncOdds() {
+    return this.http.post<SyncMatchOddsResponse>('/api/admin/matches/sync-odds', {});
   }
 
   updateFinalScore(matchId: number, request: UpdateFinalScoreRequest) {

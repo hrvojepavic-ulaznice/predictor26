@@ -1,7 +1,19 @@
-import { MatchRow } from '../../database/queries/matches.queries.js';
+import { MatchOddsInput, MatchRow } from '../../database/queries/matches.queries.js';
 import { MatchResponse } from '../matches/matches.interfaces.js';
-import { AdminMatchesResponse, ImportMatchesResponse, UpdateFinalScoreRequest } from './admin-matches.interfaces.js';
-import { findAdminMatches, importMatches, setFinalScore } from './admin-matches.repository.js';
+import {
+  AdminMatchesResponse,
+  ImportMatchesResponse,
+  SyncMatchOddsResponse,
+  UpdateFinalScoreRequest
+} from './admin-matches.interfaces.js';
+import {
+  backfillPredictionOdds,
+  findAdminMatches,
+  importMatches,
+  setFinalScore,
+  setMatchOdds
+} from './admin-matches.repository.js';
+import { ImportedMatchOdds, importOddsPortalOdds } from './oddsportal-odds-importer.js';
 import { importWorldCupSchedule } from './world-cup-schedule-importer.js';
 
 export type UpdateFinalScoreResult =
@@ -28,6 +40,20 @@ export async function importSchedule(): Promise<ImportMatchesResponse> {
 
   return {
     imported,
+    matches: findAdminMatches().map(toMatchResponse)
+  };
+}
+
+export async function syncOdds(): Promise<SyncMatchOddsResponse> {
+  const matches = findAdminMatches();
+  const importedOdds = await importOddsPortalOdds();
+  const odds = mapImportedOddsToMatches(matches, importedOdds);
+  const synced = setMatchOdds(odds);
+  const backfilled = backfillPredictionOdds();
+
+  return {
+    synced,
+    backfilled,
     matches: findAdminMatches().map(toMatchResponse)
   };
 }
@@ -81,6 +107,15 @@ function toMatchResponse(match: MatchRow): MatchResponse {
     },
     venue: match.venue,
     city: match.city,
+    odds:
+      match.home_win_odds === null || match.draw_odds === null || match.away_win_odds === null
+        ? null
+        : {
+            homeWin: match.home_win_odds,
+            draw: match.draw_odds,
+            awayWin: match.away_win_odds,
+            syncedAt: match.odds_synced_at
+          },
     finalScore:
       match.final_home_score === null || match.final_away_score === null
         ? null
@@ -94,6 +129,59 @@ function toMatchResponse(match: MatchRow): MatchResponse {
 function isValidNullableScore(score: unknown): score is number | null {
   return score === null || (typeof score === 'number' && Number.isInteger(score) && score >= 0 && score <= 99);
 }
+
+function mapImportedOddsToMatches(matches: readonly MatchRow[], importedOdds: readonly ImportedMatchOdds[]): MatchOddsInput[] {
+  const matchedOdds: MatchOddsInput[] = [];
+  const oddsByTeams = new Map<string, ImportedMatchOdds>();
+
+  for (const odds of importedOdds) {
+    oddsByTeams.set(toTeamKey(odds.homeTeamName, odds.awayTeamName), odds);
+  }
+
+  for (const match of matches) {
+    const odds = oddsByTeams.get(toTeamKey(match.home_team_name, match.away_team_name));
+
+    if (!odds) {
+      continue;
+    }
+
+    matchedOdds.push({
+      matchId: match.id,
+      homeWinOdds: odds.homeWinOdds,
+      drawOdds: odds.drawOdds,
+      awayWinOdds: odds.awayWinOdds
+    });
+  }
+
+  return matchedOdds;
+}
+
+function toTeamKey(homeTeamName: string, awayTeamName: string): string {
+  return `${normalizeTeamName(homeTeamName)}|${normalizeTeamName(awayTeamName)}`;
+}
+
+function normalizeTeamName(teamName: string): string {
+  const normalized = teamName
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/gi, '')
+    .toLowerCase();
+
+  return teamNameAliases[normalized] ?? normalized;
+}
+
+const teamNameAliases: Record<string, string> = {
+  bosniaandherzegovina: 'bosniaherzegovina',
+  bosniaherzegovina: 'bosniaherzegovina',
+  czechrepublic: 'czechia',
+  drcongo: 'drcongo',
+  ivorycoast: 'ivorycoast',
+  turkiye: 'turkey',
+  turkey: 'turkey',
+  usa: 'unitedstates',
+  unitedstates: 'unitedstates'
+};
 
 function getPredictionRound(match: MatchRow): string {
   if (match.match_number <= 24) {
