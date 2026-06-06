@@ -3,7 +3,7 @@ import { Component, computed, input } from '@angular/core';
 
 import { MatchPrediction, MatchScore } from '@models/match.models';
 import { formatFixedNumber } from '@shared/utils/number-format.utils';
-import { calculatePredictionPoints } from '@shared/utils/prediction-points.utils';
+import { calculatePredictionPoints, getPredictionPointsStateColor } from '@shared/utils/prediction-points.utils';
 
 @Component({
   selector: 'app-prediction-points',
@@ -16,6 +16,7 @@ export class PredictionPointsComponent {
   readonly finalScore = input<MatchScore | null>(null);
 
   protected readonly points = computed(() => calculatePredictionPoints(this.prediction(), this.finalScore()));
+  protected readonly color = computed(() => getPredictionPointsStateColor(this.points().state));
   protected readonly title = computed(() => {
     const points = this.points();
 

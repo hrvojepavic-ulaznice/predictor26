@@ -153,10 +153,6 @@ h2 {
   padding: 16px;
 }
 
-.match-row-saved {
-  background: #f0fdf4;
-}
-
 .match-section .match-row + .match-row {
   border-top: 1px solid #e5e7eb;
 }
@@ -172,7 +168,7 @@ h2 {
 .teams {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
 }
 
@@ -220,8 +216,8 @@ h2 {
 }
 
 .odds-values .odds-selected {
-  border: 3px solid #1d4ed8;
-  color: #1d4ed8;
+  border: 3px solid currentColor;
+  color: #111827;
 }
 
 .odds-empty {
@@ -249,7 +245,7 @@ h2 {
 
 .score-form input:disabled {
   background: #f3f4f6;
-  color: #1d4ed8;
+  color: #111827;
 }
 
 .save-state {

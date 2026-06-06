@@ -33,11 +33,13 @@
 
             <div class="tip-details">
               @if (prediction.odds; as odds) {
-                <span>Your pick {{ odds.outcome }} &#64; {{ odds.value | oddsFormat }}</span>
+                <span [style.color]="predictionStateColor(match)">
+                  Your pick {{ odds.outcome }} &#64; {{ odds.value | oddsFormat }}
+                </span>
               } @else {
-                <span>No locked odds</span>
+                <span [style.color]="predictionStateColor(match)">No locked odds</span>
               }
-              <span>{{ match.predictionRound }}</span>
+              <span [style.color]="predictionStateColor(match)">{{ match.predictionRound }}</span>
             </div>
 
             <div class="result">

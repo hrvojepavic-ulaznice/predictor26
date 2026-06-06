@@ -3,15 +3,13 @@
     class="points-value"
     [attr.aria-label]="title()"
     [attr.title]="title()"
-    [class.points-value-miss]="result.state === 'miss'"
-    [class.points-value-outcome]="result.state === 'outcome'"
-    [class.points-value-exact]="result.state === 'exact'"
+    [style.color]="color()"
   >
     @if (result.earned === null) {
       ?
     } @else {
       {{ result.earned | number: '1.0-2' }}
     }
-    /{{ result.available | number: '1.0-2' }}
+    / {{ result.available | number: '1.0-2' }}
   </span>
 }

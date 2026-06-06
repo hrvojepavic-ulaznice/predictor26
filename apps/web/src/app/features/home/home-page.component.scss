@@ -7,25 +7,12 @@
   margin: 32px auto 56px;
 }
 
-.home-header {
-  margin-bottom: 18px;
-  border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 18px;
-}
-
 .section-label {
-  margin: 0 0 6px;
+  margin: 0 0 14px;
   color: #4b5563;
   font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
-}
-
-h1 {
-  margin: 0;
-  color: #111827;
-  font-size: 1.8rem;
-  line-height: 1.15;
 }
 
 .home-action-grid {
@@ -194,14 +181,6 @@ h1 {
   .home-page {
     width: min(100% - 24px, 1120px);
     margin-top: 24px;
-  }
-
-  .home-header {
-    margin-bottom: 14px;
-  }
-
-  h1 {
-    font-size: 1.45rem;
   }
 
   .action-card {

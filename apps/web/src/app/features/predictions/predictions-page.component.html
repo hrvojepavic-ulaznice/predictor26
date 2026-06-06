@@ -53,7 +53,7 @@
                 <div class="section-badge">{{ section.label }}</div>
 
                 @for (match of section.matches; track match.id) {
-                  <article class="match-row" [class.match-row-saved]="match.prediction">
+                  <article class="match-row">
                     <div class="match-meta">
                       <span>Match {{ match.matchNumber }}</span>
                       <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
@@ -69,13 +69,31 @@
                     <div class="odds" aria-label="Match odds">
                       <div class="odds-values">
                         @if (match.odds) {
-                          <span [class.odds-selected]="match.prediction?.odds?.outcome === '1'">
+                          <span
+                            [class.odds-selected]="match.prediction?.odds?.outcome === '1'"
+                            [style.border-color]="selectedPredictionStateColor(match, '1')"
+                            [style.color]="selectedPredictionStateColor(match, '1')"
+                            [attr.title]="match.prediction?.odds?.outcome === '1' ? 'Your selection' : null"
+                            [attr.aria-label]="match.prediction?.odds?.outcome === '1' ? 'Your selection' : null"
+                          >
                             {{ match.odds.homeWin | oddsFormat }}
                           </span>
-                          <span [class.odds-selected]="match.prediction?.odds?.outcome === 'X'">
+                          <span
+                            [class.odds-selected]="match.prediction?.odds?.outcome === 'X'"
+                            [style.border-color]="selectedPredictionStateColor(match, 'X')"
+                            [style.color]="selectedPredictionStateColor(match, 'X')"
+                            [attr.title]="match.prediction?.odds?.outcome === 'X' ? 'Your selection' : null"
+                            [attr.aria-label]="match.prediction?.odds?.outcome === 'X' ? 'Your selection' : null"
+                          >
                             {{ match.odds.draw | oddsFormat }}
                           </span>
-                          <span [class.odds-selected]="match.prediction?.odds?.outcome === '2'">
+                          <span
+                            [class.odds-selected]="match.prediction?.odds?.outcome === '2'"
+                            [style.border-color]="selectedPredictionStateColor(match, '2')"
+                            [style.color]="selectedPredictionStateColor(match, '2')"
+                            [attr.title]="match.prediction?.odds?.outcome === '2' ? 'Your selection' : null"
+                            [attr.aria-label]="match.prediction?.odds?.outcome === '2' ? 'Your selection' : null"
+                          >
                             {{ match.odds.awayWin | oddsFormat }}
                           </span>
                         } @else {
@@ -93,6 +111,8 @@
                         aria-label="Home team score"
                         [disabled]="match.predictionLocked"
                         [value]="drafts()[match.id]?.home ?? ''"
+                        [style.border-color]="predictionStateColor(match)"
+                        [style.color]="predictionStateColor(match)"
                         (input)="updateDraft(match.id, 'home', $any($event.target).value)"
                       />
                       <span>:</span>
@@ -104,6 +124,8 @@
                         aria-label="Away team score"
                         [disabled]="match.predictionLocked"
                         [value]="drafts()[match.id]?.away ?? ''"
+                        [style.border-color]="predictionStateColor(match)"
+                        [style.color]="predictionStateColor(match)"
                         (input)="updateDraft(match.id, 'away', $any($event.target).value)"
                       />
                       <span class="save-state">{{ savingIds().has(match.id) ? 'Saving' : match.prediction ? 'Saved' : '' }}</span>

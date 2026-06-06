@@ -7,6 +7,11 @@ import { MatchWithPrediction } from '@models/match.models';
 import { MatchesApiProvider } from '@services/providers/matches-api.provider';
 import { PredictionPointsComponent } from '@shared/components/prediction-points/prediction-points.component';
 import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
+import {
+  calculatePredictionPoints,
+  getPredictionPointsStateColor,
+  PredictionPointsState
+} from '@shared/utils/prediction-points.utils';
 import { isValidScore, ScoreDraft, updateScoreDraft } from '@shared/utils/score-draft.utils';
 
 interface MatchGroup {
@@ -106,6 +111,26 @@ export class PredictionsPageComponent {
 
   protected hasTimeRemaining(deadlineAt: string): boolean {
     return Date.parse(deadlineAt) > this.now();
+  }
+
+  protected predictionState(match: MatchWithPrediction): PredictionPointsState | null {
+    if (!match.prediction) {
+      return null;
+    }
+
+    return calculatePredictionPoints(match.prediction, match.finalScore).state;
+  }
+
+  protected predictionStateColor(match: MatchWithPrediction): string | null {
+    return getPredictionPointsStateColor(this.predictionState(match));
+  }
+
+  protected selectedPredictionStateColor(match: MatchWithPrediction, outcome: '1' | 'X' | '2'): string | null {
+    if (match.prediction?.odds?.outcome !== outcome) {
+      return null;
+    }
+
+    return this.predictionStateColor(match);
   }
 
   private loadMatches(): void {

@@ -6,6 +6,7 @@ import { MatchWithPrediction } from '@models/match.models';
 import { MatchesApiProvider } from '@services/providers/matches-api.provider';
 import { PredictionPointsComponent } from '@shared/components/prediction-points/prediction-points.component';
 import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
+import { calculatePredictionPoints, getPredictionPointsStateColor } from '@shared/utils/prediction-points.utils';
 
 @Component({
   selector: 'app-my-tips-page',
@@ -35,6 +36,14 @@ export class MyTipsPageComponent {
     }
 
     return 'Upcoming';
+  }
+
+  protected predictionStateColor(match: MatchWithPrediction): string | null {
+    if (!match.prediction) {
+      return '#111827';
+    }
+
+    return getPredictionPointsStateColor(calculatePredictionPoints(match.prediction, match.finalScore).state) ?? '#111827';
   }
 
   private loadMatches(): void {

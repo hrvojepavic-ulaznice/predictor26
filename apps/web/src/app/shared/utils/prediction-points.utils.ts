@@ -2,12 +2,26 @@ import { MatchPrediction, MatchScore } from '@models/match.models';
 
 export type PredictionPointsState = 'pending' | 'miss' | 'outcome' | 'exact';
 
+const predictionPointsStateColors: Readonly<Record<Exclude<PredictionPointsState, 'pending'>, string>> = {
+  miss: '#b91c1c',
+  outcome: '#ea580c',
+  exact: '#166534'
+};
+
 export interface PredictionPointsResult {
   readonly earned: number | null;
   readonly available: number;
   readonly outcomePoints: number;
   readonly exactScorePoints: number;
   readonly state: PredictionPointsState;
+}
+
+export function getPredictionPointsStateColor(state: PredictionPointsState | null): string | null {
+  if (!state || state === 'pending') {
+    return null;
+  }
+
+  return predictionPointsStateColors[state];
 }
 
 export function calculatePredictionPoints(
