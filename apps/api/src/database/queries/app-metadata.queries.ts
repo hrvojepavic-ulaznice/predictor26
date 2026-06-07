@@ -13,3 +13,21 @@ export async function getAppMetadataValue(key: string): Promise<string | undefin
     db.close();
   }
 }
+
+export function setAppMetadataValue(key: string, value: string): void {
+  const db = openDatabase();
+
+  try {
+    db.prepare(
+      `
+        INSERT INTO app_metadata (key, value)
+        VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET
+          value = excluded.value,
+          updated_at = CURRENT_TIMESTAMP
+      `
+    ).run(key, value);
+  } finally {
+    db.close();
+  }
+}

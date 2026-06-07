@@ -270,6 +270,30 @@ export function updateFinalScore(
   }
 }
 
+export function clearFinalScoresBeforeKickoff(nowIso: string): number {
+  const db = openDatabase();
+
+  try {
+    const result = db
+      .prepare(
+        `
+          UPDATE matches
+          SET
+            final_home_score = NULL,
+            final_away_score = NULL,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE kickoff_at > ?
+            AND (final_home_score IS NOT NULL OR final_away_score IS NOT NULL)
+        `
+      )
+      .run(nowIso);
+
+    return result.changes;
+  } finally {
+    db.close();
+  }
+}
+
 export function updateMatchOdds(odds: readonly MatchOddsInput[]): number {
   const db = openDatabase();
 

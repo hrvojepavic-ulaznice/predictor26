@@ -8,10 +8,13 @@ import {
 } from './admin-matches.interfaces.js';
 import {
   backfillPredictionOdds,
+  clearPendingFinalScores,
   findAdminMatches,
+  getMetadataValue,
   importMatches,
   pruneMatchesAfter,
   setFinalScore,
+  setMetadataValue,
   setMatchOdds
 } from './admin-matches.repository.js';
 import {
@@ -25,6 +28,9 @@ import { importWorldCupSchedule } from './world-cup-schedule-importer.js';
 
 const useOddsPortalFriendlyTestSource = false;
 const oddsPortalSourceUrl = useOddsPortalFriendlyTestSource ? friendlyInternationalOddsPortalUrl : worldCupOddsPortalUrl;
+const scheduleSourceMetadataKey = 'admin_matches_schedule_source';
+
+type ScheduleSource = 'friendly-test' | 'world-cup';
 
 export type UpdateFinalScoreResult =
   | {
@@ -45,20 +51,30 @@ export async function getAdminMatches(): Promise<AdminMatchesResponse> {
 }
 
 export async function importSchedule(): Promise<ImportMatchesResponse> {
+  const scheduleSource = getScheduleSource();
   const importedMatches = useOddsPortalFriendlyTestSource
     ? await importOddsPortalFriendlySchedule()
     : await importWorldCupSchedule();
+  const previousScheduleSource = await getMetadataValue(scheduleSourceMetadataKey);
 
-  if (useOddsPortalFriendlyTestSource) {
+  if (previousScheduleSource && previousScheduleSource !== scheduleSource) {
     pruneMatchesAfter(0);
   }
 
   const imported = importMatches(importedMatches);
+  if (scheduleSource === 'world-cup') {
+    clearPendingFinalScores(new Date().toISOString());
+  }
+  setMetadataValue(scheduleSourceMetadataKey, scheduleSource);
 
   return {
     imported,
     matches: findAdminMatches().map(toMatchResponse)
   };
+}
+
+function getScheduleSource(): ScheduleSource {
+  return useOddsPortalFriendlyTestSource ? 'friendly-test' : 'world-cup';
 }
 
 export async function syncOdds(): Promise<SyncMatchOddsResponse> {
