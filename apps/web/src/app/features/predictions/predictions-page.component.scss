@@ -55,6 +55,10 @@ h2 {
   color: #9ca3af;
 }
 
+.deadline-remaining {
+  display: inline;
+}
+
 .lock-badge {
   border: 1px solid #fecaca;
   border-radius: 999px;
@@ -326,5 +330,14 @@ h2 {
 
   .versus {
     display: inline;
+  }
+
+  .deadline-separator {
+    display: none;
+  }
+
+  .deadline-remaining {
+    display: block;
+    margin-top: 4px;
   }
 }

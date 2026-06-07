@@ -37,7 +37,7 @@
                 <time [dateTime]="group.deadlineAt">{{ group.deadlineAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
                 @if (hasTimeRemaining(group.deadlineAt)) {
                   <span class="deadline-separator">·</span>
-                  <span>Time remaining: {{ timeRemaining(group.deadlineAt) }}</span>
+                  <span class="deadline-remaining">Time remaining: {{ timeRemaining(group.deadlineAt) }}</span>
                 }
               </p>
             </div>

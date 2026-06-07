@@ -1,5 +1,5 @@
-<section class="home-page" aria-label="World Cup Predictor">
-  <p class="section-label">World Cup Predictor</p>
+<section class="home-page" aria-label="My Prediction Center">
+  <p class="section-label">My Prediction Center</p>
 
   <nav class="home-action-grid" aria-label="Prediction actions">
     <a class="action-card" routerLink="/predictions">
@@ -8,8 +8,17 @@
         <span></span>
       </span>
       <span class="action-content">
-        <span class="action-title">Post tips</span>
-        <span class="action-description">Enter or update your match score predictions.</span>
+        <span class="action-title">Post Predictions</span>
+        <span class="action-description">
+          Enter or update your match score predictions.
+          <span class="action-deadline">
+            @if (nextPredictionDeadline(); as deadline) {
+              <span class="action-deadline-text">
+                <strong>{{ deadline.label }}</strong> closes in <strong>{{ deadline.remaining }}</strong>.
+              </span>
+            }
+          </span>
+        </span>
       </span>
     </a>
 
@@ -19,7 +28,7 @@
         <span></span>
       </span>
       <span class="action-content">
-        <span class="action-title">See my tips</span>
+        <span class="action-title">See my predictions</span>
         <span class="action-description">Review every prediction you have submitted.</span>
       </span>
     </a>

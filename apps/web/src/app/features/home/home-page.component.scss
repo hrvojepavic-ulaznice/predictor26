@@ -67,36 +67,33 @@
 }
 
 .action-icon-post::before {
-  top: 12px;
-  left: 13px;
-  width: 24px;
-  height: 26px;
-  border-radius: 5px;
+  inset: 12px;
+  border: 3px solid #3730a3;
+  border-radius: 999px;
+  background: transparent;
 }
 
 .action-icon-post::after {
-  right: 12px;
-  bottom: 10px;
-  width: 16px;
-  height: 16px;
-  border: 3px solid #eef2ff;
+  top: 24px;
+  left: 16px;
+  width: 18px;
+  height: 2px;
+  background: #3730a3;
+}
+
+.action-icon-post span {
   background: #3730a3;
 }
 
 .action-icon-post span:first-child {
-  top: 18px;
-  left: 18px;
-  width: 14px;
-  height: 3px;
-  background: #eef2ff;
+  top: 16px;
+  left: 24px;
+  width: 2px;
+  height: 18px;
 }
 
 .action-icon-post span:last-child {
-  top: 25px;
-  left: 18px;
-  width: 10px;
-  height: 3px;
-  background: #eef2ff;
+  display: none;
 }
 
 .action-icon-list::before {
@@ -144,6 +141,31 @@
   color: #6b7280;
   font-size: 0.92rem;
   line-height: 1.35;
+}
+
+.action-deadline {
+  display: block;
+  color: #4b5563;
+  min-height: 20px;
+}
+
+.action-deadline-text {
+  display: inline-block;
+  animation: deadline-fade-in 333ms ease-in-out;
+}
+
+.action-deadline strong {
+  font-weight: 850;
+}
+
+@keyframes deadline-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 520px) {
