@@ -294,6 +294,30 @@ export function clearFinalScoresBeforeKickoff(nowIso: string): number {
   }
 }
 
+export function deletePredictionsBeforeKickoff(nowIso: string): number {
+  const db = openDatabase();
+
+  try {
+    const result = db
+      .prepare(
+        `
+          DELETE FROM predictions
+          WHERE EXISTS (
+            SELECT 1
+            FROM matches
+            WHERE matches.id = predictions.match_id
+              AND matches.kickoff_at > ?
+          )
+        `
+      )
+      .run(nowIso);
+
+    return result.changes;
+  } finally {
+    db.close();
+  }
+}
+
 export function updateMatchOdds(odds: readonly MatchOddsInput[]): number {
   const db = openDatabase();
 

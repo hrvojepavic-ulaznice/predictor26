@@ -2,6 +2,7 @@ import {
   backfillMissingPredictionOdds,
   clearFinalScoresBeforeKickoff,
   deleteMatchesAfterMatchNumber,
+  deletePredictionsBeforeKickoff,
   listMatches,
   MatchOddsInput,
   MatchImportInput,
@@ -33,6 +34,10 @@ export function setMetadataValue(key: string, value: string) {
 
 export function clearPendingFinalScores(nowIso: string) {
   return clearFinalScoresBeforeKickoff(nowIso);
+}
+
+export function clearPendingPredictions(nowIso: string) {
+  return deletePredictionsBeforeKickoff(nowIso);
 }
 
 export function setFinalScore(matchId: number, homeScore: number | null, awayScore: number | null) {

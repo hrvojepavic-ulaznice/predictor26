@@ -9,6 +9,7 @@ import {
 import {
   backfillPredictionOdds,
   clearPendingFinalScores,
+  clearPendingPredictions,
   findAdminMatches,
   getMetadataValue,
   importMatches,
@@ -29,6 +30,8 @@ import { importWorldCupSchedule } from './world-cup-schedule-importer.js';
 const useOddsPortalFriendlyTestSource = false;
 const oddsPortalSourceUrl = useOddsPortalFriendlyTestSource ? friendlyInternationalOddsPortalUrl : worldCupOddsPortalUrl;
 const scheduleSourceMetadataKey = 'admin_matches_schedule_source';
+const worldCupPendingDataCleanupMetadataKey = 'admin_matches_world_cup_pending_data_cleanup';
+const worldCupPendingDataCleanupVersion = '1';
 
 type ScheduleSource = 'friendly-test' | 'world-cup';
 
@@ -63,7 +66,7 @@ export async function importSchedule(): Promise<ImportMatchesResponse> {
 
   const imported = importMatches(importedMatches);
   if (scheduleSource === 'world-cup') {
-    clearPendingFinalScores(new Date().toISOString());
+    await clearWorldCupPendingData();
   }
   setMetadataValue(scheduleSourceMetadataKey, scheduleSource);
 
@@ -75,6 +78,19 @@ export async function importSchedule(): Promise<ImportMatchesResponse> {
 
 function getScheduleSource(): ScheduleSource {
   return useOddsPortalFriendlyTestSource ? 'friendly-test' : 'world-cup';
+}
+
+async function clearWorldCupPendingData(): Promise<void> {
+  const cleanupVersion = await getMetadataValue(worldCupPendingDataCleanupMetadataKey);
+
+  if (cleanupVersion === worldCupPendingDataCleanupVersion) {
+    return;
+  }
+
+  const nowIso = new Date().toISOString();
+  clearPendingFinalScores(nowIso);
+  clearPendingPredictions(nowIso);
+  setMetadataValue(worldCupPendingDataCleanupMetadataKey, worldCupPendingDataCleanupVersion);
 }
 
 export async function syncOdds(): Promise<SyncMatchOddsResponse> {
