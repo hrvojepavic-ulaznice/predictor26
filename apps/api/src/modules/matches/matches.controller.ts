@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 
 import { SavePredictionRequest } from './matches.interfaces.js';
-import { getMatchesForUser, submitPrediction } from './matches.service.js';
+import { getMatchesForUser, getPredictedMatchesForUser, submitPrediction } from './matches.service.js';
 
 export async function getMatchesController(
   req: Request,
@@ -10,6 +10,18 @@ export async function getMatchesController(
 ): Promise<void> {
   try {
     res.json(await getMatchesForUser(req.authUser!.id));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getPredictedMatchesController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    res.json(await getPredictedMatchesForUser(req.authUser!.id));
   } catch (error) {
     next(error);
   }

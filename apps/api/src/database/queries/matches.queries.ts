@@ -137,6 +137,51 @@ export function listMatchesWithPredictions(userId: number): Array<MatchRow & Pre
   }
 }
 
+export function listPredictedMatchesWithPredictions(userId: number): Array<MatchRow & PredictionRowNullable> {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+          SELECT
+            matches.id,
+            matches.match_number,
+            matches.stage,
+            matches.group_name,
+            matches.round_label,
+            matches.kickoff_at,
+            matches.source_time_zone,
+            matches.home_team_name,
+            matches.away_team_name,
+            matches.home_team_flag,
+            matches.away_team_flag,
+            matches.venue,
+            matches.city,
+            matches.home_win_odds,
+            matches.draw_odds,
+            matches.away_win_odds,
+            matches.odds_synced_at,
+            matches.final_home_score,
+            matches.final_away_score,
+            predictions.home_score AS prediction_home_score,
+            predictions.away_score AS prediction_away_score,
+            predictions.odds_outcome AS prediction_odds_outcome,
+            predictions.odds_value AS prediction_odds_value,
+            predictions.odds_synced_at AS prediction_odds_synced_at
+          FROM matches
+          INNER JOIN predictions
+            ON predictions.match_id = matches.id
+            AND predictions.user_id = ?
+          ORDER BY matches.match_number ASC
+        `
+      )
+      .all(userId) as Array<MatchRow & PredictionRowNullable>;
+  } finally {
+    db.close();
+  }
+}
+
 export function upsertImportedMatches(matches: readonly MatchImportInput[]): number {
   const db = openDatabase();
 

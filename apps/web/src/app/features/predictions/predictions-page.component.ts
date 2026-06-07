@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
 
 import { MatchWithPrediction } from '@models/match.models';
-import { MatchesApiProvider } from '@services/providers/matches-api.provider';
+import { MatchesService } from '@services/matches.service';
 import { MatchSortMode, MatchSortPreferenceService } from '@core/state/match-sort-preference.service';
 import { MatchSortMenuComponent } from '@shared/components/match-sort-menu/match-sort-menu.component';
 import { PredictionPointsComponent } from '@shared/components/prediction-points/prediction-points.component';
@@ -37,11 +37,11 @@ interface MatchSection {
   styleUrl: './predictions-page.component.scss'
 })
 export class PredictionsPageComponent {
-  private readonly matchesApi = inject(MatchesApiProvider);
+  private readonly matchesService = inject(MatchesService);
   private readonly sortPreference = inject(MatchSortPreferenceService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly matches = signal<MatchWithPrediction[]>([]);
+  protected readonly matches = this.matchesService.matches;
   protected readonly drafts = signal<Record<number, ScoreDraft>>({});
   protected readonly loading = signal(true);
   protected readonly savingIds = signal<ReadonlySet<number>>(new Set<number>());
@@ -141,20 +141,17 @@ export class PredictionsPageComponent {
     this.loading.set(true);
     this.errorMessage.set(null);
 
-    this.matchesApi.getMatches().subscribe({
+    const request = this.matchesService.ensureMatches();
+
+    if (!request) {
+      this.setDraftsFromMatches();
+      this.loading.set(false);
+      return;
+    }
+
+    request.subscribe({
       next: ({ matches }) => {
-        this.matches.set(matches);
-        this.drafts.set(
-          Object.fromEntries(
-            matches.map((match) => [
-              match.id,
-              {
-                home: match.prediction?.home ?? null,
-                away: match.prediction?.away ?? null
-              }
-            ])
-          )
-        );
+        this.setDraftsFromMatches(matches);
         this.loading.set(false);
       },
       error: () => {
@@ -162,6 +159,20 @@ export class PredictionsPageComponent {
         this.loading.set(false);
       }
     });
+  }
+
+  private setDraftsFromMatches(matches = this.matches()): void {
+    this.drafts.set(
+      Object.fromEntries(
+        matches.map((match) => [
+          match.id,
+          {
+            home: match.prediction?.home ?? null,
+            away: match.prediction?.away ?? null
+          }
+        ])
+      )
+    );
   }
 
   private setSaving(matchId: number, saving: boolean): void {
@@ -211,18 +222,8 @@ export class PredictionsPageComponent {
     this.setSaving(match.id, true);
     this.errorMessage.set(null);
 
-    this.matchesApi.savePrediction(match.id, { homeScore, awayScore }).subscribe({
+    this.matchesService.savePrediction(match.id, { homeScore, awayScore }).subscribe({
       next: ({ prediction }) => {
-        this.matches.update((matches) =>
-          matches.map((currentMatch) =>
-            currentMatch.id === match.id
-              ? {
-                  ...currentMatch,
-                  prediction
-                }
-              : currentMatch
-          )
-        );
         this.lastSavedMessage.set(
           `Saved ${match.homeTeam.name} ${homeScore}:${awayScore} ${match.awayTeam.name}.`
         );

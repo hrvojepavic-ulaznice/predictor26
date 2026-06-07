@@ -5,7 +5,7 @@ import {
   SavePredictionRequest,
   SavePredictionResponse
 } from './matches.interfaces.js';
-import { findMatchesForUser, savePrediction } from './matches.repository.js';
+import { findMatchesForUser, findPredictedMatchesForUser, savePrediction } from './matches.repository.js';
 
 export type SavePredictionResult =
   | {
@@ -23,8 +23,16 @@ export type SavePredictionResult =
     };
 
 export async function getMatchesForUser(userId: number): Promise<MatchesResponse> {
+  return toMatchesResponse(findMatchesForUser(userId));
+}
+
+export async function getPredictedMatchesForUser(userId: number): Promise<MatchesResponse> {
+  return toMatchesResponse(findPredictedMatchesForUser(userId));
+}
+
+function toMatchesResponse(matches: ReturnType<typeof findMatchesForUser>): MatchesResponse {
   return {
-    matches: withPredictionLockData(findMatchesForUser(userId)).map((match) => ({
+    matches: withPredictionLockData(matches).map((match) => ({
       ...toMatchResponse(match),
       prediction:
         match.prediction_home_score === null || match.prediction_away_score === null

@@ -5,7 +5,7 @@ import { interval } from 'rxjs';
 
 import { AppStateService } from '@core/state/app-state.service';
 import { MatchWithPrediction } from '@models/match.models';
-import { MatchesApiProvider } from '@services/providers/matches-api.provider';
+import { MatchesService } from '@services/matches.service';
 import { HomeLeaderboardComponent } from './home-leaderboard/home-leaderboard.component';
 
 interface NextPredictionDeadline {
@@ -21,10 +21,10 @@ interface NextPredictionDeadline {
 })
 export class HomePageComponent {
   private readonly appState = inject(AppStateService);
-  private readonly matchesApi = inject(MatchesApiProvider);
+  private readonly matchesService = inject(MatchesService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly matches = signal<MatchWithPrediction[]>([]);
+  protected readonly matches = this.matchesService.matches;
   protected readonly now = signal(Date.now());
   protected readonly nextPredictionDeadline = computed<NextPredictionDeadline | null>(() => {
     const now = this.now();
@@ -62,14 +62,7 @@ export class HomePageComponent {
   }
 
   private loadMatches(): void {
-    this.matchesApi.getMatches().subscribe({
-      next: ({ matches }) => {
-        this.matches.set(matches);
-      },
-      error: () => {
-        this.matches.set([]);
-      }
-    });
+    this.matchesService.ensureMatches()?.subscribe();
   }
 }
 

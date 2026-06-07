@@ -13,6 +13,10 @@ export class MatchesApiProvider {
     return this.http.get<MatchesResponse>('/api/matches');
   }
 
+  getPredictedMatches() {
+    return this.http.get<MatchesResponse>('/api/matches/predicted');
+  }
+
   savePrediction(matchId: number, request: SavePredictionRequest) {
     return this.http.put<SavePredictionResponse>(`/api/matches/${matchId}/prediction`, request);
   }

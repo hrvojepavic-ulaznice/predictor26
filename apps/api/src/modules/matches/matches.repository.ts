@@ -1,11 +1,16 @@
 import {
   listMatchesWithPredictions,
+  listPredictedMatchesWithPredictions,
   PredictionOddsOutcome,
   upsertPrediction
 } from '../../database/queries/matches.queries.js';
 
 export function findMatchesForUser(userId: number) {
   return listMatchesWithPredictions(userId);
+}
+
+export function findPredictedMatchesForUser(userId: number) {
+  return listPredictedMatchesWithPredictions(userId);
 }
 
 export function savePrediction(

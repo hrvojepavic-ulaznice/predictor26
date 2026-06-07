@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 
 import { LeaderboardResponse, LeaderboardUser } from '@models/leaderboard.models';
-import { LeaderboardApiProvider } from '@services/providers/leaderboard-api.provider';
+import { LeaderboardService } from '@services/leaderboard.service';
 
 interface RankedLeaderboardUser extends LeaderboardUser {
   readonly rank: number;
@@ -26,9 +26,8 @@ interface RankedLeaderboardResponse extends Omit<LeaderboardResponse, 'rounds' |
   styleUrl: './home-leaderboard.component.scss'
 })
 export class HomeLeaderboardComponent {
-  private readonly leaderboardApi = inject(LeaderboardApiProvider);
-
-  private readonly leaderboardResponse = signal<LeaderboardResponse | null>(null);
+  private readonly leaderboardService = inject(LeaderboardService);
+  private readonly leaderboardResponse = this.leaderboardService.leaderboard;
 
   protected readonly leaderboard = computed<RankedLeaderboardResponse | null>(() => {
     const leaderboard = this.leaderboardResponse();
@@ -51,9 +50,15 @@ export class HomeLeaderboardComponent {
     this.loading.set(true);
     this.errorMessage.set(null);
 
-    this.leaderboardApi.getLeaderboard().subscribe({
-      next: (leaderboard) => {
-        this.leaderboardResponse.set(leaderboard);
+    const request = this.leaderboardService.ensureLeaderboard();
+
+    if (!request) {
+      this.loading.set(false);
+      return;
+    }
+
+    request.subscribe({
+      next: () => {
         this.loading.set(false);
       },
       error: () => {

@@ -3,7 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { MatchWithPrediction } from '@models/match.models';
-import { MatchesApiProvider } from '@services/providers/matches-api.provider';
+import { MatchesService } from '@services/matches.service';
 import { MatchSortMode, MatchSortPreferenceService } from '@core/state/match-sort-preference.service';
 import { MatchSortMenuComponent } from '@shared/components/match-sort-menu/match-sort-menu.component';
 import { PredictionPointsComponent } from '@shared/components/prediction-points/prediction-points.component';
@@ -27,13 +27,13 @@ interface TipSection {
   styleUrl: './my-tips-page.component.scss'
 })
 export class MyTipsPageComponent {
-  private readonly matchesApi = inject(MatchesApiProvider);
+  private readonly matchesService = inject(MatchesService);
   private readonly sortPreference = inject(MatchSortPreferenceService);
 
-  protected readonly matches = signal<MatchWithPrediction[]>([]);
+  protected readonly matches = this.matchesService.matches;
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
-  protected readonly predictedMatches = computed(() => this.matches().filter((match) => match.prediction !== null));
+  protected readonly predictedMatches = this.matchesService.predictedMatches;
   protected readonly groupedPredictedMatches = computed(() =>
     groupTips(this.predictedMatches(), this.sortPreference.sortMode())
   );
@@ -66,9 +66,15 @@ export class MyTipsPageComponent {
     this.loading.set(true);
     this.errorMessage.set(null);
 
-    this.matchesApi.getMatches().subscribe({
-      next: ({ matches }) => {
-        this.matches.set(matches);
+    const request = this.matchesService.ensurePredictedMatches();
+
+    if (!request) {
+      this.loading.set(false);
+      return;
+    }
+
+    request.subscribe({
+      next: () => {
         this.loading.set(false);
       },
       error: () => {
