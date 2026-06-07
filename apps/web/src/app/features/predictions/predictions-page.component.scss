@@ -9,6 +9,7 @@
 
 .page-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -16,7 +17,7 @@
 }
 
 .section-label {
-  margin: 0 0 6px;
+  margin: 0;
   color: #4b5563;
   font-size: 0.82rem;
   font-weight: 700;
@@ -340,9 +341,5 @@ h2 {
   .deadline-remaining {
     display: block;
     margin-top: 4px;
-  }
-
-  .page-header {
-    align-items: start;
   }
 }

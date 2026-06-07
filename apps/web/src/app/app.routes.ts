@@ -29,10 +29,12 @@ export const routes: Routes = [
       import('./features/predictions/predictions-page.component').then((component) => component.PredictionsPageComponent)
   },
   {
-    path: 'my-tips',
+    path: 'my-predictions',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./features/my-tips/my-tips-page.component').then((component) => component.MyTipsPageComponent)
+      import('./features/my-predictions/my-predictions-page.component').then(
+        (component) => component.MyPredictionsPageComponent
+      )
   },
   {
     path: 'admin',

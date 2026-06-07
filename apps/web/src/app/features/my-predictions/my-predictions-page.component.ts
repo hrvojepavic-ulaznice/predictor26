@@ -21,12 +21,12 @@ interface TipSection {
 }
 
 @Component({
-  selector: 'app-my-tips-page',
+  selector: 'app-my-predictions-page',
   imports: [DatePipe, MatchSortMenuComponent, OddsFormatPipe, PredictionPointsComponent, RouterLink],
-  templateUrl: './my-tips-page.component.html',
-  styleUrl: './my-tips-page.component.scss'
+  templateUrl: './my-predictions-page.component.html',
+  styleUrl: './my-predictions-page.component.scss'
 })
-export class MyTipsPageComponent {
+export class MyPredictionsPageComponent {
   private readonly matchesService = inject(MatchesService);
   private readonly sortPreference = inject(MatchSortPreferenceService);
 

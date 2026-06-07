@@ -2,14 +2,15 @@
   display: block;
 }
 
-.my-tips-page {
+.my-predictions-page {
   width: min(1120px, calc(100% - 32px));
   margin: 32px auto 56px;
 }
 
 .page-header {
   display: flex;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 14px;
@@ -39,10 +40,16 @@
     box-shadow 160ms ease;
 }
 
-.post-predictions-card:hover,
-.post-predictions-card:focus-visible {
+.post-predictions-card:hover {
   border-color: #9ca3af;
   box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+  outline: 0;
+}
+
+.post-predictions-card:focus,
+.post-predictions-card:focus-visible {
+  border-color: #e5e7eb;
+  box-shadow: none;
   outline: 0;
 }
 
@@ -283,14 +290,9 @@
 }
 
 @media (max-width: 520px) {
-  .my-tips-page {
+  .my-predictions-page {
     width: min(100% - 24px, 1120px);
     margin-top: 24px;
-  }
-
-  .page-header {
-    display: grid;
-    gap: 10px;
   }
 
   .teams {
