@@ -37,7 +37,7 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
           return pointsComparison;
         }
 
-        return firstUser.displayName.localeCompare(secondUser.displayName, undefined, { sensitivity: 'base' });
+        return firstUser.username.localeCompare(secondUser.username, undefined, { sensitivity: 'base' });
       })
   };
 }

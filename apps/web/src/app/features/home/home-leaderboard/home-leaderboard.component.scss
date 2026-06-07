@@ -72,6 +72,13 @@ td:first-child {
   border-left: 0;
 }
 
+.user-heading,
+.user-cell,
+.user-heading + .round-heading,
+.user-cell + td {
+  border-left: 0;
+}
+
 thead th {
   background: #f9fafb;
   color: #374151;
@@ -85,21 +92,43 @@ tbody tr:last-child td {
   border-bottom: 0;
 }
 
+.rank-heading,
+.rank-cell,
 .user-heading,
 .user-cell {
   position: sticky;
-  left: 0;
   z-index: 1;
-  width: 170px;
-  min-width: 150px;
-  max-width: 170px;
+}
+
+.rank-heading,
+.rank-cell {
+  left: 0;
+  width: 36px;
+  min-width: 36px;
+  max-width: 36px;
+}
+
+.user-heading,
+.user-cell {
+  left: 36px;
+  width: 160px;
+  min-width: 140px;
+  max-width: 160px;
   border-right: 1px solid #e5e7eb;
   text-align: left;
 }
 
+.rank-heading,
 .user-heading {
   z-index: 2;
   background: #f9fafb;
+}
+
+.rank-cell {
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.75rem;
+  font-weight: 800;
 }
 
 .user-cell {
@@ -111,8 +140,19 @@ tbody tr:last-child td {
   text-overflow: ellipsis;
 }
 
+.top-three-row .rank-cell,
+.top-three-row .user-cell,
+.top-three-row .total-cell {
+  font-weight: 950;
+}
+
+.top-ranked-row .rank-cell,
+.top-ranked-row .user-cell {
+  color: #dc2626;
+}
+
 .round-heading {
-  min-width: 150px;
+  min-width: 100px;
 }
 
 .total-heading,
@@ -150,11 +190,6 @@ td {
     border-bottom-right-radius: 0;
   }
 
-  th:last-child,
-  td:last-child {
-    border-right: 1px solid #e5e7eb;
-  }
-
   h2 {
     font-size: 1.18rem;
   }
@@ -177,10 +212,18 @@ td {
     font-size: 0.82rem;
   }
 
+  .rank-heading,
+  .rank-cell {
+    width: 36px;
+    min-width: 36px;
+    max-width: 36px;
+  }
+
   .user-heading,
   .user-cell {
-    width: 130px;
-    min-width: 120px;
-    max-width: 130px;
+    left: 36px;
+    width: 100px;
+    min-width: 90px;
+    max-width: 100px;
   }
 }

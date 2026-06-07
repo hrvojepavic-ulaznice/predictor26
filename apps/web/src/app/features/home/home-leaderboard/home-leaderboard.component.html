@@ -17,14 +17,15 @@
       <table class="leaderboard-table">
         <thead>
           <tr>
+            <th class="rank-heading" rowspan="2" scope="col" aria-label="Rank"></th>
             <th class="user-heading" rowspan="2" scope="col">User</th>
-            @for (round of table.rounds; track round) {
-              <th class="round-heading" colspan="2" scope="colgroup">{{ round }}</th>
+            @for (round of table.rounds; track round.label) {
+              <th class="round-heading" colspan="2" scope="colgroup">{{ round.heading }}</th>
             }
             <th class="total-heading" rowspan="2" scope="col">Total</th>
           </tr>
           <tr>
-            @for (round of table.rounds; track round) {
+            @for (round of table.rounds; track round.label) {
               <th scope="col">Tips</th>
               <th scope="col">Pts</th>
             }
@@ -32,8 +33,9 @@
         </thead>
         <tbody>
           @for (user of table.users; track user.id) {
-            <tr>
-              <th class="user-cell" scope="row">{{ user.displayName }}</th>
+            <tr [class.top-three-row]="user.rank <= 3" [class.top-ranked-row]="user.rank === 1">
+              <td class="rank-cell">{{ user.rankLabel }}</td>
+              <th class="user-cell" scope="row">{{ user.username }}</th>
               @for (round of user.rounds; track round.label) {
                 <td>{{ round.submittedCount }}/{{ round.expectedCount }}</td>
                 <td>{{ round.points | number: '1.0-2' }}</td>
@@ -42,7 +44,7 @@
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" [attr.colspan]="table.rounds.length * 2 + 2">No registered users yet.</td>
+              <td class="empty-cell" [attr.colspan]="table.rounds.length * 2 + 3">No registered users yet.</td>
             </tr>
           }
         </tbody>
