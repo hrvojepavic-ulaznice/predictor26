@@ -4,8 +4,16 @@
       <p class="section-label">My Predictions</p>
     </div>
 
-    <a class="back-link" routerLink="/predictions">Post tips</a>
+    <app-match-sort-menu />
   </header>
+
+  <a class="post-predictions-card" routerLink="/predictions">
+    <span class="action-icon action-icon-post" aria-hidden="true">
+      <span></span>
+      <span></span>
+    </span>
+    <span class="action-title">Post Predictions</span>
+  </a>
 
   @if (errorMessage(); as message) {
     <p class="status-message status-error">{{ message }}</p>
@@ -14,50 +22,64 @@
   @if (loading()) {
     <p class="status-message">Loading your tips...</p>
   } @else {
-    <div class="tips-list" aria-label="Submitted tips">
-      @for (match of predictedMatches(); track match.id) {
-        @if (match.prediction; as prediction) {
-          <article class="tip-row">
-            <div class="match-meta">
-              <span>Match {{ match.matchNumber }}</span>
-              <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
-              <span>{{ matchStatus(match) }}</span>
-            </div>
+    <div class="tip-groups" aria-label="Submitted tips">
+      @for (group of groupedPredictedMatches(); track group.label) {
+        <section class="tip-group">
+          <h2>{{ group.label }}</h2>
 
-            <div class="teams">
-              <span class="team-name">{{ match.homeTeam.flag }} {{ match.homeTeam.name }}</span>
-              <span class="score">{{ prediction.home }}:{{ prediction.away }}</span>
-              <span class="team-name">{{ match.awayTeam.flag }} {{ match.awayTeam.name }}</span>
-            </div>
+          <div class="tips-list">
+            @for (section of group.sections; track section.label) {
+              <div class="tip-section">
+                <div class="section-badge">{{ section.label }}</div>
 
-            <div class="tip-details">
-              @if (prediction.odds; as odds) {
-                <span [style.color]="predictionStateColor(match)">
-                  Your pick {{ odds.outcome }} &#64; {{ odds.value | oddsFormat }}
-                </span>
-              } @else {
-                <span [style.color]="predictionStateColor(match)">No locked odds</span>
-              }
-              <span [style.color]="predictionStateColor(match)">{{ match.predictionRound }}</span>
-            </div>
+                @for (match of section.matches; track match.id) {
+                  @if (match.prediction; as prediction) {
+                    <article class="tip-row">
+                      <div class="match-meta">
+                        <span>Match {{ match.matchNumber }}</span>
+                        <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
+                        <span>{{ matchStatus(match) }}</span>
+                      </div>
 
-            <div class="result">
-              @if (match.finalScore; as finalScore) {
-                <span class="result-label">Final</span>
-                <span class="result-score">{{ finalScore.home }}:{{ finalScore.away }}</span>
-              } @else {
-                <span class="result-label">Kickoff</span>
-                <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'MMM d, HH:mm' : '+0200' }}</time>
-              }
-            </div>
+                      <div class="teams">
+                        <span class="team-name">{{ match.homeTeam.flag }} {{ match.homeTeam.name }}</span>
+                        <span class="score">{{ prediction.home }}:{{ prediction.away }}</span>
+                        <span class="team-name">{{ match.awayTeam.flag }} {{ match.awayTeam.name }}</span>
+                      </div>
 
-            <app-prediction-points
-              class="points-column"
-              [prediction]="prediction"
-              [finalScore]="match.finalScore"
-            />
-          </article>
-        }
+                      <div class="tip-details">
+                        @if (prediction.odds; as odds) {
+                          <span [style.color]="predictionStateColor(match)">
+                            Your pick {{ odds.outcome }} &#64; {{ odds.value | oddsFormat }}
+                          </span>
+                        } @else {
+                          <span [style.color]="predictionStateColor(match)">No locked odds</span>
+                        }
+                        <span [style.color]="predictionStateColor(match)">{{ match.predictionRound }}</span>
+                      </div>
+
+                      <div class="result">
+                        @if (match.finalScore; as finalScore) {
+                          <span class="result-label">Final</span>
+                          <span class="result-score">{{ finalScore.home }}:{{ finalScore.away }}</span>
+                        } @else {
+                          <span class="result-label">Kickoff</span>
+                          <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'MMM d, HH:mm' : '+0200' }}</time>
+                        }
+                      </div>
+
+                      <app-prediction-points
+                        class="points-column"
+                        [prediction]="prediction"
+                        [finalScore]="match.finalScore"
+                      />
+                    </article>
+                  }
+                }
+              </div>
+            }
+          </div>
+        </section>
       } @empty {
         <p class="status-message">You have not posted any tips yet.</p>
       }

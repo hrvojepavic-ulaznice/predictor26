@@ -1,0 +1,9 @@
+<details class="sort-menu">
+  <summary class="sort-button">Sorted by {{ currentLabel() }}</summary>
+
+  <div class="sort-options" role="menu">
+    <button type="button" role="menuitem" (click)="selectMode(alternateMode(), $event)">
+      Sort by {{ alternateLabel() }}
+    </button>
+  </div>
+</details>

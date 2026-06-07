@@ -5,6 +5,8 @@ import { interval } from 'rxjs';
 
 import { MatchWithPrediction } from '@models/match.models';
 import { MatchesApiProvider } from '@services/providers/matches-api.provider';
+import { MatchSortMode, MatchSortPreferenceService } from '@core/state/match-sort-preference.service';
+import { MatchSortMenuComponent } from '@shared/components/match-sort-menu/match-sort-menu.component';
 import { PredictionPointsComponent } from '@shared/components/prediction-points/prediction-points.component';
 import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
 import {
@@ -16,10 +18,10 @@ import { isValidScore, ScoreDraft, updateScoreDraft } from '@shared/utils/score-
 
 interface MatchGroup {
   readonly label: string;
-  readonly deadlineAt: string;
-  readonly locked: boolean;
   readonly savedCount: number;
   readonly totalCount: number;
+  readonly deadlineAt: string | null;
+  readonly locked: boolean | null;
   readonly sections: MatchSection[];
 }
 
@@ -30,12 +32,13 @@ interface MatchSection {
 
 @Component({
   selector: 'app-predictions-page',
-  imports: [DatePipe, OddsFormatPipe, PredictionPointsComponent],
+  imports: [DatePipe, MatchSortMenuComponent, OddsFormatPipe, PredictionPointsComponent],
   templateUrl: './predictions-page.component.html',
   styleUrl: './predictions-page.component.scss'
 })
 export class PredictionsPageComponent {
   private readonly matchesApi = inject(MatchesApiProvider);
+  private readonly sortPreference = inject(MatchSortPreferenceService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly matches = signal<MatchWithPrediction[]>([]);
@@ -46,9 +49,10 @@ export class PredictionsPageComponent {
   protected readonly lastSavedMessage = signal<string | null>(null);
   protected readonly activeProgressLabel = signal<string | null>(null);
   protected readonly now = signal(Date.now());
-  protected readonly groupedMatches = computed(() => groupMatches(this.matches()));
+  protected readonly groupedMatches = computed(() => groupMatches(this.matches(), this.sortPreference.sortMode()));
+  protected readonly progressGroups = computed(() => groupMatches(this.matches(), 'rounds'));
   protected readonly activeProgress = computed(() => {
-    const groups = this.groupedMatches();
+    const groups = this.progressGroups();
     const activeLabel = this.activeProgressLabel();
     const group =
       groups.find((currentGroup) => currentGroup.label === activeLabel) ??
@@ -232,7 +236,11 @@ export class PredictionsPageComponent {
   }
 }
 
-function groupMatches(matches: readonly MatchWithPrediction[]): MatchGroup[] {
+function groupMatches(matches: readonly MatchWithPrediction[], sortMode: MatchSortMode): MatchGroup[] {
+  return sortMode === 'groups' ? groupMatchesByGroups(matches) : groupMatchesByRounds(matches);
+}
+
+function groupMatchesByRounds(matches: readonly MatchWithPrediction[]): MatchGroup[] {
   const groups = new Map<string, MatchWithPrediction[]>();
 
   for (const match of matches) {
@@ -256,6 +264,37 @@ function groupRoundSections(matches: readonly MatchWithPrediction[]): MatchSecti
   for (const match of matches) {
     const label = match.groupName ? `Group ${match.groupName}` : match.roundLabel;
     sections.set(label, [...(sections.get(label) ?? []), match]);
+  }
+
+  return Array.from(sections, ([label, sectionMatches]) => ({
+    label,
+    matches: sectionMatches
+  }));
+}
+
+function groupMatchesByGroups(matches: readonly MatchWithPrediction[]): MatchGroup[] {
+  const groups = new Map<string, MatchWithPrediction[]>();
+
+  for (const match of matches) {
+    const label = match.groupName ? `Group ${match.groupName}` : match.roundLabel;
+    groups.set(label, [...(groups.get(label) ?? []), match]);
+  }
+
+  return Array.from(groups, ([label, groupedMatches]) => ({
+    label,
+    deadlineAt: null,
+    locked: null,
+    savedCount: groupedMatches.filter((match) => match.prediction !== null).length,
+    totalCount: groupedMatches.length,
+    sections: groupPredictionRoundSections(groupedMatches)
+  }));
+}
+
+function groupPredictionRoundSections(matches: readonly MatchWithPrediction[]): MatchSection[] {
+  const sections = new Map<string, MatchWithPrediction[]>();
+
+  for (const match of matches) {
+    sections.set(match.predictionRound, [...(sections.get(match.predictionRound) ?? []), match]);
   }
 
   return Array.from(sections, ([label, sectionMatches]) => ({

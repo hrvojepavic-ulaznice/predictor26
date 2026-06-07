@@ -1,6 +1,7 @@
 <section class="predictions-page" aria-labelledby="predictions-title">
   <header class="page-header">
     <p class="section-label">Post Predictions</p>
+    <app-match-sort-menu />
   </header>
 
   @if (errorMessage(); as message) {
@@ -31,14 +32,18 @@
           <div class="group-header">
             <div>
               <h2 [id]="'group-' + group.label">{{ group.label }}</h2>
-              <p>
-                Predictions close at
-                <time [dateTime]="group.deadlineAt">{{ group.deadlineAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
-                @if (hasTimeRemaining(group.deadlineAt)) {
-                  <span class="deadline-separator">·</span>
-                  <span class="deadline-remaining">Time remaining: {{ timeRemaining(group.deadlineAt) }}</span>
-                }
-              </p>
+              @if (group.deadlineAt) {
+                <p>
+                  Predictions close at
+                  <time [dateTime]="group.deadlineAt">{{ group.deadlineAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
+                  @if (hasTimeRemaining(group.deadlineAt)) {
+                    <span class="deadline-separator">·</span>
+                    <span class="deadline-remaining">Time remaining: {{ timeRemaining(group.deadlineAt) }}</span>
+                  }
+                </p>
+              } @else {
+                <p>{{ group.savedCount }}/{{ group.totalCount }} predictions entered.</p>
+              }
             </div>
 
             @if (group.locked) {
@@ -49,7 +54,9 @@
           <div class="match-list">
             @for (section of group.sections; track section.label) {
               <div class="match-section">
-                <div class="section-badge">{{ section.label }}</div>
+                <div class="section-heading">
+                  <div class="section-badge">{{ section.label }}</div>
+                </div>
 
                 @for (match of section.matches; track match.id) {
                   <article class="match-row">

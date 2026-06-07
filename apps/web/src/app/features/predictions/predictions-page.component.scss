@@ -8,6 +8,10 @@
 }
 
 .page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 14px;
 }
 
@@ -128,9 +132,12 @@ h2 {
   border-top: 8px solid #f8fafc;
 }
 
+.section-heading {
+  padding: 10px 14px;
+}
+
 .section-badge {
   justify-self: start;
-  margin: 10px 14px 10px;
   border: 1px solid #dbeafe;
   border-radius: 999px;
   background: #eff6ff;
@@ -333,5 +340,9 @@ h2 {
   .deadline-remaining {
     display: block;
     margin-top: 4px;
+  }
+
+  .page-header {
+    align-items: start;
   }
 }
