@@ -20,6 +20,11 @@
           </span>
         </span>
       </span>
+      @if (remainingPredictionsCount() > 0) {
+        <span class="action-badge" [attr.aria-label]="remainingPredictionsCount() + ' predictions remaining'">
+          {{ remainingPredictionsCount() }}
+        </span>
+      }
     </a>
 
     <a class="action-card" routerLink="/my-tips">

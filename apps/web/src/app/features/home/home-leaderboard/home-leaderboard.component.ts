@@ -109,10 +109,10 @@ export class HomeLeaderboardComponent {
       ['Group stage - Round 1', 'Round 1'],
       ['Group stage - Round 2', 'Round 2'],
       ['Group stage - Round 3', 'Round 3'],
-      ['Round of 32', '1/32'],
-      ['Round of 16', '1/16'],
-      ['Quarter-finals', '1/4'],
-      ['Semi-finals', '1/2'],
+      ['Round of 32', '1/16'],
+      ['Round of 16', '1/8'],
+      ['Quarter-finals', 'QF'],
+      ['Semi-finals', 'SF'],
       ['Third-place play-off', 'Bronze'],
       ['Final', 'Final']
     ]);

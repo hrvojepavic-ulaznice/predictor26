@@ -28,9 +28,7 @@ export class HomePageComponent {
   protected readonly now = signal(Date.now());
   protected readonly nextPredictionDeadline = computed<NextPredictionDeadline | null>(() => {
     const now = this.now();
-    const nextGroup = getPredictionGroups(this.matches())
-      .filter((group) => Date.parse(group.deadlineAt) > now)
-      .sort((firstGroup, secondGroup) => Date.parse(firstGroup.deadlineAt) - Date.parse(secondGroup.deadlineAt))[0];
+    const nextGroup = getNextPredictionGroup(this.matches(), now);
 
     if (!nextGroup) {
       return null;
@@ -40,6 +38,15 @@ export class HomePageComponent {
       label: getPredictionRoundLabel(nextGroup.label),
       remaining: getTimeRemaining(nextGroup.deadlineAt, now)
     };
+  });
+  protected readonly remainingPredictionsCount = computed(() => {
+    const nextGroup = getNextPredictionGroup(this.matches(), this.now());
+
+    if (!nextGroup) {
+      return 0;
+    }
+
+    return this.matches().filter((match) => match.predictionRound === nextGroup.label && match.prediction === null).length;
   });
 
   constructor() {
@@ -83,6 +90,17 @@ function getPredictionGroups(
     label,
     deadlineAt
   }));
+}
+
+function getNextPredictionGroup(
+  matches: readonly MatchWithPrediction[],
+  now: number
+): { readonly label: string; readonly deadlineAt: string } | null {
+  return (
+    getPredictionGroups(matches)
+      .filter((group) => Date.parse(group.deadlineAt) > now)
+      .sort((firstGroup, secondGroup) => Date.parse(firstGroup.deadlineAt) - Date.parse(secondGroup.deadlineAt))[0] ?? null
+  );
 }
 
 function getPredictionRoundLabel(label: string): string {

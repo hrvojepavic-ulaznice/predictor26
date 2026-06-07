@@ -23,6 +23,7 @@
 }
 
 .action-card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -44,6 +45,27 @@
   border-color: #9ca3af;
   box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
   outline: 0;
+}
+
+.action-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: inline-grid;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  place-items: center;
+  transform: translate(35%, -35%);
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .action-icon {
