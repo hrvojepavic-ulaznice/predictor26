@@ -2,6 +2,10 @@
   <app-header />
 
   <main class="app-main">
-    <router-outlet />
+    <router-outlet (activate)="routeActivated.set(true)" />
   </main>
+
+  @if (routeActivated()) {
+    <app-footer />
+  }
 </div>

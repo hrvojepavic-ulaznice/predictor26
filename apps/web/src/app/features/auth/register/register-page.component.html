@@ -21,7 +21,7 @@
       <label class="field">
         <span>Who will win WC 2026?</span>
         <select appFormFieldState="invalid" formControlName="tiebreakerName">
-          <option value="" disabled>{{ tiebreakerOptionsLoading() ? 'Loading teams...' : 'Select a team' }}</option>
+          <option value="" disabled selected>Choose team</option>
           @for (team of tiebreakerOptions(); track team) {
             <option [value]="team">{{ team }}</option>
           }

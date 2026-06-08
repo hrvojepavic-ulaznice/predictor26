@@ -1,0 +1,14 @@
+<section class="rules-page" aria-labelledby="rules-title">
+  <div class="rules-panel">
+    <p class="section-label">Predictor26</p>
+    <h1 id="rules-title">Rules</h1>
+
+    <ol class="rules-list">
+      @for (rule of rules; track rule) {
+        <li>{{ rule }}</li>
+      }
+    </ol>
+
+    <a class="home-link" routerLink="/">Back to home</a>
+  </div>
+</section>

@@ -7,14 +7,9 @@
 
     <div class="modal-content">
       <ul>
-        <li>Exact score predictions award 1 point.</li>
-        <li>Correct match outcome predictions award points equal to the selected odds coefficient.</li>
-        <li>Points accumulate match by match across the competition.</li>
-        <li>Users are ranked first by total points.</li>
-        <li>The World Cup winner tiebreaker is the second ranking criterion.</li>
-        <li>If users are still tied, prize money is split according to the configured prize distribution.</li>
-        <li>Predictions must be submitted before the first match of each round.</li>
-        <li>After the deadline, all users can see all predictions for that round.</li>
+        @for (rule of rules; track rule) {
+          <li>{{ rule }}</li>
+        }
       </ul>
     </div>
 

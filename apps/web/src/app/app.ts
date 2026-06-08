@@ -1,12 +1,15 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 import { AppHeaderComponent } from './layout/app-header/app-header.component';
+import { AppFooterComponent } from './layout/app-footer/app-footer.component';
 
 @Component({
   selector: 'app-root',
-  imports: [AppHeaderComponent, RouterOutlet],
+  imports: [AppHeaderComponent, AppFooterComponent, RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
-export class App {}
+export class App {
+  protected readonly routeActivated = signal(false);
+}

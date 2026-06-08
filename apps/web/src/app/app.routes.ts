@@ -5,6 +5,7 @@ import { authGuard } from '@guards/auth.guard';
 import { guestGuard } from '@guards/guest.guard';
 import { LoginPageComponent } from '@features/auth/login/login-page.component';
 import { RegisterPageComponent } from '@features/auth/register/register-page.component';
+import { RulesPageComponent } from '@features/rules/rules-page.component';
 
 export const routes: Routes = [
   {
@@ -21,6 +22,10 @@ export const routes: Routes = [
     path: 'register',
     canActivate: [guestGuard],
     component: RegisterPageComponent
+  },
+  {
+    path: 'rules',
+    component: RulesPageComponent
   },
   {
     path: 'predictions',
