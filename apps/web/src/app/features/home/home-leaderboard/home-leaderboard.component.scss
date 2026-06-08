@@ -1,3 +1,5 @@
+@use '../../../shared/animations' as animations;
+
 :host {
   display: block;
 }
@@ -42,6 +44,37 @@
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #ffffff;
+}
+
+.leaderboard-skeleton {
+  height: 249.6px;
+  background: #e5e7eb;
+  animation: skeleton-pulse 1.35s ease-in-out infinite;
+}
+
+.leaderboard-table-shell {
+  @include animations.content-fade-in;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 .leaderboard-table {
@@ -185,6 +218,10 @@ td {
 
   .leaderboard-table {
     min-width: 640px;
+  }
+
+  .leaderboard-skeleton {
+    height: 216px;
   }
 
   th,

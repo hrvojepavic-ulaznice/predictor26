@@ -10,9 +10,11 @@
   }
 
   @if (loading()) {
-    <p class="status-message">Loading prediction table...</p>
+    <div class="table-shell leaderboard-skeleton" role="status" aria-label="Loading community rankings">
+      <span class="visually-hidden">Loading prediction table...</span>
+    </div>
   } @else if (leaderboard(); as table) {
-    <div class="table-shell">
+    <div class="table-shell leaderboard-table-shell">
       <table class="leaderboard-table">
         <thead>
           <tr>
