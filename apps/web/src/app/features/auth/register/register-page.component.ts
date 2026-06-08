@@ -8,6 +8,7 @@ import { AppStateService } from '@core/state/app-state.service';
 import { RulesModalComponent } from '@features/rules/rules-modal.component';
 import { SessionDataRefreshService } from '@services/session-data-refresh.service';
 import { AuthApiProvider } from '@services/providers/auth-api.provider';
+import { WorldCupTeamsApiProvider } from '@services/providers/world-cup-teams-api.provider';
 import { FormFieldStateDirective } from '@shared/directives/form-field-state.directive';
 
 @Component({
@@ -22,15 +23,19 @@ export class RegisterPageComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly sessionDataRefresh = inject(SessionDataRefreshService);
+  private readonly worldCupTeamsApi = inject(WorldCupTeamsApiProvider);
 
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly isRulesModalOpen = signal(false);
+  protected readonly tiebreakerOptions = signal<string[]>([]);
+  protected readonly tiebreakerOptionsLoading = signal(true);
 
   protected readonly registerForm = this.formBuilder.nonNullable.group({
     username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(40)]],
     name: ['', [Validators.required, Validators.maxLength(80)]],
     lastname: ['', [Validators.required, Validators.maxLength(80)]],
+    tiebreakerName: ['', [Validators.required, Validators.maxLength(80)]],
     password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(128)]],
     confirmPassword: ['', [Validators.required, Validators.maxLength(128), matchingPasswordValidator]],
     acceptedRules: [false, [Validators.requiredTrue]]
@@ -54,10 +59,21 @@ export class RegisterPageComponent {
     this.registerForm.controls.password.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.registerForm.controls.confirmPassword.updateValueAndValidity({ emitEvent: false });
     });
+
+    this.worldCupTeamsApi.getWorldCupTeams().subscribe({
+      next: ({ teams }) => {
+        this.tiebreakerOptions.set(teams);
+        this.tiebreakerOptionsLoading.set(false);
+      },
+      error: () => {
+        this.errorMessage.set('World Cup teams could not be loaded.');
+        this.tiebreakerOptionsLoading.set(false);
+      }
+    });
   }
 
   protected register(): void {
-    if (this.registerForm.invalid || this.isSubmitting()) {
+    if (this.registerForm.invalid || this.isSubmitting() || this.tiebreakerOptionsLoading()) {
       this.registerForm.markAllAsTouched();
       this.errorMessage.set('Please check the highlighted fields.');
       return;
@@ -73,6 +89,7 @@ export class RegisterPageComponent {
         username: registration.username,
         name: registration.name,
         lastname: registration.lastname,
+        tiebreakerName: registration.tiebreakerName,
         password: registration.password,
         acceptedRules: registration.acceptedRules
       })

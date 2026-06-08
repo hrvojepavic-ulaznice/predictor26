@@ -55,6 +55,7 @@ function toAdminUserResponse(user: UserRow): AdminUserResponse {
     username: user.username,
     name: user.first_name,
     lastname: user.last_name,
+    tiebreakerName: user.tiebreaker_name,
     role: user.role
   };
 }

@@ -1,5 +1,6 @@
 import { createAuthToken } from '../../shared/utils/auth-token.js';
 import { hashPassword, verifyPassword } from '../../shared/utils/password.js';
+import { getWorldCupTeamNames } from '../world-cup-teams/world-cup-teams.service.js';
 import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from './auth.interfaces.js';
 import { findUserByUsername, insertUser } from './auth.repository.js';
 
@@ -50,6 +51,7 @@ export async function login(credentials: Partial<LoginRequest> | undefined): Pro
     username: user.username,
     name: user.first_name,
     lastname: user.last_name,
+    tiebreakerName: user.tiebreaker_name,
     role: user.role
   };
 
@@ -68,6 +70,7 @@ export async function register(input: Partial<RegisterRequest> | undefined): Pro
     typeof input?.username !== 'string' ||
     typeof input.name !== 'string' ||
     typeof input.lastname !== 'string' ||
+    typeof input.tiebreakerName !== 'string' ||
     typeof input.password !== 'string' ||
     input.acceptedRules !== true
   ) {
@@ -77,6 +80,7 @@ export async function register(input: Partial<RegisterRequest> | undefined): Pro
   const username = input.username.trim();
   const name = input.name.trim();
   const lastname = input.lastname.trim();
+  const tiebreakerName = input.tiebreakerName.trim();
   const password = input.password;
 
   if (
@@ -86,9 +90,15 @@ export async function register(input: Partial<RegisterRequest> | undefined): Pro
     name.length > nameMaxLength ||
     lastname.length < nameMinLength ||
     lastname.length > nameMaxLength ||
+    tiebreakerName.length < nameMinLength ||
+    tiebreakerName.length > nameMaxLength ||
     password.length < passwordMinLength ||
     password.length > passwordMaxLength
   ) {
+    return { status: 'invalid' };
+  }
+
+  if (!getWorldCupTeamNames().includes(tiebreakerName)) {
     return { status: 'invalid' };
   }
 
@@ -102,6 +112,7 @@ export async function register(input: Partial<RegisterRequest> | undefined): Pro
     username,
     firstName: name,
     lastName: lastname,
+    tiebreakerName,
     passwordHash: hashPassword(password),
     role: 'user'
   });
@@ -119,6 +130,7 @@ export async function register(input: Partial<RegisterRequest> | undefined): Pro
         username: user.username,
         name: user.first_name,
         lastname: user.last_name,
+        tiebreakerName: user.tiebreaker_name,
         role: user.role
       }
     }

@@ -92,6 +92,32 @@ export function listMatches(): MatchRow[] {
   }
 }
 
+export function listDistinctMatchTeamNames(): string[] {
+  const db = openDatabase();
+
+  try {
+    const rows = db
+      .prepare(
+        `
+          SELECT team_name
+          FROM (
+            SELECT home_team_name AS team_name FROM matches
+            UNION
+            SELECT away_team_name AS team_name FROM matches
+          )
+          WHERE team_name IS NOT NULL
+            AND team_name != ''
+          ORDER BY team_name COLLATE NOCASE ASC
+        `
+      )
+      .all() as Array<{ team_name: string }>;
+
+    return rows.map((row) => row.team_name);
+  } finally {
+    db.close();
+  }
+}
+
 export function listMatchesWithPredictions(userId: number): Array<MatchRow & PredictionRowNullable> {
   const db = openDatabase();
 

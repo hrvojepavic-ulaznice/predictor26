@@ -7,6 +7,7 @@ export interface RegisterRequest {
   readonly username: string;
   readonly name: string;
   readonly lastname: string;
+  readonly tiebreakerName: string;
   readonly password: string;
   readonly acceptedRules: boolean;
 }
@@ -16,6 +17,7 @@ export interface AuthUserResponse {
   readonly username: string;
   readonly name: string;
   readonly lastname: string;
+  readonly tiebreakerName: string | null;
   readonly role: 'super_admin' | 'admin' | 'user';
 }
 

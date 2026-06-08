@@ -28,6 +28,7 @@ export function openDatabase() {
       username TEXT NOT NULL UNIQUE CHECK(length(username) BETWEEN 3 AND 40),
       first_name TEXT NOT NULL CHECK(length(first_name) BETWEEN 1 AND 80),
       last_name TEXT NOT NULL CHECK(length(last_name) BETWEEN 1 AND 80),
+      tiebreaker_name TEXT CHECK(tiebreaker_name IS NULL OR length(tiebreaker_name) BETWEEN 1 AND 80),
       password_hash TEXT NOT NULL CHECK(length(password_hash) <= 255),
       role TEXT NOT NULL CHECK(role IN ('super_admin', 'admin', 'user')),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -35,12 +36,13 @@ export function openDatabase() {
     );
 
     INSERT INTO app_metadata (key, value)
-    VALUES ('schema_version', '6')
+    VALUES ('schema_version', '7')
     ON CONFLICT(key) DO UPDATE SET
       value = excluded.value,
       updated_at = CURRENT_TIMESTAMP;
   `);
 
+  ensureUsersTableSupportsTiebreaker(db);
   ensureMatchesTableSupportsOdds(db);
 
   db.exec(`
@@ -123,6 +125,7 @@ function ensureUsersTableSupportsAdminRole(db: Database.Database) {
       username TEXT NOT NULL UNIQUE CHECK(length(username) BETWEEN 3 AND 40),
       first_name TEXT NOT NULL CHECK(length(first_name) BETWEEN 1 AND 80),
       last_name TEXT NOT NULL CHECK(length(last_name) BETWEEN 1 AND 80),
+      tiebreaker_name TEXT CHECK(tiebreaker_name IS NULL OR length(tiebreaker_name) BETWEEN 1 AND 80),
       password_hash TEXT NOT NULL CHECK(length(password_hash) <= 255),
       role TEXT NOT NULL CHECK(role IN ('super_admin', 'admin', 'user')),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -134,6 +137,7 @@ function ensureUsersTableSupportsAdminRole(db: Database.Database) {
       username,
       first_name,
       last_name,
+      tiebreaker_name,
       password_hash,
       role,
       created_at,
@@ -144,6 +148,7 @@ function ensureUsersTableSupportsAdminRole(db: Database.Database) {
       username,
       first_name,
       last_name,
+      NULL,
       password_hash,
       role,
       created_at,
@@ -157,6 +162,19 @@ function ensureUsersTableSupportsAdminRole(db: Database.Database) {
 
     PRAGMA foreign_keys = ON;
   `);
+}
+
+function ensureUsersTableSupportsTiebreaker(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columns.length === 0 || columnNames.has('tiebreaker_name')) {
+    return;
+  }
+
+  db.exec(
+    'ALTER TABLE users ADD COLUMN tiebreaker_name TEXT CHECK(tiebreaker_name IS NULL OR length(tiebreaker_name) BETWEEN 1 AND 80)'
+  );
 }
 
 function ensureMatchesTableSupportsOdds(db: Database.Database) {

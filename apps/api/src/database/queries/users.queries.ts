@@ -5,6 +5,7 @@ export interface UserRow {
   readonly username: string;
   readonly first_name: string;
   readonly last_name: string;
+  readonly tiebreaker_name: string | null;
   readonly password_hash: string;
   readonly role: 'super_admin' | 'admin' | 'user';
 }
@@ -15,6 +16,7 @@ export interface CreateUserInput {
   readonly username: string;
   readonly firstName: string;
   readonly lastName: string;
+  readonly tiebreakerName: string;
   readonly passwordHash: string;
   readonly role: 'user';
 }
@@ -26,7 +28,7 @@ export async function getUserByUsername(username: string): Promise<UserRow | und
     return db
       .prepare(
       `
-        SELECT id, username, first_name, last_name, password_hash, role
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
         FROM users
         WHERE username = ?
       `
@@ -44,7 +46,7 @@ export async function getUserById(id: number): Promise<UserRow | undefined> {
     return db
       .prepare(
         `
-        SELECT id, username, first_name, last_name, password_hash, role
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
         FROM users
         WHERE id = ?
       `
@@ -62,7 +64,7 @@ export async function listUsers(): Promise<UserRow[]> {
     return db
       .prepare(
         `
-        SELECT id, username, first_name, last_name, password_hash, role
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
         FROM users
         ORDER BY username COLLATE NOCASE ASC
       `
@@ -80,14 +82,15 @@ export async function createUser(input: CreateUserInput): Promise<UserRow> {
     const result = db
       .prepare(
       `
-        INSERT INTO users (username, first_name, last_name, password_hash, role)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO users (username, first_name, last_name, tiebreaker_name, password_hash, role)
+        VALUES (?, ?, ?, ?, ?, ?)
       `
       )
       .run(
       input.username,
       input.firstName,
       input.lastName,
+      input.tiebreakerName,
       input.passwordHash,
       input.role
     );
@@ -95,7 +98,7 @@ export async function createUser(input: CreateUserInput): Promise<UserRow> {
     const user = db
       .prepare(
       `
-        SELECT id, username, first_name, last_name, password_hash, role
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
         FROM users
         WHERE id = ?
       `
@@ -127,7 +130,7 @@ export async function updateUserRole(id: number, role: Exclude<UserRole, 'super_
     return db
       .prepare(
         `
-        SELECT id, username, first_name, last_name, password_hash, role
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
         FROM users
         WHERE id = ?
       `
