@@ -1,14 +1,20 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { catchError, map, Observable, of, switchMap, tap } from 'rxjs';
 
 import { MatchWithPrediction, MatchesResponse, SavePredictionRequest, SavePredictionResponse } from '@models/match.models';
+import { LeaderboardService } from '@services/leaderboard.service';
 import { MatchesApiProvider } from '@services/providers/matches-api.provider';
+
+interface EnsureMatchesOptions {
+  readonly force?: boolean;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class MatchesService {
   private readonly matchesApi = inject(MatchesApiProvider);
+  private readonly leaderboardService = inject(LeaderboardService);
   private readonly matchesSignal = signal<MatchWithPrediction[]>([]);
   private readonly fullMatchesLoadedSignal = signal(false);
   private readonly predictedMatchesLoadedSignal = signal(false);
@@ -17,8 +23,8 @@ export class MatchesService {
   readonly predictedMatches = computed(() => this.matchesSignal().filter((match) => match.prediction !== null));
   readonly fullMatchesLoaded = this.fullMatchesLoadedSignal.asReadonly();
 
-  ensureMatches(): Observable<MatchesResponse> | null {
-    if (this.fullMatchesLoadedSignal()) {
+  ensureMatches(options: EnsureMatchesOptions = {}): Observable<MatchesResponse> | null {
+    if (!options.force && this.fullMatchesLoadedSignal()) {
       return null;
     }
 
@@ -35,8 +41,8 @@ export class MatchesService {
     );
   }
 
-  ensurePredictedMatches(): Observable<MatchesResponse> | null {
-    if (this.fullMatchesLoadedSignal() || this.predictedMatchesLoadedSignal()) {
+  ensurePredictedMatches(options: EnsureMatchesOptions = {}): Observable<MatchesResponse> | null {
+    if (!options.force && (this.fullMatchesLoadedSignal() || this.predictedMatchesLoadedSignal())) {
       return null;
     }
 
@@ -58,10 +64,16 @@ export class MatchesService {
                   ...match,
                   prediction
                 }
-              : match
+            : match
           )
         );
-      })
+      }),
+      switchMap((response) =>
+        this.leaderboardService.refreshLeaderboard().pipe(
+          catchError(() => of(null)),
+          map(() => response)
+        )
+      )
     );
   }
 

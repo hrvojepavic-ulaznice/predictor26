@@ -4,6 +4,10 @@ import { Observable, tap } from 'rxjs';
 import { LeaderboardResponse } from '@models/leaderboard.models';
 import { LeaderboardApiProvider } from '@services/providers/leaderboard-api.provider';
 
+interface EnsureLeaderboardOptions {
+  readonly force?: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -15,8 +19,8 @@ export class LeaderboardService {
   readonly leaderboard = this.leaderboardSignal.asReadonly();
   readonly loaded = this.loadedSignal.asReadonly();
 
-  ensureLeaderboard(): Observable<LeaderboardResponse> | null {
-    if (this.loadedSignal()) {
+  ensureLeaderboard(options: EnsureLeaderboardOptions = {}): Observable<LeaderboardResponse> | null {
+    if (!options.force && this.loadedSignal()) {
       return null;
     }
 

@@ -6,6 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { AuthApiProvider } from '@services/providers/auth-api.provider';
 import { AppStateService } from '@core/state/app-state.service';
+import { SessionDataRefreshService } from '@services/session-data-refresh.service';
 import { FormFieldStateDirective } from '@shared/directives/form-field-state.directive';
 
 @Component({
@@ -20,6 +21,7 @@ export class LoginPageComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly sessionDataRefresh = inject(SessionDataRefreshService);
 
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
@@ -48,7 +50,9 @@ export class LoginPageComponent {
     this.authApi.login(this.loginForm.getRawValue()).subscribe({
       next: (session) => {
         this.appState.setSession(session);
-        void this.router.navigateByUrl(this.route.snapshot.queryParamMap.get('returnUrl') ?? '/');
+        this.sessionDataRefresh.refreshAfterSessionChange().subscribe(() => {
+          void this.router.navigateByUrl(this.route.snapshot.queryParamMap.get('returnUrl') ?? '/');
+        });
       },
       error: (error: unknown) => {
         this.errorMessage.set(

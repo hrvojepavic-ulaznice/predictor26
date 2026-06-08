@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 
 import { AppStateService } from '@core/state/app-state.service';
 import { RulesModalComponent } from '@features/rules/rules-modal.component';
+import { SessionDataRefreshService } from '@services/session-data-refresh.service';
 import { AuthApiProvider } from '@services/providers/auth-api.provider';
 import { FormFieldStateDirective } from '@shared/directives/form-field-state.directive';
 
@@ -20,6 +21,7 @@ export class RegisterPageComponent {
   private readonly authApi = inject(AuthApiProvider);
   private readonly formBuilder = inject(FormBuilder);
   private readonly router = inject(Router);
+  private readonly sessionDataRefresh = inject(SessionDataRefreshService);
 
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
@@ -77,7 +79,9 @@ export class RegisterPageComponent {
       .subscribe({
         next: (session) => {
           this.appState.setSession(session);
-          void this.router.navigateByUrl('/');
+          this.sessionDataRefresh.refreshAfterSessionChange().subscribe(() => {
+            void this.router.navigateByUrl('/');
+          });
         },
         error: (error: unknown) => {
           if (error instanceof HttpErrorResponse && error.status === 409) {
