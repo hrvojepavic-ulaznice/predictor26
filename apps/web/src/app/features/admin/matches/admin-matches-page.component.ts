@@ -1,9 +1,12 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { Match } from '@models/match.models';
 import { AdminMatchesApiProvider } from '@services/providers/admin-matches-api.provider';
+import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
+import { SecretCodeModalComponent } from '@shared/components/secret-code-modal/secret-code-modal.component';
 import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
 import { isValidScore, ScoreDraft, updateScoreDraft } from '@shared/utils/score-draft.utils';
 
@@ -13,10 +16,11 @@ interface MatchGroup {
 }
 
 type MatchFilter = 'active' | 'required' | 'inactive';
+type PendingSecretAction = 'schedule' | 'odds';
 
 @Component({
   selector: 'app-admin-matches-page',
-  imports: [DatePipe, OddsFormatPipe, RouterLink],
+  imports: [DatePipe, ModalShellComponent, OddsFormatPipe, RouterLink, SecretCodeModalComponent],
   templateUrl: './admin-matches-page.component.html',
   styleUrl: './admin-matches-page.component.scss'
 })
@@ -31,6 +35,8 @@ export class AdminMatchesPageComponent {
   protected readonly savingIds = signal<ReadonlySet<number>>(new Set<number>());
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly importMessage = signal<string | null>(null);
+  protected readonly secretCodeErrorMessage = signal<string | null>(null);
+  protected readonly pendingSecretAction = signal<PendingSecretAction | null>(null);
   protected readonly selectedFilter = signal<MatchFilter>('active');
   protected readonly requiredActionCount = computed(() => this.matches().filter((match) => isRequiredAction(match)).length);
   protected readonly filteredMatches = computed(() => filterMatches(this.matches(), this.selectedFilter()));
@@ -51,7 +57,59 @@ export class AdminMatchesPageComponent {
     this.loadMatches();
   }
 
-  protected importMatches(): void {
+  protected requestImportMatches(): void {
+    if (this.importing()) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.importMessage.set(null);
+    this.secretCodeErrorMessage.set(null);
+    this.pendingSecretAction.set('schedule');
+  }
+
+  protected requestSyncOdds(): void {
+    if (this.syncingOdds() || this.matches().length === 0) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.importMessage.set(null);
+    this.secretCodeErrorMessage.set(null);
+    this.pendingSecretAction.set('odds');
+  }
+
+  protected cancelSecretAction(): void {
+    if (!this.isPendingSecretActionSubmitting()) {
+      this.pendingSecretAction.set(null);
+      this.secretCodeErrorMessage.set(null);
+    }
+  }
+
+  protected confirmSecretAction(secretCode: string): void {
+    const pendingAction = this.pendingSecretAction();
+
+    if (pendingAction === 'schedule') {
+      this.importMatches(secretCode);
+      return;
+    }
+
+    if (pendingAction === 'odds') {
+      this.syncOdds(secretCode);
+    }
+  }
+
+  protected isPendingSecretActionSubmitting(): boolean {
+    const pendingAction = this.pendingSecretAction();
+
+    return (pendingAction === 'schedule' && this.importing()) || (pendingAction === 'odds' && this.syncingOdds());
+  }
+
+  protected secretActionTitle(): string {
+    return this.pendingSecretAction() === 'odds' ? 'Confirm odds sync' : 'Confirm schedule sync';
+  }
+
+  private importMatches(secretCode: string): void {
     if (this.importing()) {
       return;
     }
@@ -59,22 +117,23 @@ export class AdminMatchesPageComponent {
     this.importing.set(true);
     this.errorMessage.set(null);
     this.importMessage.set(null);
+    this.secretCodeErrorMessage.set(null);
 
-    this.adminMatchesApi.importMatches().subscribe({
+    this.adminMatchesApi.importMatches({ secretCode }).subscribe({
       next: ({ imported, matches }) => {
         this.setMatches(matches);
         this.importMessage.set(`${imported} matches imported.`);
+        this.pendingSecretAction.set(null);
         this.importing.set(false);
       },
-      error: () => {
-        this.importMessage.set(null);
-        this.errorMessage.set('Matches could not be imported.');
+      error: (error: unknown) => {
+        this.handleSecretActionError(error, 'Matches could not be imported.');
         this.importing.set(false);
       }
     });
   }
 
-  protected syncOdds(): void {
+  private syncOdds(secretCode: string): void {
     if (this.syncingOdds()) {
       return;
     }
@@ -82,16 +141,17 @@ export class AdminMatchesPageComponent {
     this.syncingOdds.set(true);
     this.errorMessage.set(null);
     this.importMessage.set(null);
+    this.secretCodeErrorMessage.set(null);
 
-    this.adminMatchesApi.syncOdds().subscribe({
+    this.adminMatchesApi.syncOdds({ secretCode }).subscribe({
       next: ({ synced, matches }) => {
         this.setMatches(matches);
         this.importMessage.set(`${synced} match odds synced.`);
+        this.pendingSecretAction.set(null);
         this.syncingOdds.set(false);
       },
-      error: () => {
-        this.importMessage.set(null);
-        this.errorMessage.set('Odds could not be synced from Game-365.');
+      error: (error: unknown) => {
+        this.handleSecretActionError(error, 'Odds could not be synced from Game-365.');
         this.syncingOdds.set(false);
       }
     });
@@ -208,6 +268,21 @@ export class AdminMatchesPageComponent {
     if (this.selectedFilter() !== 'active' && filterMatches(this.matches(), this.selectedFilter()).length === 0) {
       this.selectedFilter.set('active');
     }
+  }
+
+  private handleSecretActionError(error: unknown, fallbackMessage: string): void {
+    const message =
+      error instanceof HttpErrorResponse && typeof error.error?.message === 'string' ? error.error.message : fallbackMessage;
+
+    this.importMessage.set(null);
+
+    if (error instanceof HttpErrorResponse && error.status === 403) {
+      this.secretCodeErrorMessage.set(message);
+      return;
+    }
+
+    this.errorMessage.set(message);
+    this.pendingSecretAction.set(null);
   }
 }
 

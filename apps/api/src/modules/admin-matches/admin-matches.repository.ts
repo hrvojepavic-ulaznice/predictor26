@@ -11,9 +11,14 @@ import {
   upsertImportedMatches
 } from '../../database/queries/matches.queries.js';
 import { getAppMetadataValue, setAppMetadataValue } from '../../database/queries/app-metadata.queries.js';
+import { getSuperAdminUser } from '../../database/queries/users.queries.js';
 
 export function findAdminMatches() {
   return listMatches();
+}
+
+export async function findSuperAdminForSecretCode() {
+  return getSuperAdminUser();
 }
 
 export function importMatches(matches: readonly MatchImportInput[]) {

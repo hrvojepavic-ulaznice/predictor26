@@ -51,11 +51,13 @@ Frontend conventions:
 
 - Prefer standalone components and lazy feature routes.
 - Prefer signals for component and service state.
+- Prefer reactive forms (`ReactiveFormsModule`, `FormBuilder`, and `formControlName`) for Angular forms. Avoid template-driven forms and `ngModel` unless there is a specific, justified need.
 - Services own writable signals privately and expose readonly state.
 - `AppStateService` in `app/core/state` is the frontend source of truth for auth session state. It stores the login token and user in `localStorage` so refreshes keep the user logged in, and logout must clear that stored session.
 - API-specific HTTP methods should live in provider classes under `core/services/providers`.
 - Feature components orchestrate UI and call services; they should not contain raw endpoint strings or query mapping.
 - Shared components should be reusable and avoid domain-specific data fetching.
+- Use `app/shared/components/modal-shell` for modal backdrop, panel layout, and enter/leave animation. Modal content components should project inside that shell instead of redefining modal positioning or animation CSS.
 - Avoid viewport-unit height/layout sizing such as `vh`, `dvh`, `svh`, `lvh`, `vw`, and similar units unless there is a specific, justified need. Prefer natural document flow, content-based sizing, flex/grid behavior, and explicit component spacing so empty pages do not create layout shift or unwanted scrollbars.
 
 ## Backend Architecture

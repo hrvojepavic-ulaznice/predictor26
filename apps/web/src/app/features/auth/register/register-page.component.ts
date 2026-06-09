@@ -9,11 +9,12 @@ import { RulesModalComponent } from '@features/rules/rules-modal.component';
 import { SessionDataRefreshService } from '@services/session-data-refresh.service';
 import { AuthApiProvider } from '@services/providers/auth-api.provider';
 import { WorldCupTeamsApiProvider } from '@services/providers/world-cup-teams-api.provider';
+import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
 import { FormFieldStateDirective } from '@shared/directives/form-field-state.directive';
 
 @Component({
   selector: 'app-register-page',
-  imports: [ReactiveFormsModule, FormFieldStateDirective, RulesModalComponent],
+  imports: [ReactiveFormsModule, FormFieldStateDirective, ModalShellComponent, RulesModalComponent],
   templateUrl: './register-page.component.html',
   styleUrl: './register-page.component.scss'
 })

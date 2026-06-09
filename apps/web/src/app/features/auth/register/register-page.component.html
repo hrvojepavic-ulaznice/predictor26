@@ -57,9 +57,12 @@
 </section>
 
 @if (isRulesModalOpen()) {
-  <app-rules-modal
+  <app-modal-shell
+    labelledBy="rules-title"
     animate.enter="modal-enter"
     animate.leave="modal-leave"
     (closeModal)="closeRulesModal()"
-  />
+  >
+    <app-rules-modal (closeModal)="closeRulesModal()" />
+  </app-modal-shell>
 }

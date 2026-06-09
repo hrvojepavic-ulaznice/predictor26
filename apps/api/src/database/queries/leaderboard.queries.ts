@@ -4,8 +4,6 @@ import { PredictionOddsOutcome } from './matches.queries.js';
 export interface LeaderboardUserRow {
   readonly id: number;
   readonly username: string;
-  readonly first_name: string;
-  readonly last_name: string;
 }
 
 export interface LeaderboardPredictionRow {
@@ -27,7 +25,7 @@ export function listLeaderboardUsers(): LeaderboardUserRow[] {
     return db
       .prepare(
         `
-          SELECT id, username, first_name, last_name
+          SELECT id, username
           FROM users
           WHERE role != 'super_admin'
           ORDER BY username COLLATE NOCASE ASC

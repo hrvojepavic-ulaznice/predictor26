@@ -13,8 +13,18 @@ export interface AdminUsersResponse {
 
 export interface UpdateUserRoleRequest {
   readonly role: 'admin' | 'user';
+  readonly secretCode: string;
 }
 
 export interface UpdateUserRoleResponse {
+  readonly user: AdminUser;
+}
+
+export interface UpdateUsernameRequest {
+  readonly username: string;
+  readonly secretCode: string;
+}
+
+export interface UpdateUsernameResponse {
   readonly user: AdminUser;
 }

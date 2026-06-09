@@ -1,20 +1,16 @@
-<div class="modal-backdrop" role="presentation">
-  <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="rules-title">
-    <header class="modal-header">
-      <h2 id="rules-title">Rules</h2>
-      <button class="icon-button" type="button" aria-label="Close rules" (click)="close()">×</button>
-    </header>
+<header class="modal-header">
+  <h2 id="rules-title">Rules</h2>
+  <button class="icon-button" type="button" aria-label="Close rules" (click)="close()">×</button>
+</header>
 
-    <div class="modal-content">
-      <ul>
-        @for (rule of rules; track rule) {
-          <li>{{ rule }}</li>
-        }
-      </ul>
-    </div>
-
-    <footer class="modal-footer">
-      <button class="close-button" type="button" (click)="close()">Close</button>
-    </footer>
-  </section>
+<div class="modal-content">
+  <ul>
+    @for (rule of rules; track rule) {
+      <li>{{ rule }}</li>
+    }
+  </ul>
 </div>
+
+<footer class="modal-footer">
+  <button class="close-button" type="button" (click)="close()">Close</button>
+</footer>

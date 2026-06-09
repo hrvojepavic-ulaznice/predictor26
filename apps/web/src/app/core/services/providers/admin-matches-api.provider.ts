@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
 import {
+  AdminActionSecretRequest,
   AdminMatchesResponse,
   ImportMatchesResponse,
   SyncMatchOddsResponse,
@@ -19,12 +20,12 @@ export class AdminMatchesApiProvider {
     return this.http.get<AdminMatchesResponse>('/api/admin/matches');
   }
 
-  importMatches() {
-    return this.http.post<ImportMatchesResponse>('/api/admin/matches/import', {});
+  importMatches(request: AdminActionSecretRequest) {
+    return this.http.post<ImportMatchesResponse>('/api/admin/matches/import', request);
   }
 
-  syncOdds() {
-    return this.http.post<SyncMatchOddsResponse>('/api/admin/matches/sync-odds', {});
+  syncOdds(request: AdminActionSecretRequest) {
+    return this.http.post<SyncMatchOddsResponse>('/api/admin/matches/sync-odds', request);
   }
 
   updateFinalScore(matchId: number, request: UpdateFinalScoreRequest) {

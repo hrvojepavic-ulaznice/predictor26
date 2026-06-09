@@ -7,10 +7,10 @@
     </div>
 
     <div class="header-actions">
-      <button class="import-button" type="button" [disabled]="importing()" (click)="importMatches()">
+      <button class="import-button" type="button" [disabled]="importing()" (click)="requestImportMatches()">
         {{ scheduleActionLabel() }}
       </button>
-      <button class="import-button" type="button" [disabled]="syncingOdds() || matches().length === 0" (click)="syncOdds()">
+      <button class="import-button" type="button" [disabled]="syncingOdds() || matches().length === 0" (click)="requestSyncOdds()">
         {{ oddsActionLabel() }}
       </button>
     </div>
@@ -124,5 +124,26 @@
         <p class="status-message">No matches for this filter.</p>
       }
     </div>
+  }
+
+  @if (pendingSecretAction()) {
+    <app-modal-shell
+      labelledBy="secret-code-title"
+      panelWidth="420px"
+      [closeOnBackdrop]="true"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelSecretAction()"
+    >
+      <app-secret-code-modal
+        [title]="secretActionTitle()"
+        label="What is the secret code?"
+        confirmLabel="Start sync"
+        [errorMessage]="secretCodeErrorMessage()"
+        [isSubmitting]="isPendingSecretActionSubmitting()"
+        (confirmSecretCode)="confirmSecretAction($event)"
+        (cancelModal)="cancelSecretAction()"
+      />
+    </app-modal-shell>
   }
 </section>

@@ -75,6 +75,26 @@ export async function listUsers(): Promise<UserRow[]> {
   }
 }
 
+export async function getSuperAdminUser(): Promise<UserRow | undefined> {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
+        FROM users
+        WHERE role = 'super_admin'
+        ORDER BY id ASC
+        LIMIT 1
+      `
+      )
+      .get() as UserRow | undefined;
+  } finally {
+    db.close();
+  }
+}
+
 export async function createUser(input: CreateUserInput): Promise<UserRow> {
   const db = openDatabase();
 
@@ -126,6 +146,32 @@ export async function updateUserRole(id: number, role: Exclude<UserRole, 'super_
         WHERE id = ? AND role != 'super_admin'
       `
     ).run(role, id);
+
+    return db
+      .prepare(
+        `
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
+        FROM users
+        WHERE id = ?
+      `
+      )
+      .get(id) as UserRow | undefined;
+  } finally {
+    db.close();
+  }
+}
+
+export async function updateUsername(id: number, username: string): Promise<UserRow | undefined> {
+  const db = openDatabase();
+
+  try {
+    db.prepare(
+      `
+        UPDATE users
+        SET username = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND role != 'super_admin'
+      `
+    ).run(username, id);
 
     return db
       .prepare(

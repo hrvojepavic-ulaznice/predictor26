@@ -25,7 +25,6 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
         return {
           id: user.id,
           username: user.username,
-          displayName: getDisplayName(user.first_name, user.last_name, user.username),
           totalPoints,
           rounds
         };
@@ -132,12 +131,6 @@ function getPredictionRound(match: Pick<MatchRow, 'match_number' | 'round_label'
   }
 
   return match.round_label;
-}
-
-function getDisplayName(firstName: string, lastName: string, username: string): string {
-  const fullName = `${firstName} ${lastName}`.trim();
-
-  return fullName || username;
 }
 
 function roundPoints(points: number): number {

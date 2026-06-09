@@ -1,0 +1,12 @@
+<div class="modal-backdrop" role="presentation" (click)="closeFromBackdrop()">
+  <section
+    class="modal-panel"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="labelledBy()"
+    [style.--modal-panel-width]="panelWidth()"
+    (click)="$event.stopPropagation()"
+  >
+    <ng-content />
+  </section>
+</div>

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 
-import { UpdateFinalScoreRequest } from './admin-matches.interfaces.js';
+import { AdminActionSecretRequest, UpdateFinalScoreRequest } from './admin-matches.interfaces.js';
 import { changeFinalScore, getAdminMatches, importSchedule, syncOdds } from './admin-matches.service.js';
 
 interface MatchIdParams {
@@ -15,17 +15,49 @@ export async function getAdminMatchesController(_req: Request, res: Response, ne
   }
 }
 
-export async function importMatchesController(_req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function importMatchesController(
+  req: Request<object, object, AdminActionSecretRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
-    res.json(await importSchedule());
+    const result = await importSchedule(req.body);
+
+    if (result.status === 'invalid') {
+      res.status(400).json({ message: 'Secret code is required.' });
+      return;
+    }
+
+    if (result.status === 'invalid_secret') {
+      res.status(403).json({ message: 'Secret code is incorrect.' });
+      return;
+    }
+
+    res.json(result.response);
   } catch (error) {
     next(error);
   }
 }
 
-export async function syncMatchOddsController(_req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function syncMatchOddsController(
+  req: Request<object, object, AdminActionSecretRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
-    res.json(await syncOdds());
+    const result = await syncOdds(req.body);
+
+    if (result.status === 'invalid') {
+      res.status(400).json({ message: 'Secret code is required.' });
+      return;
+    }
+
+    if (result.status === 'invalid_secret') {
+      res.status(403).json({ message: 'Secret code is incorrect.' });
+      return;
+    }
+
+    res.json(result.response);
   } catch (error) {
     next(error);
   }

@@ -8,7 +8,6 @@ export interface LeaderboardRound {
 export interface LeaderboardUser {
   readonly id: number;
   readonly username: string;
-  readonly displayName: string;
   readonly totalPoints: number;
   readonly rounds: LeaderboardRound[];
 }

@@ -56,6 +56,10 @@ export interface AdminMatchesResponse {
   readonly matches: Match[];
 }
 
+export interface AdminActionSecretRequest {
+  readonly secretCode: string;
+}
+
 export interface ImportMatchesResponse {
   readonly imported: number;
   readonly matches: Match[];

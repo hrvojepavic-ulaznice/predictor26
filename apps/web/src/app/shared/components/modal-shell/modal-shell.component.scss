@@ -1,0 +1,53 @@
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: block;
+}
+
+:host(.modal-enter) {
+  animation: modal-fade-in 180ms ease-out;
+}
+
+:host(.modal-leave) {
+  animation: modal-fade-out 160ms ease-in;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(17, 24, 39, 0.48);
+  padding: 16px;
+}
+
+.modal-panel {
+  width: min(var(--modal-panel-width), 100%);
+  max-block-size: calc(100% - 32px);
+  overflow: auto;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+}
+
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-fade-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}

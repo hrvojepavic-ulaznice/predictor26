@@ -1,6 +1,8 @@
 import { MatchOddsInput, MatchRow } from '../../database/queries/matches.queries.js';
+import { verifyPassword } from '../../shared/utils/password.js';
 import { MatchResponse } from '../matches/matches.interfaces.js';
 import {
+  AdminActionSecretRequest,
   AdminMatchesResponse,
   ImportMatchesResponse,
   SyncMatchOddsResponse,
@@ -11,6 +13,7 @@ import {
   clearPendingFinalScores,
   clearPendingPredictions,
   findAdminMatches,
+  findSuperAdminForSecretCode,
   getMetadataValue,
   importMatches,
   pruneMatchesAfter,
@@ -35,6 +38,31 @@ const worldCupPendingDataCleanupVersion = '1';
 
 type ScheduleSource = 'friendly-test' | 'world-cup';
 
+type SecretCodeResult =
+  | {
+      readonly status: 'valid';
+    }
+  | {
+      readonly status: 'invalid';
+    }
+  | {
+      readonly status: 'invalid_secret';
+    };
+
+export type ImportScheduleResult =
+  | {
+      readonly status: 'imported';
+      readonly response: ImportMatchesResponse;
+    }
+  | Exclude<SecretCodeResult, { readonly status: 'valid' }>;
+
+export type SyncOddsResult =
+  | {
+      readonly status: 'synced';
+      readonly response: SyncMatchOddsResponse;
+    }
+  | Exclude<SecretCodeResult, { readonly status: 'valid' }>;
+
 export type UpdateFinalScoreResult =
   | {
       readonly status: 'updated';
@@ -53,7 +81,13 @@ export async function getAdminMatches(): Promise<AdminMatchesResponse> {
   };
 }
 
-export async function importSchedule(): Promise<ImportMatchesResponse> {
+export async function importSchedule(input: Partial<AdminActionSecretRequest> | undefined): Promise<ImportScheduleResult> {
+  const secretCodeResult = await validateSecretCode(input);
+
+  if (secretCodeResult.status !== 'valid') {
+    return secretCodeResult;
+  }
+
   const scheduleSource = getScheduleSource();
   const importedMatches = useOddsPortalFriendlyTestSource
     ? await importOddsPortalFriendlySchedule()
@@ -71,8 +105,11 @@ export async function importSchedule(): Promise<ImportMatchesResponse> {
   setMetadataValue(scheduleSourceMetadataKey, scheduleSource);
 
   return {
-    imported,
-    matches: findAdminMatches().map(toMatchResponse)
+    status: 'imported',
+    response: {
+      imported,
+      matches: findAdminMatches().map(toMatchResponse)
+    }
   };
 }
 
@@ -93,7 +130,13 @@ async function clearWorldCupPendingData(): Promise<void> {
   setMetadataValue(worldCupPendingDataCleanupMetadataKey, worldCupPendingDataCleanupVersion);
 }
 
-export async function syncOdds(): Promise<SyncMatchOddsResponse> {
+export async function syncOdds(input: Partial<AdminActionSecretRequest> | undefined): Promise<SyncOddsResult> {
+  const secretCodeResult = await validateSecretCode(input);
+
+  if (secretCodeResult.status !== 'valid') {
+    return secretCodeResult;
+  }
+
   const matches = findAdminMatches();
   const importedOdds = await importOddsPortalOdds(oddsPortalSourceUrl);
   const odds = mapImportedOddsToMatches(matches, importedOdds);
@@ -101,10 +144,27 @@ export async function syncOdds(): Promise<SyncMatchOddsResponse> {
   const backfilled = backfillPredictionOdds();
 
   return {
-    synced,
-    backfilled,
-    matches: findAdminMatches().map(toMatchResponse)
+    status: 'synced',
+    response: {
+      synced,
+      backfilled,
+      matches: findAdminMatches().map(toMatchResponse)
+    }
   };
+}
+
+async function validateSecretCode(input: Partial<AdminActionSecretRequest> | undefined): Promise<SecretCodeResult> {
+  if (typeof input?.secretCode !== 'string' || input.secretCode.length < 1 || input.secretCode.length > 128) {
+    return { status: 'invalid' };
+  }
+
+  const superAdmin = await findSuperAdminForSecretCode();
+
+  if (!superAdmin || !verifyPassword(input.secretCode, superAdmin.password_hash)) {
+    return { status: 'invalid_secret' };
+  }
+
+  return { status: 'valid' };
 }
 
 export async function changeFinalScore(
