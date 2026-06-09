@@ -16,6 +16,7 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
 
   return {
     rounds: roundSummaries.map((round) => round.label),
+    totalUsers: users.length,
     users: users
       .map<LeaderboardUserResponse>((user) => {
         const userPredictions = predictionsByUser.get(user.id) ?? [];

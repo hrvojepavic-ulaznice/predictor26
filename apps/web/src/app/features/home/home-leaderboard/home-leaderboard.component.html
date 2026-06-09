@@ -19,7 +19,7 @@
         <thead>
           <tr>
             <th class="rank-heading" rowspan="2" scope="col" aria-label="Rank"></th>
-            <th class="user-heading" rowspan="2" scope="col">User</th>
+            <th class="user-heading" rowspan="2" scope="col">User ({{ table.totalUsers }})</th>
             @for (round of table.rounds; track round.label) {
               <th class="round-heading" colspan="2" scope="colgroup">{{ round.heading }}</th>
             }
