@@ -8,6 +8,7 @@ export interface LeaderboardUserRow {
 
 export interface LeaderboardPredictionRow {
   readonly user_id: number;
+  readonly match_id: number;
   readonly match_number: number;
   readonly round_label: string;
   readonly final_home_score: number | null;
@@ -46,6 +47,7 @@ export function listLeaderboardPredictions(): LeaderboardPredictionRow[] {
         `
           SELECT
             predictions.user_id,
+            matches.id AS match_id,
             matches.match_number,
             matches.round_label,
             matches.final_home_score,

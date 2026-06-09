@@ -1,8 +1,11 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 
-import { LeaderboardResponse, LeaderboardUser } from '@models/leaderboard.models';
+import { LeaderboardResponse, LeaderboardRound, LeaderboardUser } from '@models/leaderboard.models';
+import { AppStateService } from '@core/state/app-state.service';
 import { LeaderboardService } from '@services/leaderboard.service';
+import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
+import { LeaderboardRoundModalComponent } from './leaderboard-round-modal.component';
 
 interface RankedLeaderboardUser extends LeaderboardUser {
   readonly rank: number;
@@ -12,6 +15,8 @@ interface RankedLeaderboardUser extends LeaderboardUser {
 interface LeaderboardRoundHeading {
   readonly label: string;
   readonly heading: string;
+  readonly locked: boolean;
+  readonly viewable: boolean;
 }
 
 interface RankedLeaderboardResponse extends Omit<LeaderboardResponse, 'rounds' | 'users'> {
@@ -19,15 +24,22 @@ interface RankedLeaderboardResponse extends Omit<LeaderboardResponse, 'rounds' |
   readonly users: RankedLeaderboardUser[];
 }
 
+interface SelectedLeaderboardRound {
+  readonly user: RankedLeaderboardUser;
+  readonly round: LeaderboardRound;
+}
+
 @Component({
   selector: 'app-home-leaderboard',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, LeaderboardRoundModalComponent, ModalShellComponent],
   templateUrl: './home-leaderboard.component.html',
   styleUrl: './home-leaderboard.component.scss'
 })
 export class HomeLeaderboardComponent {
+  private readonly appState = inject(AppStateService);
   private readonly leaderboardService = inject(LeaderboardService);
   private readonly leaderboardResponse = this.leaderboardService.leaderboard;
+  protected readonly isLoggedIn = this.appState.isLoggedIn;
 
   protected readonly leaderboard = computed<RankedLeaderboardResponse | null>(() => {
     const leaderboard = this.leaderboardResponse();
@@ -41,6 +53,7 @@ export class HomeLeaderboardComponent {
 
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly selectedRound = signal<SelectedLeaderboardRound | null>(null);
 
   constructor() {
     this.loadLeaderboard();
@@ -75,8 +88,10 @@ export class HomeLeaderboardComponent {
     return {
       ...leaderboard,
       rounds: leaderboard.rounds.map((round) => ({
-        label: round,
-        heading: this.getRoundHeading(round)
+        label: round.label,
+        heading: this.getRoundHeading(round.label),
+        locked: round.locked,
+        viewable: round.viewable
       })),
       users: leaderboard.users.map((user) => {
         if (lastPoints === null || user.totalPoints !== lastPoints) {
@@ -107,6 +122,18 @@ export class HomeLeaderboardComponent {
     ]);
 
     return `${rank}${suffixes.get(rank % 10) ?? 'th'}`;
+  }
+
+  protected openRound(user: RankedLeaderboardUser, round: LeaderboardRound): void {
+    if (!this.isLoggedIn() || !round.viewable) {
+      return;
+    }
+
+    this.selectedRound.set({ user, round });
+  }
+
+  protected closeRound(): void {
+    this.selectedRound.set(null);
   }
 
   private getRoundHeading(round: string): string {

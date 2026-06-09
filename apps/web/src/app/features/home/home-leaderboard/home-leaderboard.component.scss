@@ -197,6 +197,24 @@ td {
   font-weight: 750;
 }
 
+.tips-button {
+  border: 0;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #111827;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 850;
+  padding: 5px 8px;
+}
+
+.tips-button:hover,
+.tips-button:focus-visible {
+  background: #e5e7eb;
+  outline: 2px solid #d1d5db;
+  outline-offset: 1px;
+}
+
 .empty-cell {
   color: #6b7280;
   font-weight: 650;

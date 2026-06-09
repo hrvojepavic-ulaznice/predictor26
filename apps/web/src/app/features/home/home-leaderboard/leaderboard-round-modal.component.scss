@@ -1,0 +1,143 @@
+.modal-header,
+.modal-footer {
+  display: flex;
+  align-items: center;
+  padding: 18px 20px;
+}
+
+.modal-header {
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+h2,
+p {
+  margin: 0;
+}
+
+h2 {
+  color: #111827;
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.modal-header p {
+  margin-top: 5px;
+  color: #6b7280;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #111827;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.modal-content {
+  display: grid;
+  gap: 0;
+  padding: 0;
+}
+
+.tip-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.5fr) auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+}
+
+.tip-row + .tip-row {
+  border-top: 1px solid #e5e7eb;
+}
+
+.team-name {
+  overflow: hidden;
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-name:first-child {
+  text-align: right;
+}
+
+.prediction-score {
+  min-width: 44px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 900;
+  padding: 5px 7px;
+  text-align: center;
+}
+
+.hidden-score {
+  filter: blur(1.4px);
+  opacity: 0.58;
+}
+
+.points-value {
+  color: #374151;
+  font-size: 0.95rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.empty-message {
+  margin: 0;
+  color: #6b7280;
+  padding: 18px 20px;
+}
+
+.modal-footer {
+  justify-content: flex-end;
+  border-top: 1px solid #e5e7eb;
+}
+
+.close-button {
+  min-width: 110px;
+  border: 0;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 14px;
+}
+
+@media (max-width: 560px) {
+  .tip-row {
+    grid-template-columns: minmax(0, 0.5fr) auto minmax(0, 1fr) auto;
+    gap: 6px;
+    padding: 9px 12px;
+  }
+
+  .team-name,
+  .prediction-score,
+  .points-value {
+    font-size: 0.76rem;
+  }
+
+  .prediction-score {
+    min-width: 36px;
+    padding: 4px 5px;
+  }
+
+  .points-value {
+    font-size: 0.74rem;
+  }
+}

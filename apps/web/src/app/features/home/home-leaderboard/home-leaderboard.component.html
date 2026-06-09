@@ -38,7 +38,15 @@
               <td class="rank-cell">{{ user.rankLabel }}</td>
               <th class="user-cell" scope="row">{{ user.username }}</th>
               @for (round of user.rounds; track round.label) {
-                <td>{{ round.submittedCount }}/{{ round.expectedCount }}</td>
+                <td>
+                  @if (isLoggedIn() && round.viewable) {
+                    <button class="tips-button" type="button" (click)="openRound(user, round)">
+                      {{ round.submittedCount }}/{{ round.expectedCount }}
+                    </button>
+                  } @else {
+                    {{ round.submittedCount }}/{{ round.expectedCount }}
+                  }
+                </td>
                 <td>{{ round.points | number: '1.0-2' }}</td>
               }
               <td class="total-cell">{{ user.totalPoints | number: '1.0-2' }}</td>
@@ -51,5 +59,17 @@
         </tbody>
       </table>
     </div>
+  }
+
+  @if (selectedRound(); as selected) {
+    <app-modal-shell
+      labelledBy="leaderboard-round-title"
+      panelWidth="620px"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="closeRound()"
+    >
+      <app-leaderboard-round-modal [user]="selected.user" [round]="selected.round" (closeModal)="closeRound()" />
+    </app-modal-shell>
   }
 </section>
