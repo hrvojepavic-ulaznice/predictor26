@@ -21,6 +21,7 @@ export interface LeaderboardRoundMatch {
   readonly homeTeam: MatchTeam;
   readonly awayTeam: MatchTeam;
   readonly prediction: MatchPrediction | null;
+  readonly predictionHidden: boolean;
   readonly finalScore: MatchScore | null;
   readonly points: LeaderboardPredictionPoints;
 }

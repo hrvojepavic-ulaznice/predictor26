@@ -17,7 +17,7 @@ interface RoundSummary {
   readonly matches: MatchRow[];
 }
 
-export async function getLeaderboard(): Promise<LeaderboardResponse> {
+export async function getLeaderboard(viewerUserId: number | null = null): Promise<LeaderboardResponse> {
   const matches = findLeaderboardMatches();
   const roundSummaries = getRoundSummaries(matches);
   const users = findLeaderboardUsers();
@@ -33,7 +33,7 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
     users: users
       .map<LeaderboardUserResponse>((user) => {
         const userPredictions = predictionsByUser.get(user.id) ?? [];
-        const rounds = roundSummaries.map((round) => getUserRoundSummary(round, userPredictions));
+        const rounds = roundSummaries.map((round) => getUserRoundSummary(round, userPredictions, user.id === viewerUserId));
         const totalPoints = roundPoints(rounds.reduce((total, round) => total + round.points, 0));
 
         return {
@@ -79,10 +79,12 @@ function getRoundSummaries(matches: readonly MatchRow[]): RoundSummary[] {
 
 function getUserRoundSummary(
   round: RoundSummary,
-  predictions: readonly LeaderboardPredictionRow[]
+  predictions: readonly LeaderboardPredictionRow[],
+  isViewerUser: boolean
 ): LeaderboardRoundResponse {
   const roundPredictions = predictions.filter((prediction) => getPredictionRound(prediction) === round.label);
   const roundMatches = getLeaderboardRoundMatches(round, roundPredictions);
+  const matches = getRoundMatchesForVisibility(round, roundPredictions, roundMatches, isViewerUser);
 
   return {
     label: round.label,
@@ -91,8 +93,25 @@ function getUserRoundSummary(
     points: roundPoints(roundMatches.reduce((total, match) => total + (match.points.earned ?? 0), 0)),
     locked: round.locked,
     viewable: round.viewable,
-    matches: round.locked ? roundMatches : round.viewable ? getHiddenLeaderboardRoundMatches(round) : []
+    matches
   };
+}
+
+function getRoundMatchesForVisibility(
+  round: RoundSummary,
+  predictions: readonly LeaderboardPredictionRow[],
+  roundMatches: readonly LeaderboardRoundMatchResponse[],
+  isViewerUser: boolean
+): LeaderboardRoundMatchResponse[] {
+  if (round.locked) {
+    return [...roundMatches];
+  }
+
+  if (!round.viewable) {
+    return [];
+  }
+
+  return isViewerUser ? getViewerOpenRoundMatches(round, predictions) : getHiddenLeaderboardRoundMatches(round);
 }
 
 function getHiddenLeaderboardRoundMatches(round: RoundSummary): LeaderboardRoundMatchResponse[] {
@@ -109,6 +128,7 @@ function getHiddenLeaderboardRoundMatches(round: RoundSummary): LeaderboardRound
       flag: match.away_team_flag
     },
     prediction: null,
+    predictionHidden: true,
     finalScore: null,
     points: {
       earned: null,
@@ -116,6 +136,41 @@ function getHiddenLeaderboardRoundMatches(round: RoundSummary): LeaderboardRound
       state: 'pending'
     }
   }));
+}
+
+function getViewerOpenRoundMatches(
+  round: RoundSummary,
+  predictions: readonly LeaderboardPredictionRow[]
+): LeaderboardRoundMatchResponse[] {
+  const predictionsByMatchId = new Map(predictions.map((prediction) => [prediction.match_id, prediction]));
+
+  return round.matches.map((match) => {
+    const prediction = predictionsByMatchId.get(match.id);
+
+    return {
+      matchId: match.id,
+      matchNumber: match.match_number,
+      kickoffAt: match.kickoff_at,
+      homeTeam: {
+        name: match.home_team_name,
+        flag: match.home_team_flag
+      },
+      awayTeam: {
+        name: match.away_team_name,
+        flag: match.away_team_flag
+      },
+      prediction: prediction ? toPredictionResponse(prediction) : null,
+      predictionHidden: false,
+      finalScore: null,
+      points: prediction
+        ? calculatePredictionPoints(prediction)
+        : {
+            earned: null,
+            available: null,
+            state: 'pending'
+          }
+    };
+  });
 }
 
 function getLeaderboardRoundMatches(
@@ -152,24 +207,29 @@ function getLeaderboardRoundMatches(
         name: match.away_team_name,
         flag: match.away_team_flag
       },
-      prediction: {
-        home: prediction.prediction_home_score,
-        away: prediction.prediction_away_score,
-        odds:
-          prediction.prediction_odds_outcome === null || prediction.prediction_odds_value === null
-            ? null
-            : {
-                outcome: prediction.prediction_odds_outcome,
-                value: prediction.prediction_odds_value,
-                syncedAt: null
-              }
-      },
+      prediction: toPredictionResponse(prediction),
+      predictionHidden: false,
       finalScore,
       points: calculatePredictionPoints(prediction)
     });
   }
 
   return matches;
+}
+
+function toPredictionResponse(prediction: LeaderboardPredictionRow): LeaderboardRoundMatchResponse['prediction'] {
+  return {
+    home: prediction.prediction_home_score,
+    away: prediction.prediction_away_score,
+    odds:
+      prediction.prediction_odds_outcome === null || prediction.prediction_odds_value === null
+        ? null
+        : {
+            outcome: prediction.prediction_odds_outcome,
+            value: prediction.prediction_odds_value,
+            syncedAt: null
+          }
+  };
 }
 
 function groupPredictionsByUser(

@@ -13,7 +13,7 @@
       @if (match.prediction; as prediction) {
         <span class="prediction-score">{{ prediction.home }}:{{ prediction.away }}</span>
       } @else {
-        <span class="prediction-score hidden-score">X:X</span>
+        <span class="prediction-score" [class.hidden-score]="match.predictionHidden">X:X</span>
       }
       <span class="team-name">{{ match.awayTeam.flag }} {{ match.awayTeam.name }}</span>
 

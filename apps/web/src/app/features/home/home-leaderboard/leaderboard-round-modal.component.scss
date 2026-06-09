@@ -121,7 +121,7 @@ h2 {
 
 @media (max-width: 560px) {
   .tip-row {
-    grid-template-columns: minmax(0, 0.5fr) auto minmax(0, 1fr) auto;
+    grid-template-columns: 0.35fr 0.10fr 0.35fr 0.30fr;
     gap: 6px;
     padding: 9px 12px;
   }
@@ -139,5 +139,6 @@ h2 {
 
   .points-value {
     font-size: 0.74rem;
+    text-align: right;
   }
 }
