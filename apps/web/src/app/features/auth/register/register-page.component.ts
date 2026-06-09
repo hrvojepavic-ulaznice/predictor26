@@ -75,7 +75,11 @@ export class RegisterPageComponent {
   protected register(): void {
     if (this.registerForm.invalid || this.isSubmitting() || this.tiebreakerOptionsLoading()) {
       this.registerForm.markAllAsTouched();
-      this.errorMessage.set('Please check the highlighted fields.');
+      this.errorMessage.set(
+        this.hasOnlyPasswordMinLengthError()
+          ? 'Password must be at least 8 characters.'
+          : 'Please check the highlighted fields.'
+      );
       return;
     }
 
@@ -125,6 +129,22 @@ export class RegisterPageComponent {
 
   protected closeRulesModal(): void {
     this.isRulesModalOpen.set(false);
+  }
+
+  private hasOnlyPasswordMinLengthError(): boolean {
+    const passwordControl = this.registerForm.controls.password;
+
+    if (!passwordControl.hasError('minlength')) {
+      return false;
+    }
+
+    return Object.entries(this.registerForm.controls).every(([controlName, control]) => {
+      if (controlName === 'password') {
+        return control.errors ? Object.keys(control.errors).length === 1 : false;
+      }
+
+      return control.valid;
+    });
   }
 }
 
