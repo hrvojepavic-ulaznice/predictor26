@@ -16,4 +16,5 @@ export interface LeaderboardUser {
 export interface LeaderboardResponse {
   readonly rounds: string[];
   readonly users: LeaderboardUser[];
+  readonly totalUsers: number;
 }
