@@ -18,7 +18,7 @@
       <table class="leaderboard-table">
         <thead>
           <tr>
-            <th class="users-heading" colspan="2" rowspan="2" scope="colgroup">Users ({{ table.totalUsers }})</th>
+            <th class="users-heading" rowspan="2" scope="col">Users ({{ table.totalUsers }})</th>
             @for (round of table.rounds; track round.label) {
               <th class="round-heading" colspan="2" scope="colgroup">{{ round.heading }}</th>
             }
@@ -38,12 +38,15 @@
               [class.top-three-row]="user.rank <= 3"
               [class.top-ranked-row]="user.rank === 1"
             >
-              <td class="rank-cell">{{ user.rankLabel }}</td>
               <th class="user-cell" scope="row">
-                @if (user.id === currentUserId()) {
-                  <span class="current-user-star" aria-label="Your row">★</span>
-                }
-                <span class="user-name-text">{{ user.username }}</span>
+                <span class="user-cell-content">
+                  <span class="user-rank">{{ user.rankLabel }}</span>
+                  <span class="user-divider" aria-hidden="true"></span>
+                  @if (user.id === currentUserId()) {
+                    <span class="current-user-star" aria-label="Your row">★</span>
+                  }
+                  <span class="user-name-text">{{ user.username }}</span>
+                </span>
               </th>
               @for (round of user.rounds; track round.label) {
                 <td>
@@ -66,7 +69,7 @@
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" [attr.colspan]="table.rounds.length * 2 + 3">No registered users yet.</td>
+              <td class="empty-cell" [attr.colspan]="table.rounds.length * 2 + 2">No registered users yet.</td>
             </tr>
           }
         </tbody>

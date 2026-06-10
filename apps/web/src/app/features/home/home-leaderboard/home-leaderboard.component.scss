@@ -118,20 +118,10 @@ tbody tr:last-child td {
   border-bottom: 0;
 }
 
-.rank-heading,
-.rank-cell,
 .users-heading,
 .user-cell {
   position: sticky;
   z-index: 1;
-}
-
-.rank-heading,
-.rank-cell {
-  left: 0;
-  width: 36px;
-  min-width: 36px;
-  max-width: 36px;
 }
 
 .users-heading {
@@ -144,25 +134,17 @@ tbody tr:last-child td {
 }
 
 .user-cell {
-  left: 36px;
-  width: 160px;
-  min-width: 140px;
-  max-width: 160px;
+  left: 0;
+  width: 196px;
+  min-width: 176px;
+  max-width: 196px;
   border-right: 1px solid #e5e7eb;
   text-align: left;
 }
 
-.rank-heading,
 .users-heading {
   z-index: 2;
   background: #f9fafb;
-}
-
-.rank-cell {
-  background: #ffffff;
-  color: #111827;
-  font-size: 0.75rem;
-  font-weight: 800;
 }
 
 .user-cell {
@@ -176,13 +158,8 @@ tbody tr:last-child td {
 }
 
 .current-user-row td,
-.current-user-row .rank-cell,
 .current-user-row .user-cell {
   background: #f0fdf4;
-}
-
-.current-user-row .rank-cell {
-  color: #16a34a;
 }
 
 .current-user-row .user-cell {
@@ -190,32 +167,58 @@ tbody tr:last-child td {
   padding-right: 22px;
 }
 
+.user-cell-content {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  line-height: 1;
+}
+
+.user-rank {
+  display: inline-block;
+  flex: 0 0 auto;
+  min-width: 24px;
+  color: inherit;
+  font-size: inherit;
+  font-weight: 900;
+  line-height: 1;
+  text-align: right;
+}
+
+.user-divider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 16px;
+  background: #d1d5db;
+}
+
 .user-name-text {
+  display: block;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .current-user-star {
   position: absolute;
-  top: 12px;
-  right: 34px;
+  top: -4px;
+  right: -2px;
   color: #16a34a;
   font-size: 0.62rem;
   line-height: 1;
 }
 
-.top-three-row .rank-cell,
 .top-three-row .user-cell,
 .top-three-row .total-cell {
   font-weight: 950;
 }
 
-.top-ranked-row .rank-cell,
 .top-ranked-row .user-cell {
   color: #dc2626;
 }
 
-.top-ranked-row.current-user-row .rank-cell,
 .top-ranked-row.current-user-row .user-cell,
 .top-ranked-row.current-user-row .current-user-star {
   color: #16a34a;
@@ -305,13 +308,6 @@ td {
     font-size: 0.82rem;
   }
 
-  .rank-heading,
-  .rank-cell {
-    width: 36px;
-    min-width: 36px;
-    max-width: 36px;
-  }
-
   .users-heading {
     left: 0;
     width: 144px;
@@ -320,19 +316,27 @@ td {
   }
 
   .user-cell {
-    left: 36px;
-    width: 108px;
-    min-width: 98px;
-    max-width: 108px;
+    left: 0;
+    width: 144px;
+    min-width: 134px;
+    max-width: 144px;
   }
 
   .current-user-row .user-cell {
     padding-right: 16px;
   }
 
+  .user-cell-content {
+    gap: 6px;
+  }
+
+  .user-rank {
+    min-width: 20px;
+  }
+
   .current-user-star {
-    top: 11px;
-    right: 11px;
+    top: -4px;
+    right: -8px;
     font-size: 0.56rem;
   }
 }
