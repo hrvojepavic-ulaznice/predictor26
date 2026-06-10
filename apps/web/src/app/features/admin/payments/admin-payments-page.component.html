@@ -19,20 +19,36 @@
     <p class="status-message">Loading payment settings...</p>
   } @else {
     <form class="payment-form" [formGroup]="paymentForm" (ngSubmit)="savePaymentSettings()">
-      <label class="field">
-        <span>IBAN</span>
-        <input type="text" formControlName="iban" autocomplete="off" maxlength="200" />
-      </label>
+      <section class="payment-method" aria-labelledby="iban-label">
+        <label class="field">
+          <span id="iban-label">IBAN</span>
+          <input type="text" formControlName="iban" autocomplete="off" maxlength="200" />
+        </label>
+      </section>
 
-      <label class="field">
-        <span>KEKS</span>
-        <input type="text" formControlName="keks" autocomplete="off" maxlength="200" />
-      </label>
+      <section class="payment-method" aria-labelledby="keks-label">
+        <label class="field">
+          <span id="keks-label">KEKS info</span>
+          <input type="text" formControlName="keks" autocomplete="off" maxlength="200" />
+        </label>
 
-      <label class="field">
-        <span>Revolut</span>
-        <input type="text" formControlName="revolut" autocomplete="off" maxlength="200" />
-      </label>
+        <label class="field">
+          <span>KEKS fast-pay link</span>
+          <input type="url" formControlName="keksFastPayUrl" autocomplete="off" maxlength="500" />
+        </label>
+      </section>
+
+      <section class="payment-method" aria-labelledby="revolut-label">
+        <label class="field">
+          <span id="revolut-label">Revolut info</span>
+          <input type="text" formControlName="revolut" autocomplete="off" maxlength="200" />
+        </label>
+
+        <label class="field">
+          <span>Revolut fast-pay link</span>
+          <input type="url" formControlName="revolutFastPayUrl" autocomplete="off" maxlength="500" />
+        </label>
+      </section>
 
       <label class="cash-toggle">
         <span class="toggle-copy">

@@ -75,6 +75,16 @@ h1 {
   padding: 18px;
 }
 
+.payment-method {
+  display: grid;
+  gap: 12px;
+}
+
+.payment-method + .payment-method {
+  border-top: 1px solid #f3f4f6;
+  padding-top: 16px;
+}
+
 .field {
   display: grid;
   gap: 7px;

@@ -51,6 +51,7 @@ export function openDatabase() {
     CREATE TABLE IF NOT EXISTS payment_settings (
       type TEXT PRIMARY KEY CHECK(type IN ('iban', 'keks', 'revolut', 'cash')),
       value TEXT NOT NULL DEFAULT '' CHECK(length(value) <= 200),
+      fast_pay_url TEXT NOT NULL DEFAULT '' CHECK(length(fast_pay_url) <= 500),
       is_enabled INTEGER NOT NULL DEFAULT 0 CHECK(is_enabled IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -96,6 +97,7 @@ export function openDatabase() {
   `);
 
   seedPaymentSettings(db);
+  ensurePaymentSettingsSupportsFastPayUrl(db);
   ensurePredictionsTableSupportsOddsSnapshot(db);
 
   db.prepare(
@@ -136,6 +138,17 @@ function seedPaymentSettings(db: Database.Database) {
   for (const row of rows) {
     statement.run(row.type, row.isEnabled);
   }
+}
+
+function ensurePaymentSettingsSupportsFastPayUrl(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(payment_settings)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columns.length === 0 || columnNames.has('fast_pay_url')) {
+    return;
+  }
+
+  db.exec("ALTER TABLE payment_settings ADD COLUMN fast_pay_url TEXT NOT NULL DEFAULT '' CHECK(length(fast_pay_url) <= 500)");
 }
 
 function ensureUsersTableSupportsAdminRole(db: Database.Database) {

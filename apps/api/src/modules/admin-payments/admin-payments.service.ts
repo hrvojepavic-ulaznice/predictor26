@@ -11,6 +11,7 @@ import {
 } from './admin-payments.repository.js';
 
 const paymentValueMaxLength = 200;
+const paymentUrlMaxLength = 500;
 const secretCodeMaxLength = 128;
 
 export type UpdateAdminPaymentSettingsResult =
@@ -35,7 +36,9 @@ export async function changeAdminPaymentSettings(
   if (
     typeof input?.iban !== 'string' ||
     typeof input.keks !== 'string' ||
+    typeof input.keksFastPayUrl !== 'string' ||
     typeof input.revolut !== 'string' ||
+    typeof input.revolutFastPayUrl !== 'string' ||
     typeof input.cashEnabled !== 'boolean' ||
     typeof input.secretCode !== 'string' ||
     input.secretCode.length < 1 ||
@@ -46,12 +49,18 @@ export async function changeAdminPaymentSettings(
 
   const iban = input.iban.trim();
   const keks = input.keks.trim();
+  const keksFastPayUrl = input.keksFastPayUrl.trim();
   const revolut = input.revolut.trim();
+  const revolutFastPayUrl = input.revolutFastPayUrl.trim();
 
   if (
     iban.length > paymentValueMaxLength ||
     keks.length > paymentValueMaxLength ||
-    revolut.length > paymentValueMaxLength
+    revolut.length > paymentValueMaxLength ||
+    keksFastPayUrl.length > paymentUrlMaxLength ||
+    revolutFastPayUrl.length > paymentUrlMaxLength ||
+    !isValidPaymentUrl(keksFastPayUrl) ||
+    !isValidPaymentUrl(revolutFastPayUrl)
   ) {
     return { status: 'invalid' };
   }
@@ -63,7 +72,9 @@ export async function changeAdminPaymentSettings(
   const rows = await savePaymentSettingsForAdmin({
     iban,
     keks,
+    keksFastPayUrl,
     revolut,
+    revolutFastPayUrl,
     cashEnabled: input.cashEnabled
   });
 
@@ -71,6 +82,20 @@ export async function changeAdminPaymentSettings(
     status: 'updated',
     settings: toPaymentSettingsResponse(rows)
   };
+}
+
+function isValidPaymentUrl(url: string): boolean {
+  if (url.length === 0) {
+    return true;
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+
+    return ['http:', 'https:', 'revolut:', 'keks:'].includes(parsedUrl.protocol);
+  } catch {
+    return false;
+  }
 }
 
 async function isValidSecretCode(secretCode: string): Promise<boolean> {
@@ -85,7 +110,9 @@ function toPaymentSettingsResponse(rows: readonly PaymentSettingRow[]): AdminPay
   return {
     iban: byType.get('iban')?.value ?? '',
     keks: byType.get('keks')?.value ?? '',
+    keksFastPayUrl: byType.get('keks')?.fast_pay_url ?? '',
     revolut: byType.get('revolut')?.value ?? '',
+    revolutFastPayUrl: byType.get('revolut')?.fast_pay_url ?? '',
     cashEnabled: byType.get('cash')?.is_enabled === 1
   };
 }
