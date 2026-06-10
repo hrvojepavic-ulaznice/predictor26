@@ -1,0 +1,76 @@
+<section class="admin-payments-page" aria-labelledby="admin-payments-title">
+  <header class="page-header">
+    <div>
+      <p class="section-label">Admin</p>
+      <h1 id="admin-payments-title">Payment settings</h1>
+      <a class="back-link" routerLink="/admin">Back to admin tools</a>
+    </div>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="status-message status-error">{{ message }}</p>
+  }
+
+  @if (successMessage(); as message) {
+    <p class="status-message status-success">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Loading payment settings...</p>
+  } @else {
+    <form class="payment-form" [formGroup]="paymentForm" (ngSubmit)="savePaymentSettings()">
+      <label class="field">
+        <span>IBAN</span>
+        <input type="text" formControlName="iban" autocomplete="off" maxlength="200" />
+      </label>
+
+      <label class="field">
+        <span>KEKS</span>
+        <input type="text" formControlName="keks" autocomplete="off" maxlength="200" />
+      </label>
+
+      <label class="field">
+        <span>Revolut</span>
+        <input type="text" formControlName="revolut" autocomplete="off" maxlength="200" />
+      </label>
+
+      <label class="cash-toggle">
+        <span class="toggle-copy">
+          <span>Cash</span>
+          <span>Accept cash payments</span>
+        </span>
+        <input type="checkbox" formControlName="cashEnabled" />
+        <span class="switch-track" aria-hidden="true">
+          <span class="switch-thumb"></span>
+        </span>
+      </label>
+
+      <div class="form-actions">
+        <button class="save-button" type="submit" [disabled]="saving() || paymentForm.invalid">
+          {{ saving() ? 'Saving...' : 'Save payment settings' }}
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (pendingSettings()) {
+    <app-modal-shell
+      labelledBy="secret-code-title"
+      panelWidth="420px"
+      [closeOnBackdrop]="true"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelSecretCode()"
+    >
+      <app-secret-code-modal
+        title="Confirm payment settings"
+        label="What is the secret code?"
+        confirmLabel="Save settings"
+        [errorMessage]="secretCodeErrorMessage()"
+        [isSubmitting]="saving()"
+        (confirmSecretCode)="confirmSecretCode($event)"
+        (cancelModal)="cancelSecretCode()"
+      />
+    </app-modal-shell>
+  }
+</section>

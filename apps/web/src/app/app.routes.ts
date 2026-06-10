@@ -59,5 +59,13 @@ export const routes: Routes = [
       import('./features/admin/matches/admin-matches-page.component').then(
         (component) => component.AdminMatchesPageComponent
       )
+  },
+  {
+    path: 'admin/payments',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./features/admin/payments/admin-payments-page.component').then(
+        (component) => component.AdminPaymentsPageComponent
+      )
   }
 ];

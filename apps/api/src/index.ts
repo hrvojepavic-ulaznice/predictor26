@@ -5,6 +5,7 @@ import express from 'express';
 
 import { config } from './config/index.js';
 import { adminMatchesRoutes } from './modules/admin-matches/admin-matches.routes.js';
+import { adminPaymentsRoutes } from './modules/admin-payments/admin-payments.routes.js';
 import { adminUsersRoutes } from './modules/admin-users/admin-users.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { healthRoutes } from './modules/health/health.routes.js';
@@ -22,6 +23,7 @@ app.use('/api', matchesRoutes);
 app.use('/api', leaderboardRoutes);
 app.use('/api', worldCupTeamsRoutes);
 app.use('/api', adminMatchesRoutes);
+app.use('/api', adminPaymentsRoutes);
 app.use('/api', adminUsersRoutes);
 app.use('/api', healthRoutes);
 

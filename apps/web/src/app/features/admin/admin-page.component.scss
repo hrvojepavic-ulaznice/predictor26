@@ -138,6 +138,40 @@ h1 {
   right: 15px;
 }
 
+.tool-icon-payment::before {
+  top: 12px;
+  left: 9px;
+  width: 26px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.tool-icon-payment::after {
+  top: 17px;
+  right: 12px;
+  left: 12px;
+  height: 3px;
+  background: #eef2ff;
+}
+
+.tool-icon-payment span:first-child {
+  top: 24px;
+  left: 13px;
+  width: 8px;
+  height: 3px;
+  border-radius: 2px;
+  background: #eef2ff;
+}
+
+.tool-icon-payment span:last-child {
+  top: 24px;
+  right: 12px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #eef2ff;
+}
+
 .tool-content {
   display: grid;
   min-width: 0;

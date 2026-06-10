@@ -48,6 +48,14 @@ export function openDatabase() {
   ensureMatchesTableSupportsOdds(db);
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS payment_settings (
+      type TEXT PRIMARY KEY CHECK(type IN ('iban', 'keks', 'revolut', 'cash')),
+      value TEXT NOT NULL DEFAULT '' CHECK(length(value) <= 200),
+      is_enabled INTEGER NOT NULL DEFAULT 0 CHECK(is_enabled IN (0, 1)),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS matches (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       match_number INTEGER NOT NULL UNIQUE,
@@ -87,6 +95,7 @@ export function openDatabase() {
     );
   `);
 
+  seedPaymentSettings(db);
   ensurePredictionsTableSupportsOddsSnapshot(db);
 
   db.prepare(
@@ -107,6 +116,27 @@ export function openDatabase() {
 }
 
 export type AppDatabase = ReturnType<typeof openDatabase>;
+
+function seedPaymentSettings(db: Database.Database) {
+  const rows: Array<{ type: string; isEnabled: 0 | 1 }> = [
+    { type: 'iban', isEnabled: 1 },
+    { type: 'keks', isEnabled: 1 },
+    { type: 'revolut', isEnabled: 1 },
+    { type: 'cash', isEnabled: 0 }
+  ];
+
+  const statement = db.prepare(
+    `
+      INSERT INTO payment_settings (type, is_enabled)
+      VALUES (?, ?)
+      ON CONFLICT(type) DO NOTHING
+    `
+  );
+
+  for (const row of rows) {
+    statement.run(row.type, row.isEnabled);
+  }
+}
 
 function ensureUsersTableSupportsAdminRole(db: Database.Database) {
   const existingTable = db
