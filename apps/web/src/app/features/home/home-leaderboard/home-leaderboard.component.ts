@@ -40,6 +40,7 @@ export class HomeLeaderboardComponent {
   private readonly leaderboardService = inject(LeaderboardService);
   private readonly leaderboardResponse = this.leaderboardService.leaderboard;
   protected readonly isLoggedIn = this.appState.isLoggedIn;
+  protected readonly currentUserId = computed(() => this.appState.currentUser()?.id ?? null);
 
   protected readonly leaderboard = computed<RankedLeaderboardResponse | null>(() => {
     const leaderboard = this.leaderboardResponse();

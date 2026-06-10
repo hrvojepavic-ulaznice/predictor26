@@ -18,8 +18,7 @@
       <table class="leaderboard-table">
         <thead>
           <tr>
-            <th class="rank-heading" rowspan="2" scope="col" aria-label="Rank"></th>
-            <th class="user-heading" rowspan="2" scope="col">User ({{ table.totalUsers }})</th>
+            <th class="users-heading" colspan="2" rowspan="2" scope="colgroup">Users ({{ table.totalUsers }})</th>
             @for (round of table.rounds; track round.label) {
               <th class="round-heading" colspan="2" scope="colgroup">{{ round.heading }}</th>
             }
@@ -34,9 +33,18 @@
         </thead>
         <tbody>
           @for (user of table.users; track user.id) {
-            <tr [class.top-three-row]="user.rank <= 3" [class.top-ranked-row]="user.rank === 1">
+            <tr
+              [class.current-user-row]="user.id === currentUserId()"
+              [class.top-three-row]="user.rank <= 3"
+              [class.top-ranked-row]="user.rank === 1"
+            >
               <td class="rank-cell">{{ user.rankLabel }}</td>
-              <th class="user-cell" scope="row">{{ user.username }}</th>
+              <th class="user-cell" scope="row">
+                @if (user.id === currentUserId()) {
+                  <span class="current-user-star" aria-label="Your row">★</span>
+                }
+                <span class="user-name-text">{{ user.username }}</span>
+              </th>
               @for (round of user.rounds; track round.label) {
                 <td>
                   @if (isLoggedIn() && round.viewable) {
