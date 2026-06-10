@@ -5,6 +5,7 @@ export interface AdminPaymentSettings {
   readonly revolut: string;
   readonly revolutFastPayUrl: string;
   readonly cashEnabled: boolean;
+  readonly showPaymentInfo: boolean;
 }
 
 export interface UpdateAdminPaymentSettingsRequest extends AdminPaymentSettings {

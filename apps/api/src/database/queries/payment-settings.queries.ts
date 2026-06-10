@@ -16,6 +16,11 @@ export interface UpdatePaymentSettingsInput {
   readonly revolut: string;
   readonly revolutFastPayUrl: string;
   readonly cashEnabled: boolean;
+  readonly showPaymentInfo: boolean;
+}
+
+export interface PaymentSettingsConfigRow {
+  readonly show_payment_info: 0 | 1;
 }
 
 export async function listPaymentSettings(): Promise<PaymentSettingRow[]> {
@@ -37,6 +42,24 @@ export async function listPaymentSettings(): Promise<PaymentSettingRow[]> {
       `
       )
       .all() as PaymentSettingRow[];
+  } finally {
+    db.close();
+  }
+}
+
+export async function getPaymentSettingsConfig(): Promise<PaymentSettingsConfigRow> {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+        SELECT show_payment_info
+        FROM payment_settings_config
+        WHERE id = 1
+      `
+      )
+      .get() as PaymentSettingsConfigRow;
   } finally {
     db.close();
   }
@@ -64,6 +87,13 @@ export async function updatePaymentSettings(input: UpdatePaymentSettingsInput): 
         'revolut'
       );
       updateStatement.run('', '', input.cashEnabled ? 1 : 0, 'cash');
+      db.prepare(
+        `
+          UPDATE payment_settings_config
+          SET show_payment_info = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = 1
+        `
+      ).run(input.showPaymentInfo ? 1 : 0);
     });
 
     transaction();

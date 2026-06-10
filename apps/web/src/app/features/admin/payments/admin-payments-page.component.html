@@ -61,6 +61,17 @@
         </span>
       </label>
 
+      <label class="cash-toggle payment-info-toggle">
+        <span class="toggle-copy">
+          <span>Show payment info</span>
+          <span>Display payment instructions to users who are not verified.</span>
+        </span>
+        <input type="checkbox" formControlName="showPaymentInfo" />
+        <span class="switch-track" aria-hidden="true">
+          <span class="switch-thumb"></span>
+        </span>
+      </label>
+
       <div class="form-actions">
         <button class="save-button" type="submit" [disabled]="saving() || paymentForm.invalid">
           {{ saving() ? 'Saving...' : 'Save payment settings' }}

@@ -6,7 +6,10 @@ import { interval } from 'rxjs';
 import { AppStateService } from '@core/state/app-state.service';
 import { MatchWithPrediction } from '@models/match.models';
 import { MatchesService } from '@services/matches.service';
+import { PaymentsService } from '@services/payments.service';
+import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
 import { HomeLeaderboardComponent } from './home-leaderboard/home-leaderboard.component';
+import { PaymentInfoModalComponent } from './payment-info-modal.component';
 
 interface NextPredictionDeadline {
   readonly label: string;
@@ -15,16 +18,22 @@ interface NextPredictionDeadline {
 
 @Component({
   selector: 'app-home-page',
-  imports: [HomeLeaderboardComponent, RouterLink],
+  imports: [HomeLeaderboardComponent, ModalShellComponent, PaymentInfoModalComponent, RouterLink],
   templateUrl: './home-page.component.html',
   styleUrl: './home-page.component.scss'
 })
 export class HomePageComponent {
   private readonly appState = inject(AppStateService);
   private readonly matchesService = inject(MatchesService);
+  private readonly paymentsService = inject(PaymentsService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly matches = this.matchesService.matches;
+  protected readonly paymentInfo = this.paymentsService.paymentInfo;
+  protected readonly paymentModalOpen = signal(false);
+  protected readonly showPaymentNotice = computed(
+    () => this.appState.isLoggedIn() && !this.appState.currentUser()?.isVerified && this.paymentInfo()?.visible === true
+  );
   protected readonly now = signal(Date.now());
   protected readonly nextPredictionDeadline = computed<NextPredictionDeadline | null>(() => {
     const now = this.now();
@@ -58,11 +67,27 @@ export class HomePageComponent {
 
     if (this.appState.isLoggedIn()) {
       this.loadMatches();
+
+      if (!this.appState.currentUser()?.isVerified) {
+        this.loadPaymentInfo();
+      }
     }
+  }
+
+  protected openPaymentModal(): void {
+    this.paymentModalOpen.set(true);
+  }
+
+  protected closePaymentModal(): void {
+    this.paymentModalOpen.set(false);
   }
 
   private loadMatches(): void {
     this.matchesService.ensureMatches()?.subscribe();
+  }
+
+  private loadPaymentInfo(): void {
+    this.paymentsService.ensurePaymentInfo().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }
 }
 

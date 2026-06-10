@@ -5,6 +5,7 @@ export interface AdminPaymentSettingsResponse {
   readonly revolut: string;
   readonly revolutFastPayUrl: string;
   readonly cashEnabled: boolean;
+  readonly showPaymentInfo: boolean;
 }
 
 export interface UpdateAdminPaymentSettingsRequest {
@@ -14,5 +15,6 @@ export interface UpdateAdminPaymentSettingsRequest {
   readonly revolut: string;
   readonly revolutFastPayUrl: string;
   readonly cashEnabled: boolean;
+  readonly showPaymentInfo: boolean;
   readonly secretCode: string;
 }

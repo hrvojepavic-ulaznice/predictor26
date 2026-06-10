@@ -2,6 +2,27 @@
   <p class="section-label">My Prediction Center</p>
 
   <nav class="home-action-grid" aria-label="Prediction actions">
+    @if (paymentInfo(); as info) {
+      @if (showPaymentNotice()) {
+        <button
+          class="action-card payment-notice"
+          type="button"
+          animate.enter="payment-notice-enter"
+          (click)="openPaymentModal()"
+        >
+          <span class="action-icon payment-notice-icon" aria-hidden="true">
+            <span></span>
+            <span></span>
+          </span>
+          <span class="action-content payment-notice-copy">
+            <span class="action-title">Payment info</span>
+            <span class="action-description payment-description-desktop">Click to see payment details</span>
+            <span class="action-description payment-description-mobile">Tap to see payment details</span>
+          </span>
+        </button>
+      }
+    }
+
     <a class="action-card" routerLink="/predictions">
       <span class="action-icon action-icon-post" aria-hidden="true">
         <span></span>
@@ -40,4 +61,16 @@
   </nav>
 
   <app-home-leaderboard />
+
+  @if (paymentModalOpen() && showPaymentNotice() && paymentInfo(); as info) {
+    <app-modal-shell
+      labelledBy="payment-info-title"
+      panelWidth="520px"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="closePaymentModal()"
+    >
+      <app-payment-info-modal [methods]="info.methods" (closeModal)="closePaymentModal()" />
+    </app-modal-shell>
+  }
 </section>

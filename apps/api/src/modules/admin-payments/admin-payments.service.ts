@@ -6,6 +6,7 @@ import {
 } from './admin-payments.interfaces.js';
 import {
   findPaymentSettingsForAdmin,
+  findPaymentSettingsConfigForAdmin,
   findSuperAdminForPaymentSecretCode,
   savePaymentSettingsForAdmin
 } from './admin-payments.repository.js';
@@ -27,7 +28,9 @@ export type UpdateAdminPaymentSettingsResult =
     };
 
 export async function getAdminPaymentSettings(): Promise<AdminPaymentSettingsResponse> {
-  return toPaymentSettingsResponse(await findPaymentSettingsForAdmin());
+  const [settings, config] = await Promise.all([findPaymentSettingsForAdmin(), findPaymentSettingsConfigForAdmin()]);
+
+  return toPaymentSettingsResponse(settings, config.show_payment_info === 1);
 }
 
 export async function changeAdminPaymentSettings(
@@ -40,6 +43,7 @@ export async function changeAdminPaymentSettings(
     typeof input.revolut !== 'string' ||
     typeof input.revolutFastPayUrl !== 'string' ||
     typeof input.cashEnabled !== 'boolean' ||
+    typeof input.showPaymentInfo !== 'boolean' ||
     typeof input.secretCode !== 'string' ||
     input.secretCode.length < 1 ||
     input.secretCode.length > secretCodeMaxLength
@@ -75,12 +79,15 @@ export async function changeAdminPaymentSettings(
     keksFastPayUrl,
     revolut,
     revolutFastPayUrl,
-    cashEnabled: input.cashEnabled
+    cashEnabled: input.cashEnabled,
+    showPaymentInfo: input.showPaymentInfo
   });
+
+  const config = await findPaymentSettingsConfigForAdmin();
 
   return {
     status: 'updated',
-    settings: toPaymentSettingsResponse(rows)
+    settings: toPaymentSettingsResponse(rows, config.show_payment_info === 1)
   };
 }
 
@@ -104,7 +111,10 @@ async function isValidSecretCode(secretCode: string): Promise<boolean> {
   return Boolean(superAdmin && verifyPassword(secretCode, superAdmin.password_hash));
 }
 
-function toPaymentSettingsResponse(rows: readonly PaymentSettingRow[]): AdminPaymentSettingsResponse {
+function toPaymentSettingsResponse(
+  rows: readonly PaymentSettingRow[],
+  showPaymentInfo: boolean
+): AdminPaymentSettingsResponse {
   const byType = new Map(rows.map((row) => [row.type, row]));
 
   return {
@@ -113,6 +123,7 @@ function toPaymentSettingsResponse(rows: readonly PaymentSettingRow[]): AdminPay
     keksFastPayUrl: byType.get('keks')?.fast_pay_url ?? '',
     revolut: byType.get('revolut')?.value ?? '',
     revolutFastPayUrl: byType.get('revolut')?.fast_pay_url ?? '',
-    cashEnabled: byType.get('cash')?.is_enabled === 1
+    cashEnabled: byType.get('cash')?.is_enabled === 1,
+    showPaymentInfo
   };
 }

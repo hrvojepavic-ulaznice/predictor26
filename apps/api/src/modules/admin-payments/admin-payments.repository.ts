@@ -1,4 +1,5 @@
 import {
+  getPaymentSettingsConfig,
   listPaymentSettings,
   updatePaymentSettings,
   UpdatePaymentSettingsInput
@@ -7,6 +8,10 @@ import { getSuperAdminUser } from '../../database/queries/users.queries.js';
 
 export async function findPaymentSettingsForAdmin() {
   return listPaymentSettings();
+}
+
+export async function findPaymentSettingsConfigForAdmin() {
+  return getPaymentSettingsConfig();
 }
 
 export async function savePaymentSettingsForAdmin(input: UpdatePaymentSettingsInput) {

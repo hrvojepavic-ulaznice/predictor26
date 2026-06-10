@@ -57,6 +57,13 @@ export function openDatabase() {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS payment_settings_config (
+      id INTEGER PRIMARY KEY CHECK(id = 1),
+      show_payment_info INTEGER NOT NULL DEFAULT 0 CHECK(show_payment_info IN (0, 1)),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS matches (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       match_number INTEGER NOT NULL UNIQUE,
@@ -97,6 +104,7 @@ export function openDatabase() {
   `);
 
   seedPaymentSettings(db);
+  seedPaymentSettingsConfig(db);
   ensurePaymentSettingsSupportsFastPayUrl(db);
   ensurePredictionsTableSupportsOddsSnapshot(db);
 
@@ -138,6 +146,16 @@ function seedPaymentSettings(db: Database.Database) {
   for (const row of rows) {
     statement.run(row.type, row.isEnabled);
   }
+}
+
+function seedPaymentSettingsConfig(db: Database.Database) {
+  db.prepare(
+    `
+      INSERT INTO payment_settings_config (id, show_payment_info)
+      VALUES (1, 0)
+      ON CONFLICT(id) DO NOTHING
+    `
+  ).run();
 }
 
 function ensurePaymentSettingsSupportsFastPayUrl(db: Database.Database) {

@@ -31,7 +31,8 @@ export class AdminPaymentsPageComponent {
     keksFastPayUrl: ['', [Validators.maxLength(500)]],
     revolut: ['', [Validators.maxLength(200)]],
     revolutFastPayUrl: ['', [Validators.maxLength(500)]],
-    cashEnabled: [false]
+    cashEnabled: [false],
+    showPaymentInfo: [false]
   });
 
   constructor() {
