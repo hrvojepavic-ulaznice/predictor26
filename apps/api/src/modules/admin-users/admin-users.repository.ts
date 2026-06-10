@@ -3,6 +3,7 @@ import {
   getUserById,
   getUserByUsername,
   listUsers,
+  updateUserVerification,
   updateUsername,
   updateUserRole,
   UserRole
@@ -30,4 +31,8 @@ export async function setUserRole(userId: number, role: Exclude<UserRole, 'super
 
 export async function setUsername(userId: number, username: string) {
   return updateUsername(userId, username);
+}
+
+export async function setUserVerification(userId: number, isVerified: boolean) {
+  return updateUserVerification(userId, isVerified);
 }

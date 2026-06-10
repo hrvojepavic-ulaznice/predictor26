@@ -70,9 +70,9 @@ h1 {
 
 .user-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(184px, auto);
+  grid-template-columns: minmax(0, 1fr) auto minmax(168px, auto) minmax(168px, auto);
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   padding: 16px;
 }
 
@@ -161,7 +161,7 @@ h1 {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  min-width: 184px;
+  min-width: 168px;
   border: 0;
   background: transparent;
   color: #374151;

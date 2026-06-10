@@ -5,4 +5,5 @@ export interface AuthUser {
   readonly lastname: string;
   readonly tiebreakerName: string | null;
   readonly role: 'super_admin' | 'admin' | 'user';
+  readonly isVerified: boolean;
 }

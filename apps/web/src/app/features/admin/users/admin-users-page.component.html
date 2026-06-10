@@ -54,6 +54,22 @@
               {{ user.role === 'admin' || user.role === 'super_admin' ? 'Admin enabled' : 'Admin disabled' }}
             </span>
           </button>
+
+          <button
+            class="role-switch verified-switch"
+            type="button"
+            role="switch"
+            [attr.aria-checked]="user.isVerified"
+            [disabled]="user.role === 'super_admin' || updatingUserIds().has(user.id)"
+            (click)="toggleVerification(user)"
+          >
+            <span class="switch-track">
+              <span class="switch-thumb"></span>
+            </span>
+            <span class="switch-label">
+              {{ user.isVerified ? 'Verified' : 'Not verified' }}
+            </span>
+          </button>
         </article>
       } @empty {
         <p class="status-message">No users found.</p>
@@ -78,6 +94,27 @@
         [isSubmitting]="isPendingRoleChangeSubmitting()"
         (confirmSecretCode)="confirmRoleChange($event)"
         (cancelModal)="cancelRoleChange()"
+      />
+    </app-modal-shell>
+  }
+
+  @if (pendingVerificationChange()) {
+    <app-modal-shell
+      labelledBy="secret-code-title"
+      panelWidth="420px"
+      [closeOnBackdrop]="true"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelVerificationChange()"
+    >
+      <app-secret-code-modal
+        title="Confirm verification change"
+        label="What is the secret code?"
+        confirmLabel="Apply change"
+        [errorMessage]="verificationSecretCodeErrorMessage()"
+        [isSubmitting]="isPendingVerificationChangeSubmitting()"
+        (confirmSecretCode)="confirmVerificationChange($event)"
+        (cancelModal)="cancelVerificationChange()"
       />
     </app-modal-shell>
   }

@@ -5,6 +5,7 @@ export interface AdminUser {
   readonly lastname: string;
   readonly tiebreakerName: string | null;
   readonly role: 'super_admin' | 'admin' | 'user';
+  readonly isVerified: boolean;
 }
 
 export interface AdminUsersResponse {
@@ -17,6 +18,15 @@ export interface UpdateUserRoleRequest {
 }
 
 export interface UpdateUserRoleResponse {
+  readonly user: AdminUser;
+}
+
+export interface UpdateUserVerificationRequest {
+  readonly isVerified: boolean;
+  readonly secretCode: string;
+}
+
+export interface UpdateUserVerificationResponse {
   readonly user: AdminUser;
 }
 

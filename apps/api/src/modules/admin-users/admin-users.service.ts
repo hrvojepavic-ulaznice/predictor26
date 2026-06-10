@@ -3,6 +3,7 @@ import { verifyPassword } from '../../shared/utils/password.js';
 import {
   AdminUserResponse,
   AdminUsersResponse,
+  UpdateUserVerificationRequest,
   UpdateUsernameRequest,
   UpdateUserRoleRequest
 } from './admin-users.interfaces.js';
@@ -11,6 +12,7 @@ import {
   findUserByUsernameForAdmin,
   findUserForAdmin,
   findUsersForAdmin,
+  setUserVerification,
   setUsername,
   setUserRole
 } from './admin-users.repository.js';
@@ -53,6 +55,24 @@ export type UpdateUsernameResult =
     }
   | {
       readonly status: 'username_taken';
+    }
+  | {
+      readonly status: 'invalid_secret';
+    };
+
+export type UpdateUserVerificationResult =
+  | {
+      readonly status: 'updated';
+      readonly user: AdminUserResponse;
+    }
+  | {
+      readonly status: 'invalid';
+    }
+  | {
+      readonly status: 'not_found';
+    }
+  | {
+      readonly status: 'protected_role';
     }
   | {
       readonly status: 'invalid_secret';
@@ -154,6 +174,47 @@ export async function changeUsername(
   };
 }
 
+export async function changeUserVerification(
+  userId: number,
+  input: Partial<UpdateUserVerificationRequest> | undefined
+): Promise<UpdateUserVerificationResult> {
+  if (
+    !Number.isInteger(userId) ||
+    userId < 1 ||
+    typeof input?.isVerified !== 'boolean' ||
+    typeof input.secretCode !== 'string' ||
+    input.secretCode.length < 1 ||
+    input.secretCode.length > secretCodeMaxLength
+  ) {
+    return { status: 'invalid' };
+  }
+
+  if (!(await isValidSecretCode(input.secretCode))) {
+    return { status: 'invalid_secret' };
+  }
+
+  const targetUser = await findUserForAdmin(userId);
+
+  if (!targetUser) {
+    return { status: 'not_found' };
+  }
+
+  if (targetUser.role === 'super_admin') {
+    return { status: 'protected_role' };
+  }
+
+  const user = await setUserVerification(userId, input.isVerified);
+
+  if (!user) {
+    return { status: 'not_found' };
+  }
+
+  return {
+    status: 'updated',
+    user: toAdminUserResponse(user)
+  };
+}
+
 async function isValidSecretCode(secretCode: string): Promise<boolean> {
   const superAdmin = await findSuperAdminForSecretCode();
 
@@ -167,6 +228,7 @@ function toAdminUserResponse(user: UserRow): AdminUserResponse {
     name: user.first_name,
     lastname: user.last_name,
     tiebreakerName: user.tiebreaker_name,
-    role: user.role
+    role: user.role,
+    isVerified: user.is_verified === 1
   };
 }

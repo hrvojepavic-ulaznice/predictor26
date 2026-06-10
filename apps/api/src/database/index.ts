@@ -31,6 +31,7 @@ export function openDatabase() {
       tiebreaker_name TEXT CHECK(tiebreaker_name IS NULL OR length(tiebreaker_name) BETWEEN 1 AND 80),
       password_hash TEXT NOT NULL CHECK(length(password_hash) <= 255),
       role TEXT NOT NULL CHECK(role IN ('super_admin', 'admin', 'user')),
+      is_verified INTEGER NOT NULL DEFAULT 0 CHECK(is_verified IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -43,6 +44,7 @@ export function openDatabase() {
   `);
 
   ensureUsersTableSupportsTiebreaker(db);
+  ensureUsersTableSupportsVerification(db);
   ensureMatchesTableSupportsOdds(db);
 
   db.exec(`
@@ -175,6 +177,17 @@ function ensureUsersTableSupportsTiebreaker(db: Database.Database) {
   db.exec(
     'ALTER TABLE users ADD COLUMN tiebreaker_name TEXT CHECK(tiebreaker_name IS NULL OR length(tiebreaker_name) BETWEEN 1 AND 80)'
   );
+}
+
+function ensureUsersTableSupportsVerification(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columns.length === 0 || columnNames.has('is_verified')) {
+    return;
+  }
+
+  db.exec('ALTER TABLE users ADD COLUMN is_verified INTEGER NOT NULL DEFAULT 0 CHECK(is_verified IN (0, 1))');
 }
 
 function ensureMatchesTableSupportsOdds(db: Database.Database) {

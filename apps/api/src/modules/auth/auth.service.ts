@@ -52,7 +52,8 @@ export async function login(credentials: Partial<LoginRequest> | undefined): Pro
     name: user.first_name,
     lastname: user.last_name,
     tiebreakerName: user.tiebreaker_name,
-    role: user.role
+    role: user.role,
+    isVerified: user.is_verified === 1
   };
 
   return {
@@ -131,7 +132,8 @@ export async function register(input: Partial<RegisterRequest> | undefined): Pro
         name: user.first_name,
         lastname: user.last_name,
         tiebreakerName: user.tiebreaker_name,
-        role: user.role
+        role: user.role,
+        isVerified: user.is_verified === 1
       }
     }
   };

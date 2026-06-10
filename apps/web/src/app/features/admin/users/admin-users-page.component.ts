@@ -14,6 +14,11 @@ interface PendingRoleChange {
   readonly nextRole: 'admin' | 'user';
 }
 
+interface PendingVerificationChange {
+  readonly user: AdminUser;
+  readonly nextIsVerified: boolean;
+}
+
 @Component({
   selector: 'app-admin-users-page',
   imports: [RouterLink, AdminUsernameModalComponent, ModalShellComponent, SecretCodeModalComponent],
@@ -29,8 +34,10 @@ export class AdminUsersPageComponent {
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly secretCodeErrorMessage = signal<string | null>(null);
+  protected readonly verificationSecretCodeErrorMessage = signal<string | null>(null);
   protected readonly usernameErrorMessage = signal<string | null>(null);
   protected readonly pendingRoleChange = signal<PendingRoleChange | null>(null);
+  protected readonly pendingVerificationChange = signal<PendingVerificationChange | null>(null);
   protected readonly pendingUsernameChange = signal<AdminUser | null>(null);
   protected readonly updatingUserIds = signal<ReadonlySet<number>>(new Set<number>());
 
@@ -57,6 +64,16 @@ export class AdminUsersPageComponent {
     this.errorMessage.set(null);
     this.usernameErrorMessage.set(null);
     this.pendingUsernameChange.set(user);
+  }
+
+  protected toggleVerification(user: AdminUser): void {
+    if (user.role === 'super_admin' || this.updatingUserIds().has(user.id)) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.verificationSecretCodeErrorMessage.set(null);
+    this.pendingVerificationChange.set({ user, nextIsVerified: !user.isVerified });
   }
 
   protected cancelRoleChange(): void {
@@ -113,6 +130,58 @@ export class AdminUsersPageComponent {
     const pendingRoleChange = this.pendingRoleChange();
 
     return pendingRoleChange ? this.updatingUserIds().has(pendingRoleChange.user.id) : false;
+  }
+
+  protected cancelVerificationChange(): void {
+    if (this.pendingVerificationChange() && !this.isPendingVerificationChangeSubmitting()) {
+      this.pendingVerificationChange.set(null);
+      this.verificationSecretCodeErrorMessage.set(null);
+    }
+  }
+
+  protected confirmVerificationChange(secretCode: string): void {
+    const pendingVerificationChange = this.pendingVerificationChange();
+
+    if (!pendingVerificationChange || this.updatingUserIds().has(pendingVerificationChange.user.id)) {
+      return;
+    }
+
+    const { user, nextIsVerified } = pendingVerificationChange;
+    this.setUpdating(user.id, true);
+    this.errorMessage.set(null);
+    this.verificationSecretCodeErrorMessage.set(null);
+
+    this.adminUsersApi.updateUserVerification(user.id, { isVerified: nextIsVerified, secretCode }).subscribe({
+      next: ({ user: updatedUser }) => {
+        this.users.update((users) =>
+          users.map((currentUser) => (currentUser.id === updatedUser.id ? updatedUser : currentUser))
+        );
+        this.appState.updateCurrentUser(updatedUser);
+        this.pendingVerificationChange.set(null);
+        this.setUpdating(user.id, false);
+      },
+      error: (error: unknown) => {
+        const message =
+          error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+            ? error.error.message
+            : 'Verification update failed. Please try again.';
+
+        if (error instanceof HttpErrorResponse && error.status === 403) {
+          this.verificationSecretCodeErrorMessage.set(message);
+        } else {
+          this.errorMessage.set(message);
+          this.pendingVerificationChange.set(null);
+        }
+
+        this.setUpdating(user.id, false);
+      }
+    });
+  }
+
+  protected isPendingVerificationChangeSubmitting(): boolean {
+    const pendingVerificationChange = this.pendingVerificationChange();
+
+    return pendingVerificationChange ? this.updatingUserIds().has(pendingVerificationChange.user.id) : false;
   }
 
   protected cancelUsernameChange(): void {

@@ -6,7 +6,9 @@ import {
   UpdateUsernameRequest,
   UpdateUsernameResponse,
   UpdateUserRoleRequest,
-  UpdateUserRoleResponse
+  UpdateUserRoleResponse,
+  UpdateUserVerificationRequest,
+  UpdateUserVerificationResponse
 } from '@models/admin-user.models';
 
 @Injectable({
@@ -25,5 +27,9 @@ export class AdminUsersApiProvider {
 
   updateUsername(userId: number, request: UpdateUsernameRequest) {
     return this.http.patch<UpdateUsernameResponse>(`/api/admin/users/${userId}/username`, request);
+  }
+
+  updateUserVerification(userId: number, request: UpdateUserVerificationRequest) {
+    return this.http.patch<UpdateUserVerificationResponse>(`/api/admin/users/${userId}/verification`, request);
   }
 }

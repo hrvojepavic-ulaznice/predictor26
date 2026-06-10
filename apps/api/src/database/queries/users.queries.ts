@@ -8,6 +8,7 @@ export interface UserRow {
   readonly tiebreaker_name: string | null;
   readonly password_hash: string;
   readonly role: 'super_admin' | 'admin' | 'user';
+  readonly is_verified: 0 | 1;
 }
 
 export type UserRole = UserRow['role'];
@@ -28,7 +29,7 @@ export async function getUserByUsername(username: string): Promise<UserRow | und
     return db
       .prepare(
       `
-        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role, is_verified
         FROM users
         WHERE username = ?
       `
@@ -46,7 +47,7 @@ export async function getUserById(id: number): Promise<UserRow | undefined> {
     return db
       .prepare(
         `
-        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role, is_verified
         FROM users
         WHERE id = ?
       `
@@ -64,7 +65,7 @@ export async function listUsers(): Promise<UserRow[]> {
     return db
       .prepare(
         `
-        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role, is_verified
         FROM users
         ORDER BY username COLLATE NOCASE ASC
       `
@@ -82,7 +83,7 @@ export async function getSuperAdminUser(): Promise<UserRow | undefined> {
     return db
       .prepare(
         `
-        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role, is_verified
         FROM users
         WHERE role = 'super_admin'
         ORDER BY id ASC
@@ -118,7 +119,7 @@ export async function createUser(input: CreateUserInput): Promise<UserRow> {
     const user = db
       .prepare(
       `
-        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role, is_verified
         FROM users
         WHERE id = ?
       `
@@ -150,7 +151,7 @@ export async function updateUserRole(id: number, role: Exclude<UserRole, 'super_
     return db
       .prepare(
         `
-        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role, is_verified
         FROM users
         WHERE id = ?
       `
@@ -176,7 +177,33 @@ export async function updateUsername(id: number, username: string): Promise<User
     return db
       .prepare(
         `
-        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role, is_verified
+        FROM users
+        WHERE id = ?
+      `
+      )
+      .get(id) as UserRow | undefined;
+  } finally {
+    db.close();
+  }
+}
+
+export async function updateUserVerification(id: number, isVerified: boolean): Promise<UserRow | undefined> {
+  const db = openDatabase();
+
+  try {
+    db.prepare(
+      `
+        UPDATE users
+        SET is_verified = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND role != 'super_admin'
+      `
+    ).run(isVerified ? 1 : 0, id);
+
+    return db
+      .prepare(
+        `
+        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role, is_verified
         FROM users
         WHERE id = ?
       `
