@@ -1,7 +1,8 @@
 import { Router } from 'express';
 
-import { getLeaderboardController } from './leaderboard.controller.js';
+import { getLeaderboardController, getLeaderboardUserRoundController } from './leaderboard.controller.js';
 
 export const leaderboardRoutes = Router();
 
 leaderboardRoutes.get('/leaderboard', getLeaderboardController);
+leaderboardRoutes.get('/leaderboard/users/:userId/rounds/:roundLabel', getLeaderboardUserRoundController);

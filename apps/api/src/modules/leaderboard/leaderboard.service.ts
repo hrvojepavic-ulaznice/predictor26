@@ -3,6 +3,7 @@ import { LeaderboardPredictionRow } from '../../database/queries/leaderboard.que
 import {
   LeaderboardPredictionPointsResponse,
   LeaderboardResponse,
+  LeaderboardUserRoundDetailsResponse,
   LeaderboardRoundMatchResponse,
   LeaderboardRoundResponse,
   LeaderboardUserResponse
@@ -17,7 +18,7 @@ interface RoundSummary {
   readonly matches: MatchRow[];
 }
 
-export async function getLeaderboard(viewerUserId: number | null = null): Promise<LeaderboardResponse> {
+export async function getLeaderboard(): Promise<LeaderboardResponse> {
   const matches = findLeaderboardMatches();
   const roundSummaries = getRoundSummaries(matches);
   const users = findLeaderboardUsers();
@@ -33,7 +34,7 @@ export async function getLeaderboard(viewerUserId: number | null = null): Promis
     users: users
       .map<LeaderboardUserResponse>((user) => {
         const userPredictions = predictionsByUser.get(user.id) ?? [];
-        const rounds = roundSummaries.map((round) => getUserRoundSummary(round, userPredictions, user.id === viewerUserId));
+        const rounds = roundSummaries.map((round) => getUserRoundSummary(round, userPredictions));
         const totalPoints = roundPoints(rounds.reduce((total, round) => total + round.points, 0));
 
         return {
@@ -52,6 +53,39 @@ export async function getLeaderboard(viewerUserId: number | null = null): Promis
 
         return firstUser.username.localeCompare(secondUser.username, undefined, { sensitivity: 'base' });
       })
+  };
+}
+
+export async function getLeaderboardUserRoundDetails(
+  userId: number,
+  roundLabel: string,
+  viewerUserId: number | null
+): Promise<LeaderboardUserRoundDetailsResponse | null> {
+  if (!Number.isInteger(userId) || userId < 1 || !roundLabel) {
+    return null;
+  }
+
+  const round = getRoundSummaries(findLeaderboardMatches()).find((currentRound) => currentRound.label === roundLabel);
+
+  if (!round?.viewable || viewerUserId === null) {
+    return null;
+  }
+
+  const user = findLeaderboardUsers().find((currentUser) => currentUser.id === userId);
+
+  if (!user) {
+    return null;
+  }
+
+  const predictions = findLeaderboardPredictions().filter((prediction) => prediction.user_id === userId);
+  const roundPredictions = predictions.filter((prediction) => getPredictionRound(prediction) === round.label);
+  const roundMatches = getLeaderboardRoundMatches(round, roundPredictions);
+
+  return {
+    round: {
+      ...getUserRoundSummary(round, predictions),
+      matches: getRoundMatchesForVisibility(round, roundPredictions, roundMatches, user.id === viewerUserId)
+    }
   };
 }
 
@@ -79,12 +113,10 @@ function getRoundSummaries(matches: readonly MatchRow[]): RoundSummary[] {
 
 function getUserRoundSummary(
   round: RoundSummary,
-  predictions: readonly LeaderboardPredictionRow[],
-  isViewerUser: boolean
+  predictions: readonly LeaderboardPredictionRow[]
 ): LeaderboardRoundResponse {
   const roundPredictions = predictions.filter((prediction) => getPredictionRound(prediction) === round.label);
   const roundMatches = getLeaderboardRoundMatches(round, roundPredictions);
-  const matches = getRoundMatchesForVisibility(round, roundPredictions, roundMatches, isViewerUser);
 
   return {
     label: round.label,
@@ -92,8 +124,7 @@ function getUserRoundSummary(
     expectedCount: round.expectedCount,
     points: roundPoints(roundMatches.reduce((total, match) => total + (match.points.earned ?? 0), 0)),
     locked: round.locked,
-    viewable: round.viewable,
-    matches
+    viewable: round.viewable
   };
 }
 

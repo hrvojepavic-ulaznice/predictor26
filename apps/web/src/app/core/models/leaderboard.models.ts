@@ -33,6 +33,9 @@ export interface LeaderboardRound {
   readonly points: number;
   readonly locked: boolean;
   readonly viewable: boolean;
+}
+
+export interface LeaderboardRoundDetails extends LeaderboardRound {
   readonly matches: LeaderboardRoundMatch[];
 }
 
@@ -47,4 +50,8 @@ export interface LeaderboardResponse {
   readonly rounds: LeaderboardRoundMetadata[];
   readonly users: LeaderboardUser[];
   readonly totalUsers: number;
+}
+
+export interface LeaderboardUserRoundDetailsResponse {
+  readonly round: LeaderboardRoundDetails;
 }

@@ -1,7 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, of, tap } from 'rxjs';
 
-import { LeaderboardResponse } from '@models/leaderboard.models';
+import { LeaderboardResponse, LeaderboardRoundDetails, LeaderboardUserRoundDetailsResponse } from '@models/leaderboard.models';
 import { LeaderboardApiProvider } from '@services/providers/leaderboard-api.provider';
 
 interface EnsureLeaderboardOptions {
@@ -15,6 +15,7 @@ export class LeaderboardService {
   private readonly leaderboardApi = inject(LeaderboardApiProvider);
   private readonly leaderboardSignal = signal<LeaderboardResponse | null>(null);
   private readonly loadedSignal = signal(false);
+  private readonly roundDetailsCache = new Map<string, LeaderboardRoundDetails>();
 
   readonly leaderboard = this.leaderboardSignal.asReadonly();
   readonly loaded = this.loadedSignal.asReadonly();
@@ -32,7 +33,58 @@ export class LeaderboardService {
       tap((leaderboard) => {
         this.leaderboardSignal.set(leaderboard);
         this.loadedSignal.set(true);
+        this.roundDetailsCache.clear();
       })
     );
+  }
+
+  ensureUserRoundDetails(userId: number, roundLabel: string): Observable<LeaderboardUserRoundDetailsResponse> {
+    const cacheKey = this.getRoundDetailsCacheKey(userId, roundLabel);
+    const cachedRound = this.roundDetailsCache.get(cacheKey);
+
+    if (cachedRound) {
+      return of({ round: cachedRound });
+    }
+
+    return this.leaderboardApi.getUserRoundDetails(userId, roundLabel).pipe(
+      tap(({ round }) => {
+        this.roundDetailsCache.set(cacheKey, round);
+      })
+    );
+  }
+
+  recordPredictionSaved(userId: number, roundLabel: string, hadPredictionBefore: boolean): void {
+    if (!hadPredictionBefore) {
+      this.leaderboardSignal.update((leaderboard) => {
+        if (!leaderboard) {
+          return leaderboard;
+        }
+
+        return {
+          ...leaderboard,
+          users: leaderboard.users.map((user) =>
+            user.id === userId
+              ? {
+                  ...user,
+                  rounds: user.rounds.map((round) =>
+                    round.label === roundLabel
+                      ? {
+                          ...round,
+                          submittedCount: Math.min(round.expectedCount, round.submittedCount + 1)
+                        }
+                      : round
+                  )
+                }
+              : user
+          )
+        };
+      });
+    }
+
+    this.roundDetailsCache.delete(this.getRoundDetailsCacheKey(userId, roundLabel));
+  }
+
+  private getRoundDetailsCacheKey(userId: number, roundLabel: string): string {
+    return `${userId}:${roundLabel}`;
   }
 }

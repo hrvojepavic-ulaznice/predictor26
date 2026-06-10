@@ -50,7 +50,7 @@ h2 {
 
 .tip-row {
   display: grid;
-  grid-template-columns: minmax(0, 0.5fr) auto minmax(0, 1fr) auto;
+  grid-template-columns: 0.35fr 0.10fr 0.35fr 0.30fr;
   align-items: center;
   gap: 10px;
   padding: 10px 20px;
@@ -94,6 +94,7 @@ h2 {
   font-size: 0.95rem;
   font-weight: 900;
   white-space: nowrap;
+  text-align: right;
 }
 
 .empty-message {
@@ -103,25 +104,43 @@ h2 {
 }
 
 .modal-footer {
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 14px;
   border-top: 1px solid #e5e7eb;
 }
 
 .close-button {
-  min-width: 110px;
+  min-width: 86px;
   border: 0;
   border-radius: 8px;
   background: #111827;
   color: #ffffff;
   cursor: pointer;
   font: inherit;
-  font-weight: 700;
-  padding: 10px 14px;
+  font-size: 0.9rem;
+  font-weight: 750;
+  padding: 8px 12px;
+}
+
+.total-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.total-label,
+.total-value {
+  color: #111827;
+  font-weight: 900;
+}
+
+.total-value {
+  margin-left: 2px;
 }
 
 @media (max-width: 560px) {
   .tip-row {
-    grid-template-columns: 0.35fr 0.10fr 0.35fr 0.30fr;
     gap: 6px;
     padding: 9px 12px;
   }
@@ -139,6 +158,14 @@ h2 {
 
   .points-value {
     font-size: 0.74rem;
-    text-align: right;
+  }
+
+  .modal-footer {
+    gap: 10px;
+    padding: 14px 12px;
+  }
+
+  .close-button {
+    min-width: 92px;
   }
 }

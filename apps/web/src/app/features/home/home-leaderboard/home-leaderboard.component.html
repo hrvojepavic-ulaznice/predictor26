@@ -40,7 +40,12 @@
               @for (round of user.rounds; track round.label) {
                 <td>
                   @if (isLoggedIn() && round.viewable) {
-                    <button class="tips-button" type="button" (click)="openRound(user, round)">
+                    <button
+                      class="tips-button"
+                      type="button"
+                      [disabled]="isOpeningRound(user, round)"
+                      (click)="openRound(user, round)"
+                    >
                       {{ round.submittedCount }}/{{ round.expectedCount }}
                     </button>
                   } @else {

@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 
-import { LeaderboardResponse, LeaderboardRound, LeaderboardUser } from '@models/leaderboard.models';
+import { LeaderboardResponse, LeaderboardRound, LeaderboardRoundDetails, LeaderboardUser } from '@models/leaderboard.models';
 import { AppStateService } from '@core/state/app-state.service';
 import { LeaderboardService } from '@services/leaderboard.service';
 import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
@@ -26,7 +26,7 @@ interface RankedLeaderboardResponse extends Omit<LeaderboardResponse, 'rounds' |
 
 interface SelectedLeaderboardRound {
   readonly user: RankedLeaderboardUser;
-  readonly round: LeaderboardRound;
+  readonly round: LeaderboardRoundDetails;
 }
 
 @Component({
@@ -53,6 +53,7 @@ export class HomeLeaderboardComponent {
 
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly openingRoundKey = signal<string | null>(null);
   protected readonly selectedRound = signal<SelectedLeaderboardRound | null>(null);
 
   constructor() {
@@ -125,15 +126,36 @@ export class HomeLeaderboardComponent {
   }
 
   protected openRound(user: RankedLeaderboardUser, round: LeaderboardRound): void {
-    if (!this.isLoggedIn() || !round.viewable) {
+    if (!this.isLoggedIn() || !round.viewable || this.openingRoundKey()) {
       return;
     }
 
-    this.selectedRound.set({ user, round });
+    const roundKey = this.getRoundKey(user.id, round.label);
+    this.openingRoundKey.set(roundKey);
+    this.errorMessage.set(null);
+
+    this.leaderboardService.ensureUserRoundDetails(user.id, round.label).subscribe({
+      next: ({ round: roundDetails }) => {
+        this.selectedRound.set({ user, round: roundDetails });
+        this.openingRoundKey.set(null);
+      },
+      error: () => {
+        this.errorMessage.set('Round tips could not be loaded.');
+        this.openingRoundKey.set(null);
+      }
+    });
   }
 
   protected closeRound(): void {
     this.selectedRound.set(null);
+  }
+
+  protected isOpeningRound(user: RankedLeaderboardUser, round: LeaderboardRound): boolean {
+    return this.openingRoundKey() === this.getRoundKey(user.id, round.label);
+  }
+
+  private getRoundKey(userId: number, roundLabel: string): string {
+    return `${userId}:${roundLabel}`;
   }
 
   private getRoundHeading(round: string): string {

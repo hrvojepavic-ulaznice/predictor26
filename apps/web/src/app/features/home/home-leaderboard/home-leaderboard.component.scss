@@ -215,6 +215,11 @@ td {
   outline-offset: 1px;
 }
 
+.tips-button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
 .empty-cell {
   color: #6b7280;
   font-weight: 650;

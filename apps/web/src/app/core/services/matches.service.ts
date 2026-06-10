@@ -1,7 +1,8 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { catchError, map, Observable, of, switchMap, tap } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 
 import { MatchWithPrediction, MatchesResponse, SavePredictionRequest, SavePredictionResponse } from '@models/match.models';
+import { AppStateService } from '@core/state/app-state.service';
 import { LeaderboardService } from '@services/leaderboard.service';
 import { MatchesApiProvider } from '@services/providers/matches-api.provider';
 
@@ -13,6 +14,7 @@ interface EnsureMatchesOptions {
   providedIn: 'root'
 })
 export class MatchesService {
+  private readonly appState = inject(AppStateService);
   private readonly matchesApi = inject(MatchesApiProvider);
   private readonly leaderboardService = inject(LeaderboardService);
   private readonly matchesSignal = signal<MatchWithPrediction[]>([]);
@@ -55,6 +57,11 @@ export class MatchesService {
   }
 
   savePrediction(matchId: number, request: SavePredictionRequest): Observable<SavePredictionResponse> {
+    const existingMatch = this.matchesSignal().find((match) => match.id === matchId);
+    const hadPredictionBefore = existingMatch?.prediction !== null;
+    const predictionRound = existingMatch?.predictionRound;
+    const userId = this.appState.currentUser()?.id;
+
     return this.matchesApi.savePrediction(matchId, request).pipe(
       tap(({ prediction }) => {
         this.matchesSignal.update((matches) =>
@@ -67,13 +74,10 @@ export class MatchesService {
             : match
           )
         );
-      }),
-      switchMap((response) =>
-        this.leaderboardService.refreshLeaderboard().pipe(
-          catchError(() => of(null)),
-          map(() => response)
-        )
-      )
+        if (userId && predictionRound) {
+          this.leaderboardService.recordPredictionSaved(userId, predictionRound, hadPredictionBefore === true);
+        }
+      })
     );
   }
 
