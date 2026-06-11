@@ -8,6 +8,19 @@ export interface LeaderboardRoundMetadataResponse {
   readonly viewable: boolean;
 }
 
+export interface LeaderboardLiveMatchResponse {
+  readonly matchId: number;
+  readonly matchNumber: number;
+  readonly kickoffAt: string;
+  readonly homeTeam: TeamSlotResponse;
+  readonly awayTeam: TeamSlotResponse;
+}
+
+export interface LeaderboardLivePredictionResponse {
+  readonly matchId: number;
+  readonly prediction: PredictionResponse | null;
+}
+
 export interface LeaderboardPredictionPointsResponse {
   readonly earned: number | null;
   readonly available: number | null;
@@ -43,11 +56,13 @@ export interface LeaderboardUserResponse {
   readonly id: number;
   readonly username: string;
   readonly totalPoints: number;
+  readonly livePredictions: LeaderboardLivePredictionResponse[];
   readonly rounds: LeaderboardRoundResponse[];
 }
 
 export interface LeaderboardResponse {
   readonly rounds: LeaderboardRoundMetadataResponse[];
+  readonly liveMatches: LeaderboardLiveMatchResponse[];
   readonly users: LeaderboardUserResponse[];
   readonly totalUsers: number;
 }

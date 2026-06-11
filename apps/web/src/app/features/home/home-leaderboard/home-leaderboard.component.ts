@@ -1,7 +1,13 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 
-import { LeaderboardResponse, LeaderboardRound, LeaderboardRoundDetails, LeaderboardUser } from '@models/leaderboard.models';
+import {
+  LeaderboardLiveMatch,
+  LeaderboardResponse,
+  LeaderboardRound,
+  LeaderboardRoundDetails,
+  LeaderboardUser
+} from '@models/leaderboard.models';
 import { AppStateService } from '@core/state/app-state.service';
 import { LeaderboardService } from '@services/leaderboard.service';
 import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
@@ -12,6 +18,10 @@ interface RankedLeaderboardUser extends LeaderboardUser {
   readonly rankLabel: string;
 }
 
+interface LeaderboardLiveMatchHeading extends LeaderboardLiveMatch {
+  readonly label: string;
+}
+
 interface LeaderboardRoundHeading {
   readonly label: string;
   readonly heading: string;
@@ -19,7 +29,8 @@ interface LeaderboardRoundHeading {
   readonly viewable: boolean;
 }
 
-interface RankedLeaderboardResponse extends Omit<LeaderboardResponse, 'rounds' | 'users'> {
+interface RankedLeaderboardResponse extends Omit<LeaderboardResponse, 'liveMatches' | 'rounds' | 'users'> {
+  readonly liveMatches: LeaderboardLiveMatchHeading[];
   readonly rounds: LeaderboardRoundHeading[];
   readonly users: RankedLeaderboardUser[];
 }
@@ -89,6 +100,10 @@ export class HomeLeaderboardComponent {
 
     return {
       ...leaderboard,
+      liveMatches: leaderboard.liveMatches.map((match) => ({
+        ...match,
+        label: this.getLiveMatchLabel(match)
+      })),
       rounds: leaderboard.rounds.map((round) => ({
         label: round.label,
         heading: this.getRoundHeading(round.label),
@@ -153,6 +168,21 @@ export class HomeLeaderboardComponent {
 
   protected isOpeningRound(user: RankedLeaderboardUser, round: LeaderboardRound): boolean {
     return this.openingRoundKey() === this.getRoundKey(user.id, round.label);
+  }
+
+  private getLiveMatchLabel(match: LeaderboardLiveMatch): string {
+    return `${this.teamLabel(match.homeTeam)} - ${this.teamLabel(match.awayTeam)}`;
+  }
+
+  private teamLabel(team: LeaderboardLiveMatch['homeTeam']): string {
+    const shortName = team.name
+      .split(/\s+/)
+      .map((part) => part[0])
+      .join('')
+      .slice(0, 3)
+      .toUpperCase();
+
+    return `${team.flag ?? ''} ${shortName || team.name.slice(0, 3).toUpperCase()}`.trim();
   }
 
   private getRoundKey(userId: number, roundLabel: string): string {

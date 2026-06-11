@@ -313,13 +313,13 @@ function filterMatches(matches: readonly Match[], filter: MatchFilter): Match[] 
 }
 
 function isRequiredAction(match: Match): boolean {
-  const twoHoursMs = 2 * 60 * 60 * 1_000;
+  const matchSettlementWindowMs = (2 * 60 + 55) * 60 * 1_000;
 
-  return match.finalScore === null && Date.now() - Date.parse(match.kickoffAt) >= twoHoursMs;
+  return match.finalScore === null && Date.now() - Date.parse(match.kickoffAt) >= matchSettlementWindowMs;
 }
 
 function isInactive(match: Match): boolean {
-  const twoHoursMs = 2 * 60 * 60 * 1_000;
+  const matchSettlementWindowMs = (2 * 60 + 55) * 60 * 1_000;
 
-  return match.finalScore !== null && Date.now() - Date.parse(match.kickoffAt) >= twoHoursMs;
+  return match.finalScore !== null && Date.now() - Date.parse(match.kickoffAt) >= matchSettlementWindowMs;
 }

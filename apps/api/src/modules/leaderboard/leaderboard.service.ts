@@ -1,6 +1,7 @@
 import { MatchRow } from '../../database/queries/matches.queries.js';
 import { LeaderboardPredictionRow } from '../../database/queries/leaderboard.queries.js';
 import {
+  LeaderboardLiveMatchResponse,
   LeaderboardPredictionPointsResponse,
   LeaderboardResponse,
   LeaderboardUserRoundDetailsResponse,
@@ -18,9 +19,12 @@ interface RoundSummary {
   readonly matches: MatchRow[];
 }
 
+const assumedMatchDurationMs = (2 * 60 + 55) * 60 * 1_000;
+
 export async function getLeaderboard(): Promise<LeaderboardResponse> {
   const matches = findLeaderboardMatches();
   const roundSummaries = getRoundSummaries(matches);
+  const liveMatches = getLiveMatches(matches);
   const users = findLeaderboardUsers();
   const predictionsByUser = groupPredictionsByUser(findLeaderboardPredictions());
 
@@ -30,6 +34,7 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
       locked: round.locked,
       viewable: round.viewable
     })),
+    liveMatches: liveMatches.map(toLiveMatchResponse),
     totalUsers: users.length,
     users: users
       .map<LeaderboardUserResponse>((user) => {
@@ -41,6 +46,7 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
           id: user.id,
           username: user.username,
           totalPoints,
+          livePredictions: getUserLivePredictions(liveMatches, userPredictions),
           rounds
         };
       })
@@ -54,6 +60,51 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
         return firstUser.username.localeCompare(secondUser.username, undefined, { sensitivity: 'base' });
       })
   };
+}
+
+function getLiveMatches(matches: readonly MatchRow[]): MatchRow[] {
+  const now = Date.now();
+
+  return matches.filter(
+    (match) =>
+      Date.parse(match.kickoff_at) <= now && !isSettledForLiveLeaderboard(match, now)
+  );
+}
+
+function isSettledForLiveLeaderboard(match: MatchRow, now: number): boolean {
+  return (
+    match.final_home_score !== null &&
+    match.final_away_score !== null &&
+    now - Date.parse(match.kickoff_at) >= assumedMatchDurationMs
+  );
+}
+
+function toLiveMatchResponse(match: MatchRow): LeaderboardLiveMatchResponse {
+  return {
+    matchId: match.id,
+    matchNumber: match.match_number,
+    kickoffAt: match.kickoff_at,
+    homeTeam: {
+      name: match.home_team_name,
+      flag: match.home_team_flag
+    },
+    awayTeam: {
+      name: match.away_team_name,
+      flag: match.away_team_flag
+    }
+  };
+}
+
+function getUserLivePredictions(
+  liveMatches: readonly MatchRow[],
+  predictions: readonly LeaderboardPredictionRow[]
+): LeaderboardUserResponse['livePredictions'] {
+  const predictionsByMatchId = new Map(predictions.map((prediction) => [prediction.match_id, prediction]));
+
+  return liveMatches.map((match) => ({
+    matchId: match.id,
+    prediction: predictionsByMatchId.has(match.id) ? toPredictionResponse(predictionsByMatchId.get(match.id)!) : null
+  }));
 }
 
 export async function getLeaderboardUserRoundDetails(

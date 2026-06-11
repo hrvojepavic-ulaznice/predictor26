@@ -100,6 +100,8 @@ td:first-child {
 
 .users-heading,
 .user-cell,
+.users-heading + .live-heading,
+.user-cell + .live-score-cell,
 .users-heading + .round-heading,
 .user-cell + td {
   border-left: 0;
@@ -226,6 +228,47 @@ tbody tr:last-child td {
 
 .round-heading {
   min-width: 100px;
+}
+
+.live-heading,
+.live-match-heading,
+.live-score-cell {
+  background: #fff7f7;
+}
+
+.live-heading {
+  min-width: 84px;
+  color: #b91c1c;
+}
+
+.live-heading-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.live-match-heading {
+  min-width: 76px;
+  color: #991b1b;
+  font-size: 0.7rem;
+}
+
+.live-score-cell {
+  color: #991b1b;
+  font-weight: 900;
+}
+
+.live-score-empty {
+  color: #9ca3af;
 }
 
 .total-heading,
