@@ -1,0 +1,22 @@
+export interface NotificationConfigResponse {
+  readonly vapidPublicKey: string;
+  readonly remindersEnabled: boolean;
+}
+
+export interface SavePushSubscriptionResponse {
+  readonly subscribed: true;
+}
+
+export interface NotificationSettingsResponse {
+  readonly remindersEnabled: boolean;
+}
+
+export interface UpdateNotificationSettingsRequest {
+  readonly remindersEnabled: boolean;
+  readonly secretCode: string;
+}
+
+export interface SendTestNotificationResponse {
+  readonly sent: number;
+  readonly subscriptions: number;
+}

@@ -67,5 +67,13 @@ export const routes: Routes = [
       import('./features/admin/payments/admin-payments-page.component').then(
         (component) => component.AdminPaymentsPageComponent
       )
+  },
+  {
+    path: 'admin/notifications',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./features/admin/notifications/admin-notifications-page.component').then(
+        (component) => component.AdminNotificationsPageComponent
+      )
   }
 ];

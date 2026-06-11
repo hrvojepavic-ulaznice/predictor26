@@ -172,6 +172,37 @@ h1 {
   background: #eef2ff;
 }
 
+.tool-icon-notification::before {
+  top: 10px;
+  left: 12px;
+  width: 20px;
+  height: 22px;
+  border-radius: 10px 10px 7px 7px;
+}
+
+.tool-icon-notification::after {
+  right: 16px;
+  bottom: 9px;
+  left: 16px;
+  height: 4px;
+  background: #eef2ff;
+}
+
+.tool-icon-notification span:first-child {
+  top: 7px;
+  left: 20px;
+  width: 4px;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.tool-icon-notification span:last-child {
+  top: 14px;
+  right: 8px;
+  width: 5px;
+  height: 5px;
+}
+
 .tool-content {
   display: grid;
   min-width: 0;

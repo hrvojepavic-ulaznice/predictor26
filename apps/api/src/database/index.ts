@@ -101,12 +101,33 @@ export function openDatabase() {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(user_id, match_id)
     );
+
+    CREATE TABLE IF NOT EXISTS notification_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      endpoint TEXT NOT NULL UNIQUE,
+      subscription_json TEXT NOT NULL,
+      user_agent TEXT,
+      is_enabled INTEGER NOT NULL DEFAULT 1 CHECK(is_enabled IN (0, 1)),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS notification_reminder_deliveries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      prediction_round TEXT NOT NULL,
+      reminder_hours INTEGER NOT NULL CHECK(reminder_hours IN (1, 9)),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, prediction_round, reminder_hours)
+    );
   `);
 
   seedPaymentSettings(db);
   seedPaymentSettingsConfig(db);
   ensurePaymentSettingsSupportsFastPayUrl(db);
   ensurePredictionsTableSupportsOddsSnapshot(db);
+  ensureNotificationReminderDeliveriesSupportsOneHour(db);
 
   db.prepare(
     `
@@ -295,4 +316,41 @@ function ensurePredictionsTableSupportsOddsSnapshot(db: Database.Database) {
   if (!columnNames.has('odds_synced_at')) {
     db.exec('ALTER TABLE predictions ADD COLUMN odds_synced_at TEXT');
   }
+}
+
+function ensureNotificationReminderDeliveriesSupportsOneHour(db: Database.Database) {
+  const existingTable = db
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'notification_reminder_deliveries'")
+    .get() as { sql: string } | undefined;
+
+  if (!existingTable || existingTable.sql.includes('reminder_hours IN (1, 9)')) {
+    return;
+  }
+
+  db.exec(`
+    PRAGMA foreign_keys = OFF;
+
+    BEGIN TRANSACTION;
+
+    CREATE TABLE notification_reminder_deliveries_next (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      prediction_round TEXT NOT NULL,
+      reminder_hours INTEGER NOT NULL CHECK(reminder_hours IN (1, 9)),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, prediction_round, reminder_hours)
+    );
+
+    INSERT INTO notification_reminder_deliveries_next (id, user_id, prediction_round, reminder_hours, created_at)
+    SELECT id, user_id, prediction_round, reminder_hours, created_at
+    FROM notification_reminder_deliveries
+    WHERE reminder_hours IN (1, 9);
+
+    DROP TABLE notification_reminder_deliveries;
+    ALTER TABLE notification_reminder_deliveries_next RENAME TO notification_reminder_deliveries;
+
+    COMMIT;
+
+    PRAGMA foreign_keys = ON;
+  `);
 }

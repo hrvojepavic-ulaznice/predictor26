@@ -1,0 +1,75 @@
+<section class="admin-notifications-page" aria-labelledby="admin-notifications-title">
+  <header class="page-header">
+    <div>
+      <p class="section-label">Admin</p>
+      <h1 id="admin-notifications-title">Notification settings</h1>
+      <a class="back-link" routerLink="/admin">Back to admin tools</a>
+    </div>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="status-message status-error">{{ message }}</p>
+  }
+
+  @if (successMessage(); as message) {
+    <p class="status-message status-success">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Loading notification settings...</p>
+  } @else {
+    <section class="settings-panel" aria-labelledby="reminders-title">
+      <div class="settings-copy">
+        <h2 id="reminders-title">Prediction reminders</h2>
+        <p>
+          Enable this only when you want users to see the reminder opt-in drawer. Scheduled reminders send 9h and 1h
+          before a round locks.
+        </p>
+      </div>
+
+      <button class="toggle-button" type="button" [class.toggle-button-on]="remindersEnabled()" [disabled]="saving()" (click)="toggleReminders()">
+        {{ saving() ? 'Saving...' : remindersEnabled() ? 'Enabled' : 'Disabled' }}
+      </button>
+    </section>
+
+    <section class="settings-panel" aria-labelledby="test-title">
+      <div class="settings-copy">
+        <h2 id="test-title">Admin test notification</h2>
+        <p>
+          First register this browser for your admin user, then send a real push notification only to your own active
+          subscriptions.
+        </p>
+      </div>
+
+      <div class="test-actions">
+        <button class="secondary-button" type="button" [disabled]="enablingBrowser()" (click)="enableThisBrowser()">
+          {{ enablingBrowser() ? 'Enabling...' : 'Enable this browser' }}
+        </button>
+        <button class="test-button" type="button" [disabled]="testing()" (click)="sendTestNotification()">
+          {{ testing() ? 'Sending...' : 'Send test' }}
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (pendingRemindersEnabled() !== null) {
+    <app-modal-shell
+      labelledBy="secret-code-title"
+      panelWidth="420px"
+      [closeOnBackdrop]="true"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelSecretCode()"
+    >
+      <app-secret-code-modal
+        title="Confirm notification settings"
+        label="What is the secret code?"
+        [confirmLabel]="pendingRemindersEnabled() ? 'Enable reminders' : 'Disable reminders'"
+        [errorMessage]="secretCodeErrorMessage()"
+        [isSubmitting]="saving()"
+        (confirmSecretCode)="confirmSecretCode($event)"
+        (cancelModal)="cancelSecretCode()"
+      />
+    </app-modal-shell>
+  }
+</section>

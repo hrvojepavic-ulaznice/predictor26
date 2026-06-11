@@ -19,6 +19,7 @@ jobs:
               --exclude=.angular \
               --exclude=coverage \
               apps \
+              scripts \
               package.json \
               package-lock.json \
               tsconfig.json
@@ -44,4 +45,4 @@ jobs:
           ssh \
             -o StrictHostKeyChecking=no \
             webdev@${{ secrets.PI_HOST }} \
-            "/opt/predictor26/deploy.sh"
+            "/opt/predictor26/deploy.sh && bash /opt/predictor26/current/scripts/ensure-api-env.sh && sudo /usr/local/bin/predictor26-restart"
