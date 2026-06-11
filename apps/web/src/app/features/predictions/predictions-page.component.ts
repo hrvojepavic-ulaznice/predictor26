@@ -49,8 +49,14 @@ export class PredictionsPageComponent {
   protected readonly lastSavedMessage = signal<string | null>(null);
   protected readonly activeProgressLabel = signal<string | null>(null);
   protected readonly now = signal(Date.now());
-  protected readonly groupedMatches = computed(() => groupMatches(this.matches(), this.sortPreference.sortMode()));
-  protected readonly progressGroups = computed(() => groupMatches(this.matches(), 'rounds'));
+  protected readonly openMatches = computed(() =>
+    this.matches().filter((match) => isPredictionOpen(match, this.now()))
+  );
+  protected readonly groupedMatches = computed(() => groupMatches(this.openMatches(), this.sortPreference.sortMode()));
+  protected readonly closedRoundSummaries = computed(() =>
+    groupMatchesByRounds(this.matches()).filter((group) => isPredictionGroupClosed(group, this.now()))
+  );
+  protected readonly progressGroups = computed(() => groupMatches(this.openMatches(), 'rounds'));
   protected readonly activeProgress = computed(() => {
     const groups = this.progressGroups();
     const activeLabel = this.activeProgressLabel();
@@ -239,6 +245,14 @@ export class PredictionsPageComponent {
 
 function groupMatches(matches: readonly MatchWithPrediction[], sortMode: MatchSortMode): MatchGroup[] {
   return sortMode === 'groups' ? groupMatchesByGroups(matches) : groupMatchesByRounds(matches);
+}
+
+function isPredictionOpen(match: MatchWithPrediction, now: number): boolean {
+  return !match.predictionLocked && Date.parse(match.predictionDeadlineAt) > now;
+}
+
+function isPredictionGroupClosed(group: MatchGroup, now: number): boolean {
+  return group.locked === true || (group.deadlineAt !== null && Date.parse(group.deadlineAt) <= now);
 }
 
 function groupMatchesByRounds(matches: readonly MatchWithPrediction[]): MatchGroup[] {

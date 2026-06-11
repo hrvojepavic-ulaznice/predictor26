@@ -36,7 +36,7 @@ h2 {
 
 .group-header {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
@@ -86,6 +86,28 @@ h2 {
 .match-groups {
   display: grid;
   gap: 20px;
+}
+
+.closed-round-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.closed-round-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 14px 16px;
+}
+
+.closed-round-card h2,
+.closed-round-card p {
+  color: #6b7280;
+}
+
+.closed-round-card .group-header {
+  margin-bottom: 0;
 }
 
 .progress-banner {
@@ -215,9 +237,14 @@ h2 {
 }
 
 .odds-values span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   border: 1px solid #e5e7eb;
   border-radius: 999px;
   background: #f9fafb;
+  line-height: 1;
   padding: 5px 8px;
 }
 
