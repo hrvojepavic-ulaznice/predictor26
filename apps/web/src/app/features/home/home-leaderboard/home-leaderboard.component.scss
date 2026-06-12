@@ -101,7 +101,9 @@ td:first-child {
 .users-heading,
 .user-cell,
 .users-heading + .live-heading,
+.users-heading + .coming-up-heading,
 .user-cell + .live-score-cell,
+.user-cell + .coming-up-score-cell,
 .users-heading + .round-heading,
 .user-cell + td {
   border-left: 0;
@@ -236,12 +238,24 @@ tbody tr:last-child td {
   background: #fff7f7;
 }
 
+.coming-up-heading,
+.coming-up-match-heading,
+.coming-up-score-cell {
+  background: #eff6ff;
+}
+
 .live-heading {
   min-width: 84px;
   color: #b91c1c;
 }
 
-.live-heading-content {
+.coming-up-heading {
+  min-width: 98px;
+  color: #1d4ed8;
+}
+
+.live-heading-content,
+.coming-up-heading-content {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -256,9 +270,23 @@ tbody tr:last-child td {
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
 }
 
+.coming-up-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
 .live-match-heading {
   min-width: 76px;
   color: #991b1b;
+  font-size: 0.7rem;
+}
+
+.coming-up-match-heading {
+  min-width: 76px;
+  color: #1e40af;
   font-size: 0.7rem;
 }
 
@@ -267,7 +295,13 @@ tbody tr:last-child td {
   font-weight: 900;
 }
 
-.live-score-empty {
+.coming-up-score-cell {
+  color: #1e40af;
+  font-weight: 900;
+}
+
+.live-score-empty,
+.coming-up-score-empty {
   color: #9ca3af;
 }
 

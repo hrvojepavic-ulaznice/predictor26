@@ -21,6 +21,19 @@ export interface LeaderboardLivePredictionResponse {
   readonly prediction: PredictionResponse | null;
 }
 
+export interface LeaderboardComingUpMatchResponse {
+  readonly matchId: number;
+  readonly matchNumber: number;
+  readonly kickoffAt: string;
+  readonly homeTeam: TeamSlotResponse;
+  readonly awayTeam: TeamSlotResponse;
+}
+
+export interface LeaderboardComingUpPredictionResponse {
+  readonly matchId: number;
+  readonly prediction: PredictionResponse | null;
+}
+
 export interface LeaderboardPredictionPointsResponse {
   readonly earned: number | null;
   readonly available: number | null;
@@ -57,12 +70,14 @@ export interface LeaderboardUserResponse {
   readonly username: string;
   readonly totalPoints: number;
   readonly livePredictions: LeaderboardLivePredictionResponse[];
+  readonly comingUpPredictions: LeaderboardComingUpPredictionResponse[];
   readonly rounds: LeaderboardRoundResponse[];
 }
 
 export interface LeaderboardResponse {
   readonly rounds: LeaderboardRoundMetadataResponse[];
   readonly liveMatches: LeaderboardLiveMatchResponse[];
+  readonly comingUpMatches: LeaderboardComingUpMatchResponse[];
   readonly users: LeaderboardUserResponse[];
   readonly totalUsers: number;
 }

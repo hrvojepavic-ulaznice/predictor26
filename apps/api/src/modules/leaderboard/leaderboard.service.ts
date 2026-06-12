@@ -1,6 +1,7 @@
 import { MatchRow } from '../../database/queries/matches.queries.js';
 import { LeaderboardPredictionRow } from '../../database/queries/leaderboard.queries.js';
 import {
+  LeaderboardComingUpMatchResponse,
   LeaderboardLiveMatchResponse,
   LeaderboardPredictionPointsResponse,
   LeaderboardResponse,
@@ -19,12 +20,13 @@ interface RoundSummary {
   readonly matches: MatchRow[];
 }
 
-const assumedMatchDurationMs = (2 * 60 + 55) * 60 * 1_000;
+const assumedMatchDurationMs = (2 * 60 + 15) * 60 * 1_000;
 
 export async function getLeaderboard(): Promise<LeaderboardResponse> {
   const matches = findLeaderboardMatches();
   const roundSummaries = getRoundSummaries(matches);
   const liveMatches = getLiveMatches(matches);
+  const comingUpMatches = getComingUpMatches(roundSummaries);
   const users = findLeaderboardUsers();
   const predictionsByUser = groupPredictionsByUser(findLeaderboardPredictions());
 
@@ -35,6 +37,7 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
       viewable: round.viewable
     })),
     liveMatches: liveMatches.map(toLiveMatchResponse),
+    comingUpMatches: comingUpMatches.map(toComingUpMatchResponse),
     totalUsers: users.length,
     users: users
       .map<LeaderboardUserResponse>((user) => {
@@ -47,6 +50,7 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
           username: user.username,
           totalPoints,
           livePredictions: getUserLivePredictions(liveMatches, userPredictions),
+          comingUpPredictions: getUserComingUpPredictions(comingUpMatches, userPredictions),
           rounds
         };
       })
@@ -65,10 +69,27 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
 function getLiveMatches(matches: readonly MatchRow[]): MatchRow[] {
   const now = Date.now();
 
-  return matches.filter(
-    (match) =>
-      Date.parse(match.kickoff_at) <= now && !isSettledForLiveLeaderboard(match, now)
-  );
+  return matches.filter((match) => Date.parse(match.kickoff_at) <= now && !isSettledForLiveLeaderboard(match, now)).sort(sortMatchesByKickoff);
+}
+
+function getComingUpMatches(rounds: readonly RoundSummary[]): MatchRow[] {
+  const now = Date.now();
+  const eligibleMatches = rounds
+    .filter((round) => round.locked)
+    .flatMap((round) => round.matches)
+    .filter((match) => Date.parse(match.kickoff_at) > now);
+
+  const nextKickoffAt = eligibleMatches.reduce<string | null>((nextKickoff, match) => {
+    if (!nextKickoff || Date.parse(match.kickoff_at) < Date.parse(nextKickoff)) {
+      return match.kickoff_at;
+    }
+
+    return nextKickoff;
+  }, null);
+
+  return nextKickoffAt === null
+    ? []
+    : eligibleMatches.filter((match) => match.kickoff_at === nextKickoffAt).sort(sortMatchesByKickoff);
 }
 
 function isSettledForLiveLeaderboard(match: MatchRow, now: number): boolean {
@@ -95,6 +116,22 @@ function toLiveMatchResponse(match: MatchRow): LeaderboardLiveMatchResponse {
   };
 }
 
+function toComingUpMatchResponse(match: MatchRow): LeaderboardComingUpMatchResponse {
+  return {
+    matchId: match.id,
+    matchNumber: match.match_number,
+    kickoffAt: match.kickoff_at,
+    homeTeam: {
+      name: match.home_team_name,
+      flag: match.home_team_flag
+    },
+    awayTeam: {
+      name: match.away_team_name,
+      flag: match.away_team_flag
+    }
+  };
+}
+
 function getUserLivePredictions(
   liveMatches: readonly MatchRow[],
   predictions: readonly LeaderboardPredictionRow[]
@@ -102,6 +139,18 @@ function getUserLivePredictions(
   const predictionsByMatchId = new Map(predictions.map((prediction) => [prediction.match_id, prediction]));
 
   return liveMatches.map((match) => ({
+    matchId: match.id,
+    prediction: predictionsByMatchId.has(match.id) ? toPredictionResponse(predictionsByMatchId.get(match.id)!) : null
+  }));
+}
+
+function getUserComingUpPredictions(
+  comingUpMatches: readonly MatchRow[],
+  predictions: readonly LeaderboardPredictionRow[]
+): LeaderboardUserResponse['comingUpPredictions'] {
+  const predictionsByMatchId = new Map(predictions.map((prediction) => [prediction.match_id, prediction]));
+
+  return comingUpMatches.map((match) => ({
     matchId: match.id,
     prediction: predictionsByMatchId.has(match.id) ? toPredictionResponse(predictionsByMatchId.get(match.id)!) : null
   }));
@@ -409,4 +458,14 @@ function isRoundLocked(matches: readonly MatchRow[]): boolean {
 
 function roundPoints(points: number): number {
   return Math.round((points + Number.EPSILON) * 100) / 100;
+}
+
+function sortMatchesByKickoff(firstMatch: MatchRow, secondMatch: MatchRow): number {
+  const kickoffComparison = Date.parse(firstMatch.kickoff_at) - Date.parse(secondMatch.kickoff_at);
+
+  if (kickoffComparison !== 0) {
+    return kickoffComparison;
+  }
+
+  return firstMatch.match_number - secondMatch.match_number;
 }

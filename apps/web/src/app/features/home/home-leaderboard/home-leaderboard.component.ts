@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 
 import {
+  LeaderboardComingUpMatch,
   LeaderboardLiveMatch,
   LeaderboardResponse,
   LeaderboardRound,
@@ -22,6 +23,10 @@ interface LeaderboardLiveMatchHeading extends LeaderboardLiveMatch {
   readonly label: string;
 }
 
+interface LeaderboardComingUpMatchHeading extends LeaderboardComingUpMatch {
+  readonly label: string;
+}
+
 interface LeaderboardRoundHeading {
   readonly label: string;
   readonly heading: string;
@@ -29,8 +34,9 @@ interface LeaderboardRoundHeading {
   readonly viewable: boolean;
 }
 
-interface RankedLeaderboardResponse extends Omit<LeaderboardResponse, 'liveMatches' | 'rounds' | 'users'> {
+interface RankedLeaderboardResponse extends Omit<LeaderboardResponse, 'comingUpMatches' | 'liveMatches' | 'rounds' | 'users'> {
   readonly liveMatches: LeaderboardLiveMatchHeading[];
+  readonly comingUpMatches: LeaderboardComingUpMatchHeading[];
   readonly rounds: LeaderboardRoundHeading[];
   readonly users: RankedLeaderboardUser[];
 }
@@ -102,7 +108,11 @@ export class HomeLeaderboardComponent {
       ...leaderboard,
       liveMatches: leaderboard.liveMatches.map((match) => ({
         ...match,
-        label: this.getLiveMatchLabel(match)
+        label: this.getMatchLabel(match)
+      })),
+      comingUpMatches: leaderboard.comingUpMatches.map((match) => ({
+        ...match,
+        label: this.getMatchLabel(match)
       })),
       rounds: leaderboard.rounds.map((round) => ({
         label: round.label,
@@ -170,11 +180,11 @@ export class HomeLeaderboardComponent {
     return this.openingRoundKey() === this.getRoundKey(user.id, round.label);
   }
 
-  private getLiveMatchLabel(match: LeaderboardLiveMatch): string {
+  private getMatchLabel(match: LeaderboardLiveMatch | LeaderboardComingUpMatch): string {
     return `${this.teamLabel(match.homeTeam)} - ${this.teamLabel(match.awayTeam)}`;
   }
 
-  private teamLabel(team: LeaderboardLiveMatch['homeTeam']): string {
+  private teamLabel(team: LeaderboardLiveMatch['homeTeam'] | LeaderboardComingUpMatch['homeTeam']): string {
     const shortName = team.name
       .split(/\s+/)
       .map((part) => part[0])

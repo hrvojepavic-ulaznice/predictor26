@@ -24,6 +24,11 @@
                 <span class="live-heading-content"><span class="live-dot" aria-hidden="true"></span>Live</span>
               </th>
             }
+            @if (table.comingUpMatches.length > 0) {
+              <th class="coming-up-heading" [attr.colspan]="table.comingUpMatches.length" scope="colgroup">
+                <span class="coming-up-heading-content"><span class="coming-up-dot" aria-hidden="true"></span>Coming up</span>
+              </th>
+            }
             @for (round of table.rounds; track round.label) {
               <th class="round-heading" colspan="2" scope="colgroup">{{ round.heading }}</th>
             }
@@ -32,6 +37,9 @@
           <tr>
             @for (match of table.liveMatches; track match.matchId) {
               <th class="live-match-heading" scope="col">{{ match.label }}</th>
+            }
+            @for (match of table.comingUpMatches; track match.matchId) {
+              <th class="coming-up-match-heading" scope="col">{{ match.label }}</th>
             }
             @for (round of table.rounds; track round.label) {
               <th scope="col">Tips</th>
@@ -65,6 +73,15 @@
                   }
                 </td>
               }
+              @for (comingUpPrediction of user.comingUpPredictions; track comingUpPrediction.matchId) {
+                <td class="coming-up-score-cell">
+                  @if (comingUpPrediction.prediction; as prediction) {
+                    {{ prediction.home }}-{{ prediction.away }}
+                  } @else {
+                    <span class="coming-up-score-empty">-</span>
+                  }
+                </td>
+              }
               @for (round of user.rounds; track round.label) {
                 <td>
                   @if (isLoggedIn() && round.viewable) {
@@ -86,7 +103,7 @@
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" [attr.colspan]="table.rounds.length * 2 + table.liveMatches.length + 2">
+              <td class="empty-cell" [attr.colspan]="table.rounds.length * 2 + table.liveMatches.length + table.comingUpMatches.length + 2">
                 No registered users yet.
               </td>
             </tr>
