@@ -1,3 +1,5 @@
+@use '../../shared/animations' as animations;
+
 :host {
   display: block;
   background: rgba(248, 250, 252, 0.92);
@@ -58,6 +60,16 @@
   align-items: center;
 }
 
+.guest-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-nav-enter {
+  @include animations.content-fade-in;
+}
+
 .nav-link {
   border: 0;
   background: transparent;
@@ -85,22 +97,23 @@
 .user-name {
   max-width: 220px;
   overflow: hidden;
-  padding: 10px 8px 10px 0;
+  padding: 10px 14px 10px 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .verified-tooltip {
   position: absolute;
-  right: -8px;
-  bottom: -3px;
+  right: 0;
+  bottom: 3px;
+  z-index: 2;
 }
 
 .verified-badge {
   position: relative;
   display: block;
-  width: 18px;
-  height: 23px;
+  width: 15px;
+  height: 15px;
   object-fit: contain;
 }
 
@@ -111,6 +124,10 @@
   }
 
   .account-nav {
+    gap: 4px;
+  }
+
+  .guest-actions {
     gap: 4px;
   }
 
@@ -125,4 +142,5 @@
   .user-name {
     max-width: 128px;
   }
+
 }

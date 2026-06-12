@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { interval } from 'rxjs';
@@ -31,9 +31,11 @@ export class HomePageComponent {
   protected readonly matches = this.matchesService.matches;
   protected readonly paymentInfo = this.paymentsService.paymentInfo;
   protected readonly paymentModalOpen = signal(false);
-  protected readonly showPaymentNotice = computed(
-    () => this.appState.isLoggedIn() && !this.appState.currentUser()?.isVerified && this.paymentInfo()?.visible === true
-  );
+  protected readonly showPaymentNotice = computed(() => {
+    const user = this.appState.currentUser();
+
+    return user !== null && !user.isVerified && this.paymentInfo()?.visible === true;
+  });
   protected readonly now = signal(Date.now());
   protected readonly nextPredictionDeadline = computed<NextPredictionDeadline | null>(() => {
     const now = this.now();
@@ -67,11 +69,15 @@ export class HomePageComponent {
 
     if (this.appState.isLoggedIn()) {
       this.loadMatches();
-
-      if (!this.appState.currentUser()?.isVerified) {
-        this.loadPaymentInfo();
-      }
     }
+
+    effect(() => {
+      const user = this.appState.currentUser();
+
+      if (user !== null && !user.isVerified) {
+        untracked(() => this.loadPaymentInfo());
+      }
+    });
   }
 
   protected openPaymentModal(): void {

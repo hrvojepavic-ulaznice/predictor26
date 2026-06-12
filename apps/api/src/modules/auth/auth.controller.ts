@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 
 import { LoginRequest, RegisterRequest } from './auth.interfaces.js';
-import { login, register } from './auth.service.js';
+import { getCurrentUser, login, register } from './auth.service.js';
 
 export async function loginController(
   req: Request<object, object, LoginRequest>,
@@ -46,6 +46,28 @@ export async function registerController(
     }
 
     res.status(201).json(result.session);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function currentUserController(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = _req.authUser?.id;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Authentication is required.' });
+      return;
+    }
+
+    const user = await getCurrentUser(userId);
+
+    if (!user) {
+      res.status(401).json({ message: 'Authentication is required.' });
+      return;
+    }
+
+    res.json(user);
   } catch (error) {
     next(error);
   }

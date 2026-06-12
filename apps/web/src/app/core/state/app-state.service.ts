@@ -4,7 +4,11 @@ import { AuthUser } from '@models/auth-user.model';
 
 interface StoredSession {
   readonly token: string;
-  readonly user: AuthUser;
+  readonly user: AuthUser | null;
+}
+
+interface PersistedSession {
+  readonly token: string;
 }
 
 const sessionStorageKey = 'predictor26.session';
@@ -20,22 +24,31 @@ export class AppStateService {
   readonly token = computed(() => this.sessionSignal()?.token ?? null);
   readonly isLoggedIn = computed(() => this.sessionSignal() !== null);
 
-  setSession(session: StoredSession): void {
+  setSession(session: { readonly token: string; readonly user: AuthUser }): void {
     this.sessionSignal.set(session);
-    localStorage.setItem(sessionStorageKey, JSON.stringify(session));
+    writeStoredSession(session.token);
   }
 
   updateCurrentUser(user: AuthUser): void {
     const session = this.sessionSignal();
 
-    if (!session || session.user.id !== user.id) {
+    if (!session || (session.user !== null && session.user.id !== user.id)) {
       return;
     }
 
-    this.setSession({
+    this.sessionSignal.set({
       token: session.token,
       user
     });
+    writeStoredSession(session.token);
+  }
+
+  setToken(token: string): void {
+    this.sessionSignal.set({
+      token,
+      user: null
+    });
+    writeStoredSession(token);
   }
 
   clearSession(): void {
@@ -52,15 +65,22 @@ function readStoredSession(): StoredSession | null {
   }
 
   try {
-    const parsedSession = JSON.parse(storedSession) as StoredSession;
+    const parsedSession = JSON.parse(storedSession) as Partial<PersistedSession>;
 
-    if (!parsedSession.token || !parsedSession.user?.username) {
+    if (!parsedSession.token) {
       return null;
     }
 
-    return parsedSession;
+    return {
+      token: parsedSession.token,
+      user: null
+    };
   } catch {
     localStorage.removeItem(sessionStorageKey);
     return null;
   }
+}
+
+function writeStoredSession(token: string): void {
+  localStorage.setItem(sessionStorageKey, JSON.stringify({ token } satisfies PersistedSession));
 }

@@ -1,8 +1,9 @@
 import { createAuthToken } from '../../shared/utils/auth-token.js';
+import { getUserById, UserRow } from '../../database/queries/users.queries.js';
 import { hashPassword, verifyPassword } from '../../shared/utils/password.js';
 import { areRegistrationsDisabled } from '../competition-settings/competition-settings.service.js';
 import { getWorldCupTeamNames } from '../world-cup-teams/world-cup-teams.service.js';
-import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from './auth.interfaces.js';
+import { AuthUserResponse, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from './auth.interfaces.js';
 import { findUserByUsername, insertUser } from './auth.repository.js';
 
 const usernameMinLength = 3;
@@ -50,24 +51,20 @@ export async function login(credentials: Partial<LoginRequest> | undefined): Pro
     return null;
   }
 
-  const responseUser = {
-    id: user.id,
-    username: user.username,
-    name: user.first_name,
-    lastname: user.last_name,
-    tiebreakerName: user.tiebreaker_name,
-    role: user.role,
-    isVerified: user.is_verified === 1
-  };
-
   return {
     token: createAuthToken({
       userId: user.id,
       username: user.username,
       role: user.role
     }),
-    user: responseUser
+    user: toAuthUserResponse(user)
   };
+}
+
+export async function getCurrentUser(userId: number): Promise<AuthUserResponse | null> {
+  const user = await getUserById(userId);
+
+  return user ? toAuthUserResponse(user) : null;
 }
 
 export async function register(input: Partial<RegisterRequest> | undefined): Promise<RegisterResult> {
@@ -134,15 +131,19 @@ export async function register(input: Partial<RegisterRequest> | undefined): Pro
         username: user.username,
         role: user.role
       }),
-      user: {
-        id: user.id,
-        username: user.username,
-        name: user.first_name,
-        lastname: user.last_name,
-        tiebreakerName: user.tiebreaker_name,
-        role: user.role,
-        isVerified: user.is_verified === 1
-      }
+      user: toAuthUserResponse(user)
     }
+  };
+}
+
+function toAuthUserResponse(user: UserRow): AuthUserResponse {
+  return {
+    id: user.id,
+    username: user.username,
+    name: user.first_name,
+    lastname: user.last_name,
+    tiebreakerName: user.tiebreaker_name,
+    role: user.role,
+    isVerified: user.is_verified === 1
   };
 }

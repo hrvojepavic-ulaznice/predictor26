@@ -52,6 +52,17 @@
   border-bottom-color: #111827;
 }
 
+.tooltip-bottom-end {
+  top: calc(100% + 8px);
+  right: 0;
+}
+
+.tooltip-bottom-end::after {
+  right: 6px;
+  bottom: 100%;
+  border-bottom-color: #111827;
+}
+
 .tooltip-top {
   bottom: calc(100% + 8px);
   left: 50%;

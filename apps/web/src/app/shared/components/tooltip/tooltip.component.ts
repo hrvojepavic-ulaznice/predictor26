@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 
-export type TooltipPlacement = 'bottom' | 'left' | 'right' | 'top';
+export type TooltipPlacement = 'bottom' | 'bottom-end' | 'left' | 'right' | 'top';
 
 @Component({
   selector: 'app-tooltip',
