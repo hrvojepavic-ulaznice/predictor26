@@ -1,6 +1,7 @@
 export const PREDICTOR_RULES = [
   'Exact score predictions award 1 point.',
   'Correct match outcome predictions award points equal to the selected odds coefficient.',
+  'Final scores are based on regular time only; extra time and penalties do not count.',
   'Points accumulate match by match across the competition.',
   'Users are ranked first by total points.',
   'The World Cup winner tiebreaker is the second ranking criterion.',

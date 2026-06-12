@@ -9,7 +9,7 @@
       <span class="user-pill">
         <a class="user-name" routerLink="/my-predictions" aria-label="View my predictions">{{ user.username }}</a>
         @if (user.isVerified) {
-          <app-tooltip class="verified-tooltip" text="Verified user!">
+          <app-tooltip class="verified-tooltip" text="I've paid my dues!">
             <img class="verified-badge" src="icons/verified-badge.svg" alt="" width="18" height="23" aria-hidden="true" />
           </app-tooltip>
         }
