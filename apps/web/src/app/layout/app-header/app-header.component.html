@@ -6,7 +6,14 @@
 
   <nav class="account-nav" aria-label="Account">
     @if (appState.currentUser(); as user) {
-      <a class="user-name" routerLink="/my-predictions" aria-label="View my predictions">{{ user.username }}</a>
+      <span class="user-pill">
+        <a class="user-name" routerLink="/my-predictions" aria-label="View my predictions">{{ user.username }}</a>
+        @if (user.isVerified) {
+          <app-tooltip class="verified-tooltip" text="Verified user!">
+            <img class="verified-badge" src="icons/verified-badge.svg" alt="" width="18" height="23" aria-hidden="true" />
+          </app-tooltip>
+        }
+      </span>
       @if (user.role === 'super_admin' || user.role === 'admin') {
         <a class="nav-link" routerLink="/admin">Admin</a>
       }
