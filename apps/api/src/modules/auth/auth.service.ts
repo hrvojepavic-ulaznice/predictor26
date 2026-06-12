@@ -1,5 +1,6 @@
 import { createAuthToken } from '../../shared/utils/auth-token.js';
 import { hashPassword, verifyPassword } from '../../shared/utils/password.js';
+import { areRegistrationsDisabled } from '../competition-settings/competition-settings.service.js';
 import { getWorldCupTeamNames } from '../world-cup-teams/world-cup-teams.service.js';
 import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from './auth.interfaces.js';
 import { findUserByUsername, insertUser } from './auth.repository.js';
@@ -21,6 +22,9 @@ export type RegisterResult =
     }
   | {
       readonly status: 'username_taken';
+    }
+  | {
+      readonly status: 'registrations_disabled';
     };
 
 export async function login(credentials: Partial<LoginRequest> | undefined): Promise<LoginResponse | null> {
@@ -67,6 +71,10 @@ export async function login(credentials: Partial<LoginRequest> | undefined): Pro
 }
 
 export async function register(input: Partial<RegisterRequest> | undefined): Promise<RegisterResult> {
+  if (await areRegistrationsDisabled()) {
+    return { status: 'registrations_disabled' };
+  }
+
   if (
     typeof input?.username !== 'string' ||
     typeof input.name !== 'string' ||

@@ -1,0 +1,142 @@
+:host {
+  display: block;
+}
+
+.admin-competition-page {
+  width: min(860px, calc(100% - 32px));
+  margin: 32px auto 56px;
+}
+
+.page-header {
+  margin-bottom: 20px;
+}
+
+.section-label {
+  margin: 0 0 6px;
+  color: #4b5563;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  color: #111827;
+  font-size: 1.8rem;
+  line-height: 1.15;
+}
+
+h2 {
+  color: #111827;
+  font-size: 1rem;
+}
+
+p {
+  color: #6b7280;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 10px;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  color: #111827;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.status-message {
+  margin: 16px 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.status-error,
+.status-success {
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.status-error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.status-success {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.settings-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 18px;
+}
+
+.settings-copy {
+  display: grid;
+  gap: 6px;
+}
+
+button {
+  flex: 0 0 auto;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 11px 14px;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.toggle-button {
+  min-width: 108px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+}
+
+.toggle-button-on {
+  border: 1px solid #111827;
+  background: #111827;
+  color: #ffffff;
+}
+
+@media (max-width: 620px) {
+  .admin-competition-page {
+    width: min(100% - 24px, 860px);
+    margin-top: 24px;
+  }
+
+  .settings-panel {
+    display: grid;
+  }
+
+  button {
+    justify-self: start;
+  }
+}

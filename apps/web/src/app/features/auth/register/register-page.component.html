@@ -47,9 +47,9 @@
         </label>
       </div>
 
-      <p class="form-error" [class.form-error-visible]="errorMessage()">{{ errorMessage() || '&nbsp;' }}</p>
+      <p class="form-error" [class.form-error-visible]="formMessage()">{{ formMessage() || '&nbsp;' }}</p>
 
-      <button class="submit-button" type="submit" [disabled]="isSubmitting() || tiebreakerOptionsLoading()">
+      <button class="submit-button" type="submit" [disabled]="isSubmitting() || tiebreakerOptionsLoading() || registrationsDisabled()">
         {{ isSubmitting() ? 'Registering...' : 'Register' }}
       </button>
     </form>

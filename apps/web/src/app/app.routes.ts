@@ -75,5 +75,13 @@ export const routes: Routes = [
       import('./features/admin/notifications/admin-notifications-page.component').then(
         (component) => component.AdminNotificationsPageComponent
       )
+  },
+  {
+    path: 'admin/competition',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./features/admin/competition/admin-competition-page.component').then(
+        (component) => component.AdminCompetitionPageComponent
+      )
   }
 ];

@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, ReactiveFormsModule, ValidationErrors, Validators, FormBuilder } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -8,6 +8,7 @@ import { AppStateService } from '@core/state/app-state.service';
 import { RulesModalComponent } from '@features/rules/rules-modal.component';
 import { SessionDataRefreshService } from '@services/session-data-refresh.service';
 import { AuthApiProvider } from '@services/providers/auth-api.provider';
+import { CompetitionSettingsApiProvider } from '@services/providers/competition-settings-api.provider';
 import { WorldCupTeamsApiProvider } from '@services/providers/world-cup-teams-api.provider';
 import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
 import { FormFieldStateDirective } from '@shared/directives/form-field-state.directive';
@@ -21,6 +22,7 @@ import { FormFieldStateDirective } from '@shared/directives/form-field-state.dir
 export class RegisterPageComponent {
   private readonly appState = inject(AppStateService);
   private readonly authApi = inject(AuthApiProvider);
+  private readonly competitionSettingsApi = inject(CompetitionSettingsApiProvider);
   private readonly formBuilder = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly sessionDataRefresh = inject(SessionDataRefreshService);
@@ -29,8 +31,13 @@ export class RegisterPageComponent {
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly isRulesModalOpen = signal(false);
+  protected readonly registrationsDisabled = signal(false);
   protected readonly tiebreakerOptions = signal<string[]>([]);
   protected readonly tiebreakerOptionsLoading = signal(true);
+  protected readonly registrationClosedMessage = 'Competition started and registrations are not possible.';
+  protected readonly formMessage = computed(() =>
+    this.registrationsDisabled() ? this.registrationClosedMessage : this.errorMessage()
+  );
 
   protected readonly registerForm = this.formBuilder.nonNullable.group({
     username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(40)]],
@@ -71,9 +78,20 @@ export class RegisterPageComponent {
         this.tiebreakerOptionsLoading.set(false);
       }
     });
+
+    this.competitionSettingsApi.getSettings().subscribe({
+      next: (settings) => {
+        this.registrationsDisabled.set(settings.registrationsDisabled);
+      }
+    });
   }
 
   protected register(): void {
+    if (this.registrationsDisabled()) {
+      this.errorMessage.set(this.registrationClosedMessage);
+      return;
+    }
+
     if (this.registerForm.invalid || this.isSubmitting() || this.tiebreakerOptionsLoading()) {
       this.registerForm.markAllAsTouched();
       this.errorMessage.set(
@@ -114,10 +132,16 @@ export class RegisterPageComponent {
             this.registerForm.controls.username.markAsTouched();
           }
 
+          if (error instanceof HttpErrorResponse && error.status === 403) {
+            this.registrationsDisabled.set(true);
+          }
+
           this.errorMessage.set(
             error instanceof HttpErrorResponse && error.status === 409
               ? 'Username is already taken.'
-              : 'Please check the registration fields.'
+              : error instanceof HttpErrorResponse && error.status === 403
+                ? this.registrationClosedMessage
+                : 'Please check the registration fields.'
           );
           this.isSubmitting.set(false);
         }

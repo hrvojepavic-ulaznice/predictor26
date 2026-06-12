@@ -1,0 +1,61 @@
+<section class="admin-competition-page" aria-labelledby="admin-competition-title">
+  <header class="page-header">
+    <div>
+      <p class="section-label">Admin</p>
+      <h1 id="admin-competition-title">Competition settings</h1>
+      <a class="back-link" routerLink="/admin">Back to admin tools</a>
+    </div>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="status-message status-error">{{ message }}</p>
+  }
+
+  @if (successMessage(); as message) {
+    <p class="status-message status-success">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Loading competition settings...</p>
+  } @else {
+    <section class="settings-panel" aria-labelledby="registrations-title">
+      <div class="settings-copy">
+        <h2 id="registrations-title">Registrations</h2>
+        <p>
+          Registrations are enabled by default. Disable them once the competition starts so new users cannot join.
+        </p>
+      </div>
+
+      <button
+        class="toggle-button"
+        type="button"
+        [class.toggle-button-on]="registrationsDisabled()"
+        [disabled]="saving()"
+        (click)="toggleRegistrations()"
+      >
+        {{ saving() ? 'Saving...' : registrationsDisabled() ? 'Disabled' : 'Enabled' }}
+      </button>
+    </section>
+  }
+
+  @if (pendingRegistrationsDisabled() !== null) {
+    <app-modal-shell
+      labelledBy="secret-code-title"
+      panelWidth="420px"
+      [closeOnBackdrop]="true"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelSecretCode()"
+    >
+      <app-secret-code-modal
+        title="Confirm competition settings"
+        label="What is the secret code?"
+        [confirmLabel]="pendingRegistrationsDisabled() ? 'Disable registrations' : 'Enable registrations'"
+        [errorMessage]="secretCodeErrorMessage()"
+        [isSubmitting]="saving()"
+        (confirmSecretCode)="confirmSecretCode($event)"
+        (cancelModal)="cancelSecretCode()"
+      />
+    </app-modal-shell>
+  }
+</section>

@@ -8,6 +8,7 @@ import { adminMatchesRoutes } from './modules/admin-matches/admin-matches.routes
 import { adminPaymentsRoutes } from './modules/admin-payments/admin-payments.routes.js';
 import { adminUsersRoutes } from './modules/admin-users/admin-users.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
+import { competitionSettingsRoutes } from './modules/competition-settings/competition-settings.routes.js';
 import { healthRoutes } from './modules/health/health.routes.js';
 import { leaderboardRoutes } from './modules/leaderboard/leaderboard.routes.js';
 import { matchesRoutes } from './modules/matches/matches.routes.js';
@@ -22,6 +23,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api', authRoutes);
+app.use('/api', competitionSettingsRoutes);
 app.use('/api', matchesRoutes);
 app.use('/api', notificationsRoutes);
 app.use('/api', paymentsRoutes);

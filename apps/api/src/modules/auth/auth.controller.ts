@@ -40,6 +40,11 @@ export async function registerController(
       return;
     }
 
+    if (result.status === 'registrations_disabled') {
+      res.status(403).json({ message: 'Competition started and registrations are not possible.' });
+      return;
+    }
+
     res.status(201).json(result.session);
   } catch (error) {
     next(error);
