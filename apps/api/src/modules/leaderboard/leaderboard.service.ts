@@ -26,7 +26,7 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
   const matches = findLeaderboardMatches();
   const roundSummaries = getRoundSummaries(matches);
   const liveMatches = getLiveMatches(matches);
-  const comingUpMatches = getComingUpMatches(roundSummaries);
+  const comingUpMatches = getComingUpMatches(roundSummaries, liveMatches);
   const users = findLeaderboardUsers();
   const predictionsByUser = groupPredictionsByUser(findLeaderboardPredictions());
 
@@ -72,7 +72,7 @@ function getLiveMatches(matches: readonly MatchRow[]): MatchRow[] {
   return matches.filter((match) => Date.parse(match.kickoff_at) <= now && !isSettledForLiveLeaderboard(match, now)).sort(sortMatchesByKickoff);
 }
 
-function getComingUpMatches(rounds: readonly RoundSummary[]): MatchRow[] {
+function getComingUpMatches(rounds: readonly RoundSummary[], liveMatches: readonly MatchRow[]): MatchRow[] {
   const now = Date.now();
   const eligibleMatches = rounds
     .filter((round) => round.locked)
@@ -87,9 +87,11 @@ function getComingUpMatches(rounds: readonly RoundSummary[]): MatchRow[] {
     return nextKickoff;
   }, null);
 
-  return nextKickoffAt === null
-    ? []
-    : eligibleMatches.filter((match) => match.kickoff_at === nextKickoffAt).sort(sortMatchesByKickoff);
+  if (nextKickoffAt === null || shouldHideComingUpMatches(nextKickoffAt, liveMatches)) {
+    return [];
+  }
+
+  return eligibleMatches.filter((match) => match.kickoff_at === nextKickoffAt).sort(sortMatchesByKickoff);
 }
 
 function isSettledForLiveLeaderboard(match: MatchRow, now: number): boolean {
@@ -98,6 +100,19 @@ function isSettledForLiveLeaderboard(match: MatchRow, now: number): boolean {
     match.final_away_score !== null &&
     now - Date.parse(match.kickoff_at) >= assumedMatchDurationMs
   );
+}
+
+function shouldHideComingUpMatches(nextKickoffAt: string, liveMatches: readonly MatchRow[]): boolean {
+  if (liveMatches.length === 0) {
+    return false;
+  }
+
+  const nextKickoffTime = Date.parse(nextKickoffAt);
+  const latestLiveWindowEnd = Math.max(
+    ...liveMatches.map((match) => Date.parse(match.kickoff_at) + assumedMatchDurationMs)
+  );
+
+  return nextKickoffTime > latestLiveWindowEnd;
 }
 
 function toLiveMatchResponse(match: MatchRow): LeaderboardLiveMatchResponse {
