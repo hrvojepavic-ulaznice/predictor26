@@ -32,6 +32,34 @@ if [[ -z "$(get_env_value VAPID_SUBJECT)" ]]; then
   set_env_value "VAPID_SUBJECT" "mailto:admin@predictor26.local"
 fi
 
+if [[ -z "$(get_env_value AUTH_TOKEN_SECRET)" ]]; then
+  auth_token_secret="$(
+    node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+  )"
+
+  set_env_value "AUTH_TOKEN_SECRET" "$auth_token_secret"
+fi
+
+if [[ -z "$(get_env_value SUPER_ADMIN_PASSWORD)" ]]; then
+  super_admin_password="$(
+    node -e "console.log(require('node:crypto').randomBytes(18).toString('base64url'))"
+  )"
+
+  if [[ -z "$(get_env_value SUPER_ADMIN_USERNAME)" ]]; then
+    set_env_value "SUPER_ADMIN_USERNAME" "super_admin"
+  fi
+
+  if [[ -z "$(get_env_value SUPER_ADMIN_FIRST_NAME)" ]]; then
+    set_env_value "SUPER_ADMIN_FIRST_NAME" "admin"
+  fi
+
+  if [[ -z "$(get_env_value SUPER_ADMIN_LAST_NAME)" ]]; then
+    set_env_value "SUPER_ADMIN_LAST_NAME" "admin"
+  fi
+
+  set_env_value "SUPER_ADMIN_PASSWORD" "$super_admin_password"
+fi
+
 if [[ -z "$(get_env_value VAPID_PUBLIC_KEY)" || -z "$(get_env_value VAPID_PRIVATE_KEY)" ]]; then
   keys="$(
     cd "$CURRENT_DIR"

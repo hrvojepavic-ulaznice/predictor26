@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
 
 import { config } from '../config/index.js';
+import { hashPassword } from '../shared/utils/password.js';
 
 export function openDatabase() {
   mkdirSync(dirname(config.databasePath), { recursive: true });
@@ -129,19 +130,7 @@ export function openDatabase() {
   ensurePredictionsTableSupportsOddsSnapshot(db);
   ensureNotificationReminderDeliveriesSupportsOneHour(db);
 
-  db.prepare(
-    `
-      INSERT INTO users (username, first_name, last_name, password_hash, role)
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(username) DO NOTHING
-    `
-  ).run(
-    'super_admin',
-    'admin',
-    'admin',
-    'pbkdf2_sha256$120000$cefb6e4c26d72ee420f8fbb8f91950fe$a1f7e2629548c5ec560ab9b775752d373cb183c56a03a387bf9b2d5ee96ebccc',
-    'super_admin'
-  );
+  seedSuperAdmin(db);
 
   return db;
 }
@@ -177,6 +166,39 @@ function seedPaymentSettingsConfig(db: Database.Database) {
       ON CONFLICT(id) DO NOTHING
     `
   ).run();
+}
+
+function seedSuperAdmin(db: Database.Database) {
+  const existingSuperAdmin = db
+    .prepare("SELECT id FROM users WHERE role = 'super_admin' ORDER BY id ASC LIMIT 1")
+    .get() as { id: number } | undefined;
+
+  if (existingSuperAdmin) {
+    return;
+  }
+
+  if (!config.superAdminPassword) {
+    if (config.nodeEnv === 'production') {
+      throw new Error('SUPER_ADMIN_PASSWORD is required to bootstrap the first super admin.');
+    }
+
+    console.warn('SUPER_ADMIN_PASSWORD is missing. Skipping development super admin bootstrap.');
+    return;
+  }
+
+  db.prepare(
+    `
+      INSERT INTO users (username, first_name, last_name, password_hash, role)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(username) DO NOTHING
+    `
+  ).run(
+    config.superAdminUsername,
+    config.superAdminFirstName,
+    config.superAdminLastName,
+    hashPassword(config.superAdminPassword),
+    'super_admin'
+  );
 }
 
 function ensurePaymentSettingsSupportsFastPayUrl(db: Database.Database) {
