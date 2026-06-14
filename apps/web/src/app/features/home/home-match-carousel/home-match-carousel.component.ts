@@ -44,7 +44,7 @@ export class HomeMatchCarouselComponent {
   protected readonly selectedMatchError = signal<string | null>(null);
   protected readonly modalSkeletonVisible = signal(false);
   protected readonly fallbackDayLabel = signal(getDayLabel(getLocalDateKey(new Date())));
-  protected readonly skeletonUserCount = computed(() => this.selectedMatchDetails()?.users.length ?? this.leaderboardService.leaderboard()?.totalUsers ?? 6);
+  protected readonly skeletonUserCount = computed(() => this.selectedMatchDetails()?.users.length ?? this.leaderboardService.leaderboard()?.totalUsers ?? 7);
   protected readonly days = computed<MatchDayView[]>(() =>
     (this.leaderboardService.matchDays() ?? []).map((day) => ({
       ...day,
@@ -54,12 +54,14 @@ export class HomeMatchCarouselComponent {
   protected readonly selectedDay = computed(() => this.days()[this.selectedDayIndex()] ?? null);
   protected readonly selectedDayLabel = computed(() => this.selectedDay()?.label ?? this.fallbackDayLabel());
   protected readonly selectedMatches = computed<MatchCardView[]>(() =>
-    (this.selectedDay()?.matches ?? []).map((match) => ({
-      ...match,
-      statusLabel: getStatusLabel(match.status),
-      winningOutcome: match.finalScore ? getScoreOutcome(match.finalScore.home, match.finalScore.away) : null,
-      canOpenDetails: this.isLoggedIn() && match.roundLocked
-    }))
+    (this.selectedDay()?.matches ?? [])
+      .map((match) => ({
+        ...match,
+        statusLabel: getStatusLabel(match.status),
+        winningOutcome: match.finalScore ? getScoreOutcome(match.finalScore.home, match.finalScore.away) : null,
+        canOpenDetails: this.isLoggedIn() && match.roundLocked
+      }))
+      .sort(sortLiveMatchesFirst)
   );
   protected readonly canGoPrevious = computed(() => this.selectedDayIndex() > 0);
   protected readonly canGoNext = computed(() => this.selectedDayIndex() < this.days().length - 1);
@@ -202,4 +204,22 @@ function getScoreOutcome(homeScore: number, awayScore: number): '1' | 'X' | '2' 
   }
 
   return 'X';
+}
+
+function sortLiveMatchesFirst(firstMatch: MatchCardView, secondMatch: MatchCardView): number {
+  if (firstMatch.status === 'live' && secondMatch.status !== 'live') {
+    return -1;
+  }
+
+  if (firstMatch.status !== 'live' && secondMatch.status === 'live') {
+    return 1;
+  }
+
+  const kickoffComparison = Date.parse(firstMatch.kickoffAt) - Date.parse(secondMatch.kickoffAt);
+
+  if (kickoffComparison !== 0) {
+    return kickoffComparison;
+  }
+
+  return firstMatch.matchNumber - secondMatch.matchNumber;
 }
