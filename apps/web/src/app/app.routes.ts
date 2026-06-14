@@ -42,6 +42,14 @@ export const routes: Routes = [
       )
   },
   {
+    path: 'match-day',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/home/home-match-carousel/home-match-carousel.component').then(
+        (component) => component.HomeMatchCarouselComponent
+      )
+  },
+  {
     path: 'admin',
     canActivate: [adminGuard],
     loadComponent: () => import('./features/admin/admin-page.component').then((component) => component.AdminPageComponent)

@@ -49,7 +49,7 @@
 .leaderboard-skeleton {
   height: 249.6px;
   background: #e5e7eb;
-  animation: skeleton-pulse 1.35s ease-in-out infinite;
+  @include animations.skeleton-pulse;
 }
 
 .leaderboard-table-shell {
@@ -64,17 +64,6 @@
   clip: rect(0, 0, 0, 0);
   clip-path: inset(50%);
   white-space: nowrap;
-}
-
-@keyframes skeleton-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-
-  50% {
-    opacity: 1;
-  }
 }
 
 .leaderboard-table {

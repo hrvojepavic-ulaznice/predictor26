@@ -1,0 +1,106 @@
+<section class="match-day-page" aria-labelledby="match-carousel-title">
+  <header class="page-header">
+    <div class="day-controls">
+      <button class="day-button" type="button" aria-label="Previous day" [disabled]="!canGoPrevious()" (click)="previousDay()">‹</button>
+      <span class="day-label">{{ selectedDayLabel() }}</span>
+      <button class="day-button" type="button" aria-label="Next day" [disabled]="!canGoNext()" (click)="nextDay()">›</button>
+    </div>
+    <p id="match-carousel-title" class="section-label">Match Day</p>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="status-message status-error">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <div class="matches-grid loading-grid" role="status" aria-label="Loading matches">
+      @for (item of [1, 2, 3]; track item) {
+        <span class="skeleton-card" aria-hidden="true">
+          <span class="skeleton-meta">
+            <span class="skeleton-pill"></span>
+            <span class="skeleton-time"></span>
+          </span>
+          <span class="skeleton-odds">
+            <span class="skeleton-odd"></span>
+            <span class="skeleton-odd"></span>
+            <span class="skeleton-odd"></span>
+          </span>
+          <span class="skeleton-teams">
+            <span class="skeleton-team"></span>
+            <span class="skeleton-score"></span>
+            <span class="skeleton-team"></span>
+          </span>
+        </span>
+      }
+    </div>
+  } @else {
+    <div class="matches-grid">
+      @for (match of selectedMatches(); track match.matchId) {
+        <button
+          class="match-card"
+          type="button"
+          [class.match-card-live]="match.status === 'live'"
+          [class.match-card-finished]="match.status === 'finished'"
+          [class.match-card-undecided]="match.status === 'undecided'"
+          [disabled]="!match.canOpenDetails || openingMatchId() !== null"
+          (click)="openMatch(match)"
+        >
+          <span class="match-meta">
+            <span
+              class="status-pill"
+              [class.status-pill-coming-up]="match.status === 'coming_up'"
+              [class.status-pill-live]="match.status === 'live'"
+              [class.status-pill-finished]="match.status === 'finished'"
+              [class.status-pill-undecided]="match.status === 'undecided'"
+            >
+              {{ match.statusLabel }}
+            </span>
+            <time [attr.datetime]="match.kickoffAt">{{ match.kickoffAt | date: 'HH:mm' }}</time>
+          </span>
+          @if (match.odds; as odds) {
+            <span class="odds-row" aria-label="Match odds">
+              <span class="odds-pill" [class.odds-win]="match.winningOutcome === '1'">{{ odds.homeWin | oddsFormat }}</span>
+              <span class="odds-pill" [class.odds-win]="match.winningOutcome === 'X'">{{ odds.draw | oddsFormat }}</span>
+              <span class="odds-pill" [class.odds-win]="match.winningOutcome === '2'">{{ odds.awayWin | oddsFormat }}</span>
+            </span>
+          }
+          <span class="teams-row">
+            <span class="team-name">{{ match.homeTeam.flag }} {{ match.homeTeam.name }}</span>
+            <span class="score-box">
+              @if (match.finalScore) {
+                {{ match.finalScore.home }}:{{ match.finalScore.away }}
+              } @else {
+                -
+              }
+            </span>
+            <span class="team-name">{{ match.awayTeam.flag }} {{ match.awayTeam.name }}</span>
+          </span>
+          @if (match.canOpenDetails) {
+            <span class="details-indicator" aria-hidden="true">...</span>
+          }
+        </button>
+      } @empty {
+        <p class="empty-message">No games on this day.</p>
+      }
+    </div>
+  }
+
+  @if (selectedMatch(); as match) {
+    <app-modal-shell
+      labelledBy="match-predictions-title"
+      panelWidth="680px"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="closeMatch()"
+    >
+      <app-match-predictions-modal
+        [match]="match"
+        [details]="selectedMatchDetails()"
+        [loading]="modalSkeletonVisible()"
+        [skeletonRows]="skeletonUserCount()"
+        [errorMessage]="selectedMatchError()"
+        (closeModal)="closeMatch()"
+      />
+    </app-modal-shell>
+  }
+</section>

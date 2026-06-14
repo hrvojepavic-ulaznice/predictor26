@@ -1,9 +1,13 @@
 import { MatchRow } from '../../database/queries/matches.queries.js';
 import { LeaderboardPredictionRow } from '../../database/queries/leaderboard.queries.js';
+import { LatestLiveScoreSnapshotRow } from '../../database/queries/live-scores.queries.js';
 import {
   LeaderboardComingUpMatchResponse,
   LeaderboardLiveMatchResponse,
   LeaderboardPredictionPointsResponse,
+  LeaderboardMatchDayResponse,
+  LeaderboardMatchPredictionsResponse,
+  LeaderboardMatchStatusResponse,
   LeaderboardResponse,
   LeaderboardUserRoundDetailsResponse,
   LeaderboardRoundMatchResponse,
@@ -11,6 +15,7 @@ import {
   LeaderboardUserResponse
 } from './leaderboard.interfaces.js';
 import { findLeaderboardMatches, findLeaderboardPredictions, findLeaderboardUsers } from './leaderboard.repository.js';
+import { findLatestLiveScoreSnapshots } from '../live-scores/live-scores.repository.js';
 
 interface RoundSummary {
   readonly label: string;
@@ -21,11 +26,13 @@ interface RoundSummary {
 }
 
 const assumedMatchDurationMs = (2 * 60 + 15) * 60 * 1_000;
+const matchDayTimeZone = 'Europe/Zagreb';
 
 export async function getLeaderboard(): Promise<LeaderboardResponse> {
   const matches = findLeaderboardMatches();
+  const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
   const roundSummaries = getRoundSummaries(matches);
-  const liveMatches = getLiveMatches(matches);
+  const liveMatches = getLiveMatches(matches, latestSnapshotsByMatchId);
   const comingUpMatches = getComingUpMatches(roundSummaries, liveMatches);
   const users = findLeaderboardUsers();
   const predictionsByUser = groupPredictionsByUser(findLeaderboardPredictions());
@@ -66,10 +73,81 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
   };
 }
 
-function getLiveMatches(matches: readonly MatchRow[]): MatchRow[] {
+export async function getLeaderboardMatchDays(): Promise<LeaderboardMatchDayResponse[]> {
+  const days = new Map<string, MatchRow[]>();
+  const matches = findLeaderboardMatches();
+  const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
+  const roundLockedByLabel = new Map(getRoundSummaries(matches).map((round) => [round.label, round.locked]));
+
+  for (const match of matches.sort(sortMatchesByKickoff)) {
+    const dateKey = getLocalDateKey(match.kickoff_at);
+    days.set(dateKey, [...(days.get(dateKey) ?? []), match]);
+  }
+
+  return Array.from(days, ([date, matches]) => ({
+    date,
+    matches: matches.map((match) =>
+      toDayMatchResponse(match, roundLockedByLabel.get(getPredictionRound(match)) ?? false, latestSnapshotsByMatchId.get(match.id))
+    )
+  }));
+}
+
+export async function getLeaderboardMatchPredictions(
+  matchId: number,
+  viewerUserId: number | null
+): Promise<LeaderboardMatchPredictionsResponse | null> {
+  if (!Number.isInteger(matchId) || matchId < 1 || viewerUserId === null) {
+    return null;
+  }
+
+  const matches = findLeaderboardMatches();
+  const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
+  const match = matches.find((currentMatch) => currentMatch.id === matchId);
+
+  if (!match) {
+    return null;
+  }
+
+  const round = getRoundSummaries(matches).find((currentRound) => currentRound.label === getPredictionRound(match));
+
+  if (!round?.viewable) {
+    return null;
+  }
+
+  const locked = round.locked;
+  const predictionsByUserId = new Map(
+    findLeaderboardPredictions()
+      .filter((prediction) => prediction.match_id === match.id)
+      .map((prediction) => [prediction.user_id, prediction])
+  );
+
+  return {
+    match: toDayMatchResponse(match, locked, latestSnapshotsByMatchId.get(match.id)),
+    locked,
+    users: findLeaderboardUsers().map((user) => {
+      const prediction = predictionsByUserId.get(user.id);
+      const predictionHidden = !locked && user.id !== viewerUserId && prediction !== undefined;
+
+      return {
+        userId: user.id,
+        username: user.username,
+        prediction: prediction && !predictionHidden ? toPredictionResponse(prediction) : null,
+        predictionHidden,
+        points: prediction && (locked || user.id === viewerUserId) ? calculatePredictionPoints(prediction) : hiddenPredictionPoints()
+      };
+    })
+  };
+}
+
+function getLiveMatches(
+  matches: readonly MatchRow[],
+  latestSnapshotsByMatchId: ReadonlyMap<number, LatestLiveScoreSnapshotRow>
+): MatchRow[] {
   const now = Date.now();
 
-  return matches.filter((match) => Date.parse(match.kickoff_at) <= now && !isSettledForLiveLeaderboard(match, now)).sort(sortMatchesByKickoff);
+  return matches
+    .filter((match) => Date.parse(match.kickoff_at) <= now && !isSettledForLiveLeaderboard(match, now, latestSnapshotsByMatchId.get(match.id)))
+    .sort(sortMatchesByKickoff);
 }
 
 function getComingUpMatches(rounds: readonly RoundSummary[], liveMatches: readonly MatchRow[]): MatchRow[] {
@@ -94,7 +172,11 @@ function getComingUpMatches(rounds: readonly RoundSummary[], liveMatches: readon
   return eligibleMatches.filter((match) => match.kickoff_at === nextKickoffAt).sort(sortMatchesByKickoff);
 }
 
-function isSettledForLiveLeaderboard(match: MatchRow, now: number): boolean {
+function isSettledForLiveLeaderboard(match: MatchRow, now: number, snapshot: LatestLiveScoreSnapshotRow | undefined): boolean {
+  if (isFinishedByProvider(snapshot)) {
+    return true;
+  }
+
   return (
     match.final_home_score !== null &&
     match.final_away_score !== null &&
@@ -144,6 +226,40 @@ function toComingUpMatchResponse(match: MatchRow): LeaderboardComingUpMatchRespo
       name: match.away_team_name,
       flag: match.away_team_flag
     }
+  };
+}
+
+function toDayMatchResponse(match: MatchRow, roundLocked: boolean, snapshot: LatestLiveScoreSnapshotRow | undefined) {
+  return {
+    matchId: match.id,
+    matchNumber: match.match_number,
+    kickoffAt: match.kickoff_at,
+    status: getMatchStatus(match, snapshot),
+    roundLocked,
+    homeTeam: {
+      name: match.home_team_name,
+      flag: match.home_team_flag
+    },
+    awayTeam: {
+      name: match.away_team_name,
+      flag: match.away_team_flag
+    },
+    odds:
+      match.home_win_odds === null || match.draw_odds === null || match.away_win_odds === null
+        ? null
+        : {
+            homeWin: match.home_win_odds,
+            draw: match.draw_odds,
+            awayWin: match.away_win_odds,
+            syncedAt: match.odds_synced_at
+          },
+    finalScore:
+      match.final_home_score === null || match.final_away_score === null
+        ? null
+        : {
+            home: match.final_home_score,
+            away: match.final_away_score
+          }
   };
 }
 
@@ -429,6 +545,54 @@ function calculatePredictionPoints(prediction: LeaderboardPredictionRow): Leader
     available,
     state: 'miss'
   };
+}
+
+function hiddenPredictionPoints(): LeaderboardPredictionPointsResponse {
+  return {
+    earned: null,
+    available: null,
+    state: 'pending'
+  };
+}
+
+function getMatchStatus(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined): LeaderboardMatchStatusResponse {
+  const now = Date.now();
+  const kickoffTime = Date.parse(match.kickoff_at);
+  const elapsed = now - kickoffTime;
+  const hasFinalScore = match.final_home_score !== null && match.final_away_score !== null;
+
+  if ((hasFinalScore && elapsed >= assumedMatchDurationMs) || isFinishedByProvider(snapshot)) {
+    return 'finished';
+  }
+
+  if (kickoffTime <= now && elapsed < assumedMatchDurationMs) {
+    return 'live';
+  }
+
+  if (kickoffTime <= now && !hasFinalScore) {
+    return 'undecided';
+  }
+
+  return 'coming_up';
+}
+
+function isFinishedByProvider(snapshot: LatestLiveScoreSnapshotRow | undefined): boolean {
+  return snapshot?.status === 'finished' && snapshot.home_score !== null && snapshot.away_score !== null;
+}
+
+function getLocalDateKey(kickoffAt: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: matchDayTimeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date(kickoffAt));
+
+  const year = parts.find((part) => part.type === 'year')?.value ?? '1970';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '01';
+  const day = parts.find((part) => part.type === 'day')?.value ?? '01';
+
+  return `${year}-${month}-${day}`;
 }
 
 function getScoreOutcome(homeScore: number, awayScore: number): '1' | 'X' | '2' {

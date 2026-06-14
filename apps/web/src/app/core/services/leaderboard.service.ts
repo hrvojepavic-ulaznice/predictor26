@@ -1,7 +1,14 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Observable, of, tap } from 'rxjs';
 
-import { LeaderboardResponse, LeaderboardRoundDetails, LeaderboardUserRoundDetailsResponse } from '@models/leaderboard.models';
+import {
+  LeaderboardMatchDay,
+  LeaderboardMatchDaysResponse,
+  LeaderboardMatchPredictionsResponse,
+  LeaderboardResponse,
+  LeaderboardRoundDetails,
+  LeaderboardUserRoundDetailsResponse
+} from '@models/leaderboard.models';
 import { LeaderboardApiProvider } from '@services/providers/leaderboard-api.provider';
 
 interface EnsureLeaderboardOptions {
@@ -14,10 +21,14 @@ interface EnsureLeaderboardOptions {
 export class LeaderboardService {
   private readonly leaderboardApi = inject(LeaderboardApiProvider);
   private readonly leaderboardSignal = signal<LeaderboardResponse | null>(null);
+  private readonly matchDaysSignal = signal<LeaderboardMatchDay[] | null>(null);
   private readonly loadedSignal = signal(false);
+  private readonly matchDaysLoadedSignal = signal(false);
   private readonly roundDetailsCache = new Map<string, LeaderboardRoundDetails>();
+  private readonly matchPredictionsCache = new Map<number, LeaderboardMatchPredictionsResponse>();
 
   readonly leaderboard = this.leaderboardSignal.asReadonly();
+  readonly matchDays = this.matchDaysSignal.asReadonly();
   readonly loaded = this.loadedSignal.asReadonly();
 
   ensureLeaderboard(options: EnsureLeaderboardOptions = {}): Observable<LeaderboardResponse> | null {
@@ -28,12 +39,39 @@ export class LeaderboardService {
     return this.refreshLeaderboard();
   }
 
+  ensureMatchDays(options: EnsureLeaderboardOptions = {}): Observable<LeaderboardMatchDaysResponse> | null {
+    if (!options.force && this.matchDaysLoadedSignal()) {
+      return null;
+    }
+
+    return this.leaderboardApi.getMatchDays().pipe(
+      tap(({ days }) => {
+        this.matchDaysSignal.set(days);
+        this.matchDaysLoadedSignal.set(true);
+      })
+    );
+  }
+
   refreshLeaderboard(): Observable<LeaderboardResponse> {
     return this.leaderboardApi.getLeaderboard().pipe(
       tap((leaderboard) => {
         this.leaderboardSignal.set(leaderboard);
         this.loadedSignal.set(true);
         this.roundDetailsCache.clear();
+      })
+    );
+  }
+
+  ensureMatchPredictions(matchId: number): Observable<LeaderboardMatchPredictionsResponse> {
+    const cachedPredictions = this.matchPredictionsCache.get(matchId);
+
+    if (cachedPredictions) {
+      return of(cachedPredictions);
+    }
+
+    return this.leaderboardApi.getMatchPredictions(matchId).pipe(
+      tap((response) => {
+        this.matchPredictionsCache.set(matchId, response);
       })
     );
   }
@@ -82,6 +120,7 @@ export class LeaderboardService {
     }
 
     this.roundDetailsCache.delete(this.getRoundDetailsCacheKey(userId, roundLabel));
+    this.matchPredictionsCache.clear();
   }
 
   private getRoundDetailsCacheKey(userId: number, roundLabel: string): string {

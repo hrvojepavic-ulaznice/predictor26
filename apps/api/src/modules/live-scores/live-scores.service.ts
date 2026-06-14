@@ -1,4 +1,5 @@
 import { config } from '../../config/index.js';
+import { LatestLiveScoreSnapshotRow } from '../../database/queries/live-scores.queries.js';
 import { MatchRow } from '../../database/queries/matches.queries.js';
 import { getAppMetadataValue, setAppMetadataValue } from '../../database/queries/app-metadata.queries.js';
 import { fetchOddsPortalLiveScores, ProviderLiveScore } from './oddsportal-live-score-provider.js';
@@ -45,9 +46,9 @@ export async function getLiveScoreJobSnapshot() {
   const enabled = await areLiveScoresEnabled();
   const matches = findLiveScoreMatches();
   const now = new Date();
-  const activeMatches = getActiveMatches(matches, now);
-  const nextRunAt = enabled ? calculateNextRunAt(matches, now, activeMatches.length > 0) : null;
   const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
+  const activeMatches = getActiveMatches(matches, now, latestSnapshotsByMatchId);
+  const nextRunAt = enabled ? calculateNextRunAt(matches, now, activeMatches.length > 0, latestSnapshotsByMatchId) : null;
 
   scheduledNextRunAt = scheduledNextRunAt ?? nextRunAt;
 
@@ -170,7 +171,8 @@ async function runLiveScoreSync(options: { readonly force: boolean }): Promise<L
 
   try {
     const matches = findLiveScoreMatches();
-    const activeMatches = getActiveMatches(matches, startedAt);
+    const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
+    const activeMatches = getActiveMatches(matches, startedAt, latestSnapshotsByMatchId);
 
     if (!enabled || (!options.force && activeMatches.length === 0)) {
       status = 'skipped';
@@ -232,7 +234,8 @@ async function runLiveScoreSync(options: { readonly force: boolean }): Promise<L
 
   const finishedAt = new Date();
   const matches = findLiveScoreMatches();
-  const nextRunAt = enabled ? calculateNextRunAt(matches, finishedAt, liveMatches > 0) : null;
+  const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
+  const nextRunAt = enabled ? calculateNextRunAt(matches, finishedAt, liveMatches > 0, latestSnapshotsByMatchId) : null;
   scheduledNextRunAt = nextRunAt;
   const report: LiveScoreRunReport = {
     runId: null,
@@ -277,22 +280,36 @@ function scheduleNextLiveScoreSync(delayMs: number): void {
   }, Math.max(delayMs, schedulerMinimumDelayMs));
 }
 
-function getActiveMatches(matches: readonly MatchRow[], now: Date): MatchRow[] {
+function getActiveMatches(
+  matches: readonly MatchRow[],
+  now: Date,
+  latestSnapshotsByMatchId: ReadonlyMap<number, LatestLiveScoreSnapshotRow>
+): MatchRow[] {
   const nowTime = now.getTime();
 
   return matches.filter((match) => {
+    if (isFinishedByProvider(latestSnapshotsByMatchId.get(match.id))) {
+      return false;
+    }
+
     const kickoffTime = Date.parse(match.kickoff_at);
 
     return kickoffTime <= nowTime + config.liveScoreKickoffBufferMs && kickoffTime + config.liveScoreActiveWindowMs >= nowTime;
   });
 }
 
-function calculateNextRunAt(matches: readonly MatchRow[], now: Date, hasLiveMatches: boolean): string | null {
+function calculateNextRunAt(
+  matches: readonly MatchRow[],
+  now: Date,
+  hasLiveMatches: boolean,
+  latestSnapshotsByMatchId: ReadonlyMap<number, LatestLiveScoreSnapshotRow>
+): string | null {
   if (hasLiveMatches) {
     return new Date(now.getTime() + config.liveScorePollIntervalMs).toISOString();
   }
 
   const nextKickoff = matches
+    .filter((match) => !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id)))
     .map((match) => Date.parse(match.kickoff_at))
     .filter((kickoffTime) => Number.isFinite(kickoffTime) && kickoffTime + config.liveScoreActiveWindowMs >= now.getTime())
     .sort((first, second) => first - second)[0];
@@ -308,6 +325,10 @@ function calculateNextRunAt(matches: readonly MatchRow[], now: Date, hasLiveMatc
       : now.getTime() + config.liveScorePollIntervalMs;
 
   return new Date(nextRunTime).toISOString();
+}
+
+function isFinishedByProvider(snapshot: LatestLiveScoreSnapshotRow | undefined): boolean {
+  return snapshot?.status === 'finished' && snapshot.home_score !== null && snapshot.away_score !== null;
 }
 
 function mapProviderScoresToMatches(matches: readonly MatchRow[], scores: readonly ProviderLiveScore[]) {
