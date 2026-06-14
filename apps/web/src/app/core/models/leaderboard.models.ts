@@ -14,6 +14,7 @@ export interface LeaderboardLiveMatch {
   readonly kickoffAt: string;
   readonly homeTeam: MatchTeam;
   readonly awayTeam: MatchTeam;
+  readonly finalScore: MatchScore | null;
 }
 
 export interface LeaderboardLivePrediction {

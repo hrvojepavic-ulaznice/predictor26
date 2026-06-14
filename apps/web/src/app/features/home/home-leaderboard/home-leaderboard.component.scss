@@ -251,6 +251,20 @@ tbody tr:last-child td {
   gap: 6px;
 }
 
+.live-match-heading-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.live-heading-score {
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 4px 7px;
+}
+
 .live-dot {
   width: 7px;
   height: 7px;
