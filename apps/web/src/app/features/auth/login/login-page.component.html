@@ -5,12 +5,31 @@
     <form class="auth-form" [formGroup]="loginForm" (ngSubmit)="login()">
       <label class="field">
         <span>Username</span>
-        <input appFormFieldState="required" type="text" formControlName="username" autocomplete="username" maxlength="40" />
+        <input
+          #usernameInput
+          appFormFieldState="required"
+          type="text"
+          formControlName="username"
+          name="username"
+          autocomplete="username"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+          maxlength="40"
+        />
       </label>
 
       <label class="field">
         <span>Password</span>
-        <input appFormFieldState="required" type="password" formControlName="password" autocomplete="current-password" maxlength="128" />
+        <input
+          #passwordInput
+          appFormFieldState="required"
+          type="password"
+          formControlName="password"
+          name="password"
+          autocomplete="current-password"
+          maxlength="128"
+        />
       </label>
 
       <p class="form-error" [class.form-error-visible]="errorMessage()">{{ errorMessage() || '&nbsp;' }}</p>

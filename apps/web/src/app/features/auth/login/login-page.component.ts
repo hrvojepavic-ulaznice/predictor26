@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -26,6 +26,12 @@ export class LoginPageComponent {
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
 
+  @ViewChild('usernameInput')
+  private readonly usernameInput?: ElementRef<HTMLInputElement>;
+
+  @ViewChild('passwordInput')
+  private readonly passwordInput?: ElementRef<HTMLInputElement>;
+
   protected readonly loginForm = this.formBuilder.nonNullable.group({
     username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(40)]],
     password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(128)]]
@@ -38,6 +44,8 @@ export class LoginPageComponent {
   }
 
   protected login(): void {
+    this.syncNativeInputValues();
+
     if (this.loginForm.invalid || this.isSubmitting()) {
       this.loginForm.markAllAsTouched();
       this.errorMessage.set('Invalid username or password.');
@@ -63,5 +71,18 @@ export class LoginPageComponent {
         this.isSubmitting.set(false);
       }
     });
+  }
+
+  private syncNativeInputValues(): void {
+    const username = this.usernameInput?.nativeElement.value;
+    const password = this.passwordInput?.nativeElement.value;
+
+    if (username !== undefined && username !== this.loginForm.controls.username.value) {
+      this.loginForm.controls.username.setValue(username);
+    }
+
+    if (password !== undefined && password !== this.loginForm.controls.password.value) {
+      this.loginForm.controls.password.setValue(password);
+    }
   }
 }

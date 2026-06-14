@@ -5,7 +5,17 @@
     <form class="register-form" [formGroup]="registerForm" (ngSubmit)="register()">
       <label class="field">
         <span>Username</span>
-        <input appFormFieldState="invalid" type="text" formControlName="username" autocomplete="username" maxlength="40" />
+        <input
+          appFormFieldState="invalid"
+          type="text"
+          formControlName="username"
+          name="username"
+          autocomplete="username"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+          maxlength="40"
+        />
       </label>
 
       <label class="field">
