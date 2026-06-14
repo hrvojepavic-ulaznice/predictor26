@@ -4,6 +4,7 @@ import cors from 'cors';
 import express from 'express';
 
 import { config } from './config/index.js';
+import { adminJobsRoutes } from './modules/admin-jobs/admin-jobs.routes.js';
 import { adminMatchesRoutes } from './modules/admin-matches/admin-matches.routes.js';
 import { adminPaymentsRoutes } from './modules/admin-payments/admin-payments.routes.js';
 import { adminUsersRoutes } from './modules/admin-users/admin-users.routes.js';
@@ -29,6 +30,7 @@ app.use('/api', notificationsRoutes);
 app.use('/api', paymentsRoutes);
 app.use('/api', leaderboardRoutes);
 app.use('/api', worldCupTeamsRoutes);
+app.use('/api', adminJobsRoutes);
 app.use('/api', adminMatchesRoutes);
 app.use('/api', adminPaymentsRoutes);
 app.use('/api', adminUsersRoutes);

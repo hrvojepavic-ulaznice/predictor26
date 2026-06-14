@@ -77,6 +77,12 @@ export const routes: Routes = [
       )
   },
   {
+    path: 'admin/jobs',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./features/admin/jobs/admin-jobs-page.component').then((component) => component.AdminJobsPageComponent)
+  },
+  {
     path: 'admin/competition',
     canActivate: [adminGuard],
     loadComponent: () =>

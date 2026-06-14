@@ -10,6 +10,8 @@ import {
   disableUserNotificationSubscription,
   findUserNotificationSubscriptions,
   findReminderCandidates,
+  getNotificationSubscriptionStats,
+  listRecentReminderDeliveries,
   markReminderDelivered,
   saveUserNotificationSubscription
 } from './notifications.repository.js';
@@ -17,7 +19,21 @@ import {
 webPush.setVapidDetails(config.vapidSubject, config.vapidPublicKey, config.vapidPrivateKey);
 
 const notificationRemindersEnabledKey = 'notification_reminders_enabled';
+const notificationReminderLastRunKey = 'notification_reminder_last_run';
 const secretCodeMaxLength = 128;
+const recentReminderDeliveryLimit = 20;
+const dueReminderCandidateLimit = 20;
+
+export interface NotificationReminderRunReport {
+  readonly startedAt: string;
+  readonly finishedAt: string;
+  readonly enabled: boolean;
+  readonly candidateCount: number;
+  readonly sentCount: number;
+  readonly failedCount: number;
+  readonly disabledSubscriptionCount: number;
+  readonly errorMessage: string | null;
+}
 
 export type UpdateNotificationSettingsResult =
   | {
@@ -43,6 +59,41 @@ export async function getNotificationConfig() {
 export async function getNotificationSettings() {
   return {
     remindersEnabled: await areNotificationRemindersEnabled()
+  };
+}
+
+export async function getNotificationReminderJobSnapshot() {
+  const now = new Date();
+  const windowEnd = new Date(now.getTime() - config.notificationReminderIntervalMs);
+  const remindersEnabled = await areNotificationRemindersEnabled();
+  const subscriptionStats = getNotificationSubscriptionStats();
+  const dueCandidates = remindersEnabled ? findReminderCandidates(now, windowEnd) : [];
+
+  return {
+    enabled: remindersEnabled,
+    intervalMs: config.notificationReminderIntervalMs,
+    dueCandidateCount: dueCandidates.length,
+    activeSubscriptions: subscriptionStats.active_subscriptions,
+    disabledSubscriptions: subscriptionStats.disabled_subscriptions,
+    totalSubscriptions: subscriptionStats.total_subscriptions,
+    usersWithActiveSubscriptions: subscriptionStats.users_with_active_subscriptions,
+    lastRun: await getLastNotificationReminderRun(),
+    dueCandidates: dueCandidates.slice(0, dueReminderCandidateLimit).map((candidate) => ({
+      userId: candidate.user_id,
+      username: candidate.username,
+      predictionRound: candidate.prediction_round,
+      deadlineAt: candidate.deadline_at,
+      expectedCount: candidate.expected_count,
+      submittedCount: candidate.submitted_count,
+      reminderHours: candidate.reminder_hours
+    })),
+    recentDeliveries: listRecentReminderDeliveries(recentReminderDeliveryLimit).map((delivery) => ({
+      userId: delivery.user_id,
+      username: delivery.username,
+      predictionRound: delivery.prediction_round,
+      reminderHours: delivery.reminder_hours,
+      deliveredAt: delivery.created_at
+    }))
   };
 }
 
@@ -104,14 +155,16 @@ export function startNotificationReminderScheduler(): void {
   }, config.notificationReminderIntervalMs);
 }
 
-export async function sendDuePredictionReminders(): Promise<void> {
-  if (!(await areNotificationRemindersEnabled())) {
-    return;
-  }
-
+export async function sendDuePredictionReminders(): Promise<NotificationReminderRunReport> {
+  const startedAt = new Date();
+  const enabled = await areNotificationRemindersEnabled();
   const now = new Date();
   const windowEnd = new Date(now.getTime() - config.notificationReminderIntervalMs);
-  const candidates = findReminderCandidates(now, windowEnd);
+  const candidates = enabled ? findReminderCandidates(now, windowEnd) : [];
+  let sentCount = 0;
+  let failedCount = 0;
+  let disabledSubscriptionCount = 0;
+  let errorMessage: string | null = null;
 
   for (const candidate of candidates) {
     const payload = buildReminderPayload(candidate);
@@ -119,11 +172,15 @@ export async function sendDuePredictionReminders(): Promise<void> {
     try {
       await webPush.sendNotification(JSON.parse(candidate.subscription_json) as PushSubscription, JSON.stringify(payload));
       markReminderDelivered(candidate.user_id, candidate.prediction_round, candidate.reminder_hours);
+      sentCount += 1;
     } catch (error) {
       const statusCode = readWebPushStatusCode(error);
+      failedCount += 1;
+      errorMessage = error instanceof Error ? error.message : 'Prediction reminder notification failed.';
 
       if (statusCode === 404 || statusCode === 410) {
         disableUserNotificationSubscription(candidate.endpoint);
+        disabledSubscriptionCount += 1;
       }
 
       console.error('Prediction reminder notification failed', {
@@ -134,6 +191,21 @@ export async function sendDuePredictionReminders(): Promise<void> {
       });
     }
   }
+
+  const report = {
+    startedAt: startedAt.toISOString(),
+    finishedAt: new Date().toISOString(),
+    enabled,
+    candidateCount: candidates.length,
+    sentCount,
+    failedCount,
+    disabledSubscriptionCount,
+    errorMessage
+  };
+
+  setAppMetadataValue(notificationReminderLastRunKey, JSON.stringify(report));
+
+  return report;
 }
 
 export async function sendTestNotification(userId: number): Promise<{ readonly sent: number; readonly subscriptions: number }> {
@@ -188,6 +260,20 @@ export function resetUserNotificationSubscriptions(userId: number): { readonly r
 
 async function areNotificationRemindersEnabled(): Promise<boolean> {
   return (await getAppMetadataValue(notificationRemindersEnabledKey)) === 'true';
+}
+
+async function getLastNotificationReminderRun(): Promise<NotificationReminderRunReport | null> {
+  const value = await getAppMetadataValue(notificationReminderLastRunKey);
+
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value) as NotificationReminderRunReport;
+  } catch {
+    return null;
+  }
 }
 
 async function isValidSecretCode(secretCode: string): Promise<boolean> {

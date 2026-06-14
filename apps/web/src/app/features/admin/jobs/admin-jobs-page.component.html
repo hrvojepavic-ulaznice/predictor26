@@ -1,0 +1,172 @@
+<section class="admin-jobs-page" aria-labelledby="admin-jobs-title">
+  <header class="page-header">
+    <div>
+      <p class="section-label">Admin</p>
+      <h1 id="admin-jobs-title">Scheduled jobs</h1>
+      <a class="back-link" routerLink="/admin">Back to admin tools</a>
+    </div>
+
+    <button class="secondary-button" type="button" [disabled]="loading()" (click)="refresh()">Refresh</button>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="status-message status-error">{{ message }}</p>
+  }
+
+  @if (successMessage(); as message) {
+    <p class="status-message status-success">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Loading scheduled job details...</p>
+  } @else if (job(); as notificationJob) {
+    <section class="job-panel" aria-labelledby="notification-reminders-title">
+      <div class="job-heading">
+        <div>
+          <p class="job-kicker">Current job</p>
+          <h2 id="notification-reminders-title">{{ notificationJob.name }}</h2>
+          <p>{{ notificationJob.description }}</p>
+        </div>
+
+        <div class="job-actions">
+          <span class="status-pill" [class.status-pill-on]="notificationJob.enabled">
+            {{ notificationJob.enabled ? 'Enabled' : 'Disabled' }}
+          </span>
+          <button class="primary-button" type="button" [disabled]="running()" (click)="runNow()">
+            {{ running() ? 'Running...' : 'Run now' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="metrics-grid" aria-label="Prediction reminder job metrics">
+        <div class="metric">
+          <span class="metric-label">Interval</span>
+          <strong>{{ intervalMinutes() | number: '1.0-0' }} min</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Due now</span>
+          <strong>{{ notificationJob.dueCandidateCount }}</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Active subscriptions</span>
+          <strong>{{ notificationJob.activeSubscriptions }}</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Subscribed users</span>
+          <strong>{{ notificationJob.usersWithActiveSubscriptions }}</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Disabled subscriptions</span>
+          <strong>{{ notificationJob.disabledSubscriptions }}</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Total subscriptions</span>
+          <strong>{{ notificationJob.totalSubscriptions }}</strong>
+        </div>
+      </div>
+
+      <section class="details-section" aria-labelledby="last-run-title">
+        <h3 id="last-run-title">Last run</h3>
+
+        @if (notificationJob.lastRun; as lastRun) {
+          <dl class="run-details">
+            <div>
+              <dt>Started</dt>
+              <dd>{{ lastRun.startedAt | date: 'medium' }}</dd>
+            </div>
+            <div>
+              <dt>Finished</dt>
+              <dd>{{ lastRun.finishedAt | date: 'medium' }}</dd>
+            </div>
+            <div>
+              <dt>Candidates</dt>
+              <dd>{{ lastRun.candidateCount }}</dd>
+            </div>
+            <div>
+              <dt>Sent</dt>
+              <dd>{{ lastRun.sentCount }}</dd>
+            </div>
+            <div>
+              <dt>Failed</dt>
+              <dd>{{ lastRun.failedCount }}</dd>
+            </div>
+            <div>
+              <dt>Disabled</dt>
+              <dd>{{ lastRun.disabledSubscriptionCount }}</dd>
+            </div>
+          </dl>
+
+          @if (lastRun.errorMessage) {
+            <p class="status-message status-error">{{ lastRun.errorMessage }}</p>
+          }
+        } @else {
+          <p class="empty-message">This job has not recorded a run yet.</p>
+        }
+      </section>
+
+      <section class="details-section" aria-labelledby="due-candidates-title">
+        <h3 id="due-candidates-title">Due if run now</h3>
+
+        @if (notificationJob.dueCandidates.length > 0) {
+          <div class="deliveries-table-shell">
+            <table class="deliveries-table">
+              <thead>
+                <tr>
+                  <th scope="col">User</th>
+                  <th scope="col">Round</th>
+                  <th scope="col">Lock time</th>
+                  <th scope="col">Tips</th>
+                  <th scope="col">Window</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (candidate of notificationJob.dueCandidates; track candidate.userId + ':' + candidate.predictionRound + ':' + candidate.reminderHours) {
+                  <tr>
+                    <td>{{ candidate.username }}</td>
+                    <td>{{ candidate.predictionRound }}</td>
+                    <td>{{ candidate.deadlineAt | date: 'medium' }}</td>
+                    <td>{{ candidate.submittedCount }}/{{ candidate.expectedCount }}</td>
+                    <td>{{ candidate.reminderHours }}h before lock</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="empty-message">No reminder candidates are due in the current interval window.</p>
+        }
+      </section>
+
+      <section class="details-section" aria-labelledby="recent-deliveries-title">
+        <h3 id="recent-deliveries-title">Recent reminder deliveries</h3>
+
+        @if (notificationJob.recentDeliveries.length > 0) {
+          <div class="deliveries-table-shell">
+            <table class="deliveries-table">
+              <thead>
+                <tr>
+                  <th scope="col">Time</th>
+                  <th scope="col">User</th>
+                  <th scope="col">Round</th>
+                  <th scope="col">Window</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (delivery of notificationJob.recentDeliveries; track delivery.userId + ':' + delivery.predictionRound + ':' + delivery.reminderHours) {
+                  <tr>
+                    <td>{{ delivery.deliveredAt | date: 'medium' }}</td>
+                    <td>{{ delivery.username }}</td>
+                    <td>{{ delivery.predictionRound }}</td>
+                    <td>{{ delivery.reminderHours }}h before lock</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="empty-message">No reminder deliveries have been recorded yet.</p>
+        }
+      </section>
+    </section>
+  }
+</section>

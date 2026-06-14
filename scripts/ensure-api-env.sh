@@ -32,6 +32,8 @@ if [[ -z "$(get_env_value VAPID_SUBJECT)" ]]; then
   set_env_value "VAPID_SUBJECT" "mailto:admin@predictor26.local"
 fi
 
+set_env_value "NOTIFICATION_REMINDER_INTERVAL_MS" "300000"
+
 if [[ -z "$(get_env_value AUTH_TOKEN_SECRET)" ]]; then
   auth_token_secret="$(
     node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
