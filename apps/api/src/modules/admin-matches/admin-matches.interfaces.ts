@@ -28,3 +28,12 @@ export interface UpdateFinalScoreResponse {
   readonly match: MatchResponse;
   readonly finalScore: ScoreResponse | null;
 }
+
+export interface UpdateKickoffRequest {
+  readonly kickoffAt: string;
+  readonly secretCode: string;
+}
+
+export interface UpdateKickoffResponse {
+  readonly match: MatchResponse;
+}

@@ -89,3 +89,12 @@ export interface UpdateFinalScoreResponse {
   readonly match: Match;
   readonly finalScore: MatchScore | null;
 }
+
+export interface UpdateKickoffRequest {
+  readonly kickoffAt: string;
+  readonly secretCode: string;
+}
+
+export interface UpdateKickoffResponse {
+  readonly match: Match;
+}

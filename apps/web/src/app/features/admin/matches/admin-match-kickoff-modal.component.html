@@ -1,0 +1,36 @@
+<form class="kickoff-form" [formGroup]="kickoffForm" (ngSubmit)="confirm()">
+  <header class="modal-header">
+    <h2 id="kickoff-modal-title">Edit match date</h2>
+    <button class="icon-button" type="button" aria-label="Close" [disabled]="isSubmitting()" (click)="cancel()">×</button>
+  </header>
+
+  <div class="modal-content">
+    <p class="match-label">Match {{ match().matchNumber }}: {{ match().homeTeam.name }} vs {{ match().awayTeam.name }}</p>
+
+    <label class="field">
+      <span>Match date and time</span>
+      <input type="datetime-local" autofocus appFormFieldState="invalid" formControlName="kickoffAt" [readonly]="isSubmitting()" />
+    </label>
+
+    <label class="field">
+      <span>What is the secret code?</span>
+      <input
+        type="password"
+        autocomplete="current-password"
+        maxlength="128"
+        appFormFieldState="required"
+        formControlName="secretCode"
+        [readonly]="isSubmitting()"
+      />
+    </label>
+
+    <p class="form-error" [class.form-error-visible]="errorMessage()">{{ errorMessage() || '&nbsp;' }}</p>
+  </div>
+
+  <footer class="modal-footer">
+    <button class="secondary-button" type="button" [disabled]="isSubmitting()" (click)="cancel()">Cancel</button>
+    <button class="confirm-button" type="submit" [disabled]="isSubmitting() || kickoffForm.invalid">
+      {{ isSubmitting() ? 'Saving...' : 'Save date' }}
+    </button>
+  </footer>
+</form>

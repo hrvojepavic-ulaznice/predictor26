@@ -74,7 +74,18 @@
                       <span class="required-badge" aria-label="Requires action">!</span>
                     }
                   </span>
-                  <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
+                  <span>
+                    <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
+                    <button
+                      class="kickoff-edit-button"
+                      type="button"
+                      [disabled]="savingIds().has(match.id)"
+                      [attr.aria-label]="'Edit date for match ' + match.matchNumber"
+                      (click)="editKickoff(match)"
+                    >
+                      <span aria-hidden="true">&#9998;</span>
+                    </button>
+                  </span>
                   <span>{{ match.city }} · {{ match.venue }}</span>
                 </div>
 
@@ -143,6 +154,25 @@
         [isSubmitting]="isPendingSecretActionSubmitting()"
         (confirmSecretCode)="confirmSecretAction($event)"
         (cancelModal)="cancelSecretAction()"
+      />
+    </app-modal-shell>
+  }
+
+  @if (editingKickoffMatch(); as match) {
+    <app-modal-shell
+      labelledBy="kickoff-modal-title"
+      panelWidth="440px"
+      [closeOnBackdrop]="true"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelKickoffChange()"
+    >
+      <app-admin-match-kickoff-modal
+        [match]="match"
+        [errorMessage]="kickoffErrorMessage()"
+        [isSubmitting]="isKickoffChangeSubmitting()"
+        (confirmKickoffChange)="confirmKickoffChange($event)"
+        (cancelModal)="cancelKickoffChange()"
       />
     </app-modal-shell>
   }

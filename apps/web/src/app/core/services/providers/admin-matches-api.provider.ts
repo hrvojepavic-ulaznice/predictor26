@@ -7,7 +7,9 @@ import {
   ImportMatchesResponse,
   SyncMatchOddsResponse,
   UpdateFinalScoreRequest,
-  UpdateFinalScoreResponse
+  UpdateFinalScoreResponse,
+  UpdateKickoffRequest,
+  UpdateKickoffResponse
 } from '@models/match.models';
 
 @Injectable({
@@ -30,5 +32,9 @@ export class AdminMatchesApiProvider {
 
   updateFinalScore(matchId: number, request: UpdateFinalScoreRequest) {
     return this.http.patch<UpdateFinalScoreResponse>(`/api/admin/matches/${matchId}/final-score`, request);
+  }
+
+  updateKickoff(matchId: number, request: UpdateKickoffRequest) {
+    return this.http.patch<UpdateKickoffResponse>(`/api/admin/matches/${matchId}/kickoff`, request);
   }
 }

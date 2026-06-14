@@ -9,6 +9,7 @@ import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.
 import { SecretCodeModalComponent } from '@shared/components/secret-code-modal/secret-code-modal.component';
 import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
 import { isValidScore, ScoreDraft, updateScoreDraft } from '@shared/utils/score-draft.utils';
+import { AdminMatchKickoffModalComponent, KickoffChangeConfirmation } from './admin-match-kickoff-modal.component';
 
 interface MatchGroup {
   readonly label: string;
@@ -20,7 +21,7 @@ type PendingSecretAction = 'schedule' | 'odds';
 
 @Component({
   selector: 'app-admin-matches-page',
-  imports: [DatePipe, ModalShellComponent, OddsFormatPipe, RouterLink, SecretCodeModalComponent],
+  imports: [AdminMatchKickoffModalComponent, DatePipe, ModalShellComponent, OddsFormatPipe, RouterLink, SecretCodeModalComponent],
   templateUrl: './admin-matches-page.component.html',
   styleUrl: './admin-matches-page.component.scss'
 })
@@ -32,6 +33,8 @@ export class AdminMatchesPageComponent {
   protected readonly loading = signal(true);
   protected readonly importing = signal(false);
   protected readonly syncingOdds = signal(false);
+  protected readonly kickoffErrorMessage = signal<string | null>(null);
+  protected readonly editingKickoffMatch = signal<Match | null>(null);
   protected readonly savingIds = signal<ReadonlySet<number>>(new Set<number>());
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly importMessage = signal<string | null>(null);
@@ -77,6 +80,70 @@ export class AdminMatchesPageComponent {
     this.importMessage.set(null);
     this.secretCodeErrorMessage.set(null);
     this.pendingSecretAction.set('odds');
+  }
+
+  protected editKickoff(match: Match): void {
+    if (this.savingIds().has(match.id)) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.kickoffErrorMessage.set(null);
+    this.editingKickoffMatch.set(match);
+  }
+
+  protected cancelKickoffChange(): void {
+    const match = this.editingKickoffMatch();
+
+    if (match && !this.savingIds().has(match.id)) {
+      this.editingKickoffMatch.set(null);
+      this.kickoffErrorMessage.set(null);
+    }
+  }
+
+  protected confirmKickoffChange(confirmation: KickoffChangeConfirmation): void {
+    const match = this.editingKickoffMatch();
+
+    if (!match || this.savingIds().has(match.id)) {
+      return;
+    }
+
+    this.setSaving(match.id, true);
+    this.errorMessage.set(null);
+    this.kickoffErrorMessage.set(null);
+
+    this.adminMatchesApi.updateKickoff(match.id, confirmation).subscribe({
+      next: ({ match: updatedMatch }) => {
+        this.matches.update((matches) =>
+          matches.map((currentMatch) => (currentMatch.id === updatedMatch.id ? updatedMatch : currentMatch))
+        );
+        this.editingKickoffMatch.set(null);
+        this.importMessage.set(`Match ${updatedMatch.matchNumber} date saved.`);
+        this.ensureSelectedFilterHasResults();
+        this.setSaving(match.id, false);
+      },
+      error: (error: unknown) => {
+        const message =
+          error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+            ? error.error.message
+            : 'Match date could not be saved.';
+
+        if (error instanceof HttpErrorResponse && [400, 403].includes(error.status)) {
+          this.kickoffErrorMessage.set(message);
+        } else {
+          this.errorMessage.set(message);
+          this.editingKickoffMatch.set(null);
+        }
+
+        this.setSaving(match.id, false);
+      }
+    });
+  }
+
+  protected isKickoffChangeSubmitting(): boolean {
+    const match = this.editingKickoffMatch();
+
+    return match ? this.savingIds().has(match.id) : false;
   }
 
   protected cancelSecretAction(): void {
