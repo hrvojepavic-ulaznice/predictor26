@@ -21,6 +21,7 @@ interface RankedLeaderboardUser extends LeaderboardUser {
 
 interface LeaderboardLiveMatchHeading extends LeaderboardLiveMatch {
   readonly label: string;
+  readonly liveScoreLabel: string | null;
 }
 
 interface LeaderboardComingUpMatchHeading extends LeaderboardComingUpMatch {
@@ -108,7 +109,8 @@ export class HomeLeaderboardComponent {
       ...leaderboard,
       liveMatches: leaderboard.liveMatches.map((match) => ({
         ...match,
-        label: this.getMatchLabel(match)
+        label: this.getMatchLabel(match),
+        liveScoreLabel: match.finalScore ? `${match.finalScore.home}:${match.finalScore.away}` : null
       })),
       comingUpMatches: leaderboard.comingUpMatches.map((match) => ({
         ...match,

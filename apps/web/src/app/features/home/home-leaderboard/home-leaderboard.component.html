@@ -21,7 +21,10 @@
             <th class="users-heading" rowspan="2" scope="col">Users ({{ table.totalUsers }})</th>
             @if (table.liveMatches.length > 0) {
               <th class="live-heading" [attr.colspan]="table.liveMatches.length" scope="colgroup">
-                <span class="live-heading-content"><span class="live-dot" aria-hidden="true"></span>Live</span>
+                <span class="live-heading-content">
+                  <span class="live-dot" aria-hidden="true"></span>
+                  <span>Live</span>
+                </span>
               </th>
             }
             @if (table.comingUpMatches.length > 0) {
@@ -36,7 +39,14 @@
           </tr>
           <tr>
             @for (match of table.liveMatches; track match.matchId) {
-              <th class="live-match-heading" scope="col">{{ match.label }}</th>
+              <th class="live-match-heading" scope="col">
+                <span class="live-match-heading-content">
+                  <span>{{ match.label }}</span>
+                  @if (match.liveScoreLabel) {
+                    <span class="live-heading-score">{{ match.liveScoreLabel }}</span>
+                  }
+                </span>
+              </th>
             }
             @for (match of table.comingUpMatches; track match.matchId) {
               <th class="coming-up-match-heading" scope="col">{{ match.label }}</th>

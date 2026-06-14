@@ -209,7 +209,14 @@ function toLiveMatchResponse(match: MatchRow): LeaderboardLiveMatchResponse {
     awayTeam: {
       name: match.away_team_name,
       flag: match.away_team_flag
-    }
+    },
+    finalScore:
+      match.final_home_score === null || match.final_away_score === null
+        ? null
+        : {
+            home: match.final_home_score,
+            away: match.final_away_score
+          }
   };
 }
 
