@@ -1,7 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
-import { LeaderboardResponse, LeaderboardUserRoundDetailsResponse } from '@models/leaderboard.models';
+import {
+  LeaderboardMatchDaysResponse,
+  LeaderboardMatchPredictionsResponse,
+  LeaderboardResponse,
+  LeaderboardUserRoundDetailsResponse
+} from '@models/leaderboard.models';
 
 @Injectable({
   providedIn: 'root'
@@ -17,5 +22,13 @@ export class LeaderboardApiProvider {
     return this.http.get<LeaderboardUserRoundDetailsResponse>(
       `/api/leaderboard/users/${userId}/rounds/${encodeURIComponent(roundLabel)}`
     );
+  }
+
+  getMatchDays() {
+    return this.http.get<LeaderboardMatchDaysResponse>('/api/leaderboard/matches/days');
+  }
+
+  getMatchPredictions(matchId: number) {
+    return this.http.get<LeaderboardMatchPredictionsResponse>(`/api/leaderboard/matches/${matchId}/predictions`);
   }
 }

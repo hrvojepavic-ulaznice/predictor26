@@ -1,0 +1,147 @@
+:host {
+  display: block;
+}
+
+.modal-header,
+.modal-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.modal-header {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 18px 18px 14px;
+}
+
+h2,
+p {
+  margin: 0;
+}
+
+h2 {
+  color: #111827;
+  font-size: 1.1rem;
+}
+
+p {
+  margin-top: 5px;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.icon-button,
+.close-button {
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.icon-button {
+  background: #f3f4f6;
+  color: #111827;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 7px 10px;
+}
+
+.modal-content {
+  display: grid;
+  gap: 8px;
+  max-height: min(520px, 64vh);
+  overflow: auto;
+  padding: 14px 18px;
+}
+
+.tip-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px 86px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px 12px;
+}
+
+.modal-skeleton-list {
+  display: grid;
+  gap: 8px;
+  animation: skeleton-pulse 1.35s ease-in-out infinite;
+}
+
+.modal-skeleton-row {
+  height: 43px;
+  border-radius: 8px;
+  background: #e5e7eb;
+}
+
+.tip-row,
+.modal-error {
+  animation: modal-content-in 180ms ease-out;
+}
+
+@keyframes modal-content-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-error {
+  margin: 0;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 12px 14px;
+}
+
+.user-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #111827;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prediction-score,
+.points-value {
+  color: #111827;
+  font-weight: 900;
+  text-align: center;
+}
+
+.hidden-score {
+  filter: blur(3px);
+  user-select: none;
+}
+
+.points-value {
+  text-align: right;
+}
+
+.modal-footer {
+  border-top: 1px solid #e5e7eb;
+  padding: 14px 18px 18px;
+}
+
+.close-button {
+  margin-left: auto;
+  background: #111827;
+  color: #ffffff;
+  font-weight: 800;
+  padding: 10px 14px;
+}
+
+@media (max-width: 520px) {
+  .tip-row {
+    grid-template-columns: minmax(0, 1fr) 58px 72px;
+  }
+}

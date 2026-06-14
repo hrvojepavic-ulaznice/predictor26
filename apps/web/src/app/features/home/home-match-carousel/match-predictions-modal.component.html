@@ -1,0 +1,50 @@
+<header class="modal-header">
+  <div>
+    <h2 id="match-predictions-title">
+      {{ match().homeTeam.flag }} {{ match().homeTeam.name }} - {{ match().awayTeam.flag }}
+      {{ match().awayTeam.name }}
+    </h2>
+    <p>{{ lockedLabel() }} · {{ submittedCount() }}/{{ userCount() }}</p>
+  </div>
+  <button class="icon-button" type="button" aria-label="Close match tips" (click)="close()">×</button>
+</header>
+
+<div class="modal-content">
+  @if (loading()) {
+    <div class="modal-skeleton-list" role="status" aria-label="Loading match tips">
+      @for (item of skeletonItems(); track item) {
+        <span class="modal-skeleton-row" aria-hidden="true"></span>
+      }
+    </div>
+  } @else if (errorMessage(); as message) {
+    <p class="modal-error">{{ message }}</p>
+  } @else if (details(); as loadedDetails) {
+    @for (user of loadedDetails.users; track user.userId) {
+      <article class="tip-row">
+        <span class="user-name">{{ user.username }}</span>
+        @if (user.prediction; as prediction) {
+          <span class="prediction-score">{{ prediction.home }}:{{ prediction.away }}</span>
+        } @else {
+          <span class="prediction-score" [class.hidden-score]="user.predictionHidden">X:X</span>
+        }
+        <span class="points-value" [style.color]="pointsColor(user)">
+          @if (user.points.earned === null) {
+            ?
+          } @else {
+            {{ user.points.earned | number: '1.2-2' }}
+          }
+          /
+          @if (user.points.available === null) {
+            ?
+          } @else {
+            {{ user.points.available | number: '1.2-2' }}
+          }
+        </span>
+      </article>
+    }
+  }
+</div>
+
+<footer class="modal-footer">
+  <button class="close-button" type="button" (click)="close()">Close</button>
+</footer>

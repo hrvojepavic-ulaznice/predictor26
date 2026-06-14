@@ -148,6 +148,30 @@
   height: 3px;
 }
 
+.action-icon-match-day::before {
+  top: 13px;
+  left: 13px;
+  width: 24px;
+  height: 24px;
+  background: #eff6ff;
+}
+
+.action-icon-match-day::after {
+  top: 18px;
+  left: 18px;
+  width: 14px;
+  height: 14px;
+  background: #3730a3;
+}
+
+.action-icon-match-day span:first-child {
+  top: 11px;
+  left: 11px;
+  width: 28px;
+  height: 28px;
+  background: rgba(55, 48, 163, 0.12);
+}
+
 .action-content {
   display: grid;
   min-width: 0;

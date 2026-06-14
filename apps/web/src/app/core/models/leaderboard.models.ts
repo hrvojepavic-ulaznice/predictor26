@@ -1,4 +1,4 @@
-import { MatchPrediction, MatchScore, MatchTeam } from './match.models';
+import { MatchOdds, MatchPrediction, MatchScore, MatchTeam } from './match.models';
 
 export type LeaderboardPredictionPointsState = 'pending' | 'miss' | 'outcome' | 'exact';
 
@@ -84,4 +84,41 @@ export interface LeaderboardResponse {
 
 export interface LeaderboardUserRoundDetailsResponse {
   readonly round: LeaderboardRoundDetails;
+}
+
+export type LeaderboardMatchStatus = 'finished' | 'live' | 'coming_up' | 'undecided';
+
+export interface LeaderboardMatchDay {
+  readonly date: string;
+  readonly matches: LeaderboardDayMatch[];
+}
+
+export interface LeaderboardDayMatch {
+  readonly matchId: number;
+  readonly matchNumber: number;
+  readonly kickoffAt: string;
+  readonly status: LeaderboardMatchStatus;
+  readonly roundLocked: boolean;
+  readonly homeTeam: MatchTeam;
+  readonly awayTeam: MatchTeam;
+  readonly odds: MatchOdds | null;
+  readonly finalScore: MatchScore | null;
+}
+
+export interface LeaderboardMatchPredictionUser {
+  readonly userId: number;
+  readonly username: string;
+  readonly prediction: MatchPrediction | null;
+  readonly predictionHidden: boolean;
+  readonly points: LeaderboardPredictionPoints;
+}
+
+export interface LeaderboardMatchPredictionsResponse {
+  readonly match: LeaderboardDayMatch;
+  readonly locked: boolean;
+  readonly users: LeaderboardMatchPredictionUser[];
+}
+
+export interface LeaderboardMatchDaysResponse {
+  readonly days: LeaderboardMatchDay[];
 }

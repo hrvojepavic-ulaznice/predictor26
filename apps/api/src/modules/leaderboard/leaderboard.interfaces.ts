@@ -1,4 +1,4 @@
-import { PredictionResponse, ScoreResponse, TeamSlotResponse } from '../matches/matches.interfaces.js';
+import { MatchOddsResponse, PredictionResponse, ScoreResponse, TeamSlotResponse } from '../matches/matches.interfaces.js';
 
 export type LeaderboardPredictionPointsState = 'pending' | 'miss' | 'outcome' | 'exact';
 
@@ -84,4 +84,37 @@ export interface LeaderboardResponse {
 
 export interface LeaderboardUserRoundDetailsResponse {
   readonly round: LeaderboardRoundDetailsResponse;
+}
+
+export type LeaderboardMatchStatusResponse = 'finished' | 'live' | 'coming_up' | 'undecided';
+
+export interface LeaderboardMatchDayResponse {
+  readonly date: string;
+  readonly matches: LeaderboardDayMatchResponse[];
+}
+
+export interface LeaderboardDayMatchResponse {
+  readonly matchId: number;
+  readonly matchNumber: number;
+  readonly kickoffAt: string;
+  readonly status: LeaderboardMatchStatusResponse;
+  readonly roundLocked: boolean;
+  readonly homeTeam: TeamSlotResponse;
+  readonly awayTeam: TeamSlotResponse;
+  readonly odds: MatchOddsResponse | null;
+  readonly finalScore: ScoreResponse | null;
+}
+
+export interface LeaderboardMatchPredictionUserResponse {
+  readonly userId: number;
+  readonly username: string;
+  readonly prediction: PredictionResponse | null;
+  readonly predictionHidden: boolean;
+  readonly points: LeaderboardPredictionPointsResponse;
+}
+
+export interface LeaderboardMatchPredictionsResponse {
+  readonly match: LeaderboardDayMatchResponse;
+  readonly locked: boolean;
+  readonly users: LeaderboardMatchPredictionUserResponse[];
 }

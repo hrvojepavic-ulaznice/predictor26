@@ -11,3 +11,7 @@
 @mixin content-fade-in {
   animation: content-fade-in 500ms ease-in-out;
 }
+
+@mixin skeleton-pulse {
+  animation: skeleton-pulse 1.35s ease-in-out infinite;
+}
