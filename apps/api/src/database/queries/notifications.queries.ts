@@ -21,6 +21,14 @@ export interface ReminderCandidateRow {
   readonly subscription_json: string;
 }
 
+export interface ReminderDeliveryRow {
+  readonly user_id: number;
+  readonly username: string;
+  readonly prediction_round: string;
+  readonly reminder_hours: 1 | 9;
+  readonly created_at: string;
+}
+
 export interface PushSubscriptionInput {
   readonly endpoint: string;
   readonly subscriptionJson: string;
@@ -100,6 +108,31 @@ export function listNotificationSubscriptionsForUser(userId: number): Notificati
         `
       )
       .all(userId) as NotificationSubscriptionRow[];
+  } finally {
+    db.close();
+  }
+}
+
+export function listRecentReminderDeliveries(limit: number): ReminderDeliveryRow[] {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+          SELECT
+            users.id AS user_id,
+            users.username,
+            notification_reminder_deliveries.prediction_round,
+            notification_reminder_deliveries.reminder_hours,
+            notification_reminder_deliveries.created_at
+          FROM notification_reminder_deliveries
+          INNER JOIN users ON users.id = notification_reminder_deliveries.user_id
+          ORDER BY notification_reminder_deliveries.created_at DESC
+          LIMIT ?
+        `
+      )
+      .all(limit) as ReminderDeliveryRow[];
   } finally {
     db.close();
   }

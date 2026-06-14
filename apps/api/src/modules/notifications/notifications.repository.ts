@@ -2,6 +2,7 @@ import {
   disableNotificationSubscription,
   disableNotificationSubscriptionsForUser,
   listNotificationSubscriptionsForUser,
+  listRecentReminderDeliveries,
   listReminderCandidates,
   PushSubscriptionInput,
   recordReminderDelivery,
@@ -31,3 +32,5 @@ export function findReminderCandidates(now: Date, windowEnd: Date) {
 export function markReminderDelivered(userId: number, predictionRound: string, reminderHours: 1 | 9): void {
   recordReminderDelivery(userId, predictionRound, reminderHours);
 }
+
+export { listRecentReminderDeliveries };

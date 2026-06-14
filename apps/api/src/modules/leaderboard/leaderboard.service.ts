@@ -216,7 +216,7 @@ function getRoundSummaries(matches: readonly MatchRow[]): RoundSummary[] {
     label,
     expectedCount: roundMatches.length,
     locked: isRoundLocked(roundMatches),
-    matches: roundMatches
+    matches: [...roundMatches].sort(sortMatchesByKickoff)
   }));
   const firstUnlockedIndex = roundSummaries.findIndex((round) => !round.locked);
 
