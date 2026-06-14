@@ -1,7 +1,6 @@
 import {
   disableNotificationSubscription,
   disableNotificationSubscriptionsForUser,
-  getNotificationSubscriptionStats,
   listNotificationSubscriptionsForUser,
   listRecentReminderDeliveries,
   listReminderCandidates,
@@ -34,4 +33,4 @@ export function markReminderDelivered(userId: number, predictionRound: string, r
   recordReminderDelivery(userId, predictionRound, reminderHours);
 }
 
-export { getNotificationSubscriptionStats, listRecentReminderDeliveries };
+export { listRecentReminderDeliveries };

@@ -21,13 +21,6 @@ export interface ReminderCandidateRow {
   readonly subscription_json: string;
 }
 
-export interface NotificationSubscriptionStatsRow {
-  readonly total_subscriptions: number;
-  readonly active_subscriptions: number;
-  readonly disabled_subscriptions: number;
-  readonly users_with_active_subscriptions: number;
-}
-
 export interface ReminderDeliveryRow {
   readonly user_id: number;
   readonly username: string;
@@ -40,27 +33,6 @@ export interface PushSubscriptionInput {
   readonly endpoint: string;
   readonly subscriptionJson: string;
   readonly userAgent: string | null;
-}
-
-export function getNotificationSubscriptionStats(): NotificationSubscriptionStatsRow {
-  const db = openDatabase();
-
-  try {
-    return db
-      .prepare(
-        `
-          SELECT
-            COUNT(*) AS total_subscriptions,
-            COALESCE(SUM(CASE WHEN is_enabled = 1 THEN 1 ELSE 0 END), 0) AS active_subscriptions,
-            COALESCE(SUM(CASE WHEN is_enabled = 0 THEN 1 ELSE 0 END), 0) AS disabled_subscriptions,
-            COUNT(DISTINCT CASE WHEN is_enabled = 1 THEN user_id END) AS users_with_active_subscriptions
-          FROM notification_subscriptions
-        `
-      )
-      .get() as NotificationSubscriptionStatsRow;
-  } finally {
-    db.close();
-  }
 }
 
 export function upsertNotificationSubscription(userId: number, input: PushSubscriptionInput): void {

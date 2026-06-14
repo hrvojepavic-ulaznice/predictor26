@@ -19,12 +19,8 @@ export interface AdminJobSummary {
 }
 
 export interface AdminNotificationReminderJob extends AdminJobSummary {
-  readonly dueCandidateCount: number;
-  readonly activeSubscriptions: number;
-  readonly disabledSubscriptions: number;
-  readonly totalSubscriptions: number;
-  readonly usersWithActiveSubscriptions: number;
-  readonly dueCandidates: Array<{
+  readonly usersToNotifyNowCount: number;
+  readonly dueUsers: Array<{
     readonly userId: number;
     readonly username: string;
     readonly predictionRound: string;
@@ -53,4 +49,8 @@ export interface AdminJobDetailsResponse {
 export interface RunAdminJobResponse {
   readonly job: AdminNotificationReminderJob;
   readonly run: AdminJobRunReport;
+}
+
+export interface RunAdminJobRequest {
+  readonly secretCode: string;
 }

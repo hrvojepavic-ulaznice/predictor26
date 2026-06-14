@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 
+import { RunAdminJobRequest } from './admin-jobs.interfaces.js';
 import { getAdminJob, getAdminJobs, runAdminJob } from './admin-jobs.service.js';
 
 interface JobParams extends Record<string, string> {
@@ -21,13 +22,23 @@ export async function getAdminJobController(req: Request<JobParams>, res: Respon
   res.json(result);
 }
 
-export async function runAdminJobController(req: Request<JobParams>, res: Response): Promise<void> {
-  const result = await runAdminJob(req.params.jobId);
+export async function runAdminJobController(req: Request<JobParams, object, RunAdminJobRequest>, res: Response): Promise<void> {
+  const result = await runAdminJob(req.params.jobId, req.body);
 
-  if (!result) {
+  if (result.status === 'not_found') {
     res.status(404).json({ message: 'Scheduled job could not be found.' });
     return;
   }
 
-  res.json(result);
+  if (result.status === 'invalid') {
+    res.status(400).json({ message: 'Please enter a valid secret code.' });
+    return;
+  }
+
+  if (result.status === 'invalid_secret') {
+    res.status(403).json({ message: 'Secret code is incorrect.' });
+    return;
+  }
+
+  res.json(result.response);
 }

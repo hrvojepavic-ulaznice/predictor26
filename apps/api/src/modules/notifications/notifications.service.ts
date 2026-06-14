@@ -10,7 +10,6 @@ import {
   disableUserNotificationSubscription,
   findUserNotificationSubscriptions,
   findReminderCandidates,
-  getNotificationSubscriptionStats,
   listRecentReminderDeliveries,
   markReminderDelivered,
   saveUserNotificationSubscription
@@ -66,27 +65,15 @@ export async function getNotificationReminderJobSnapshot() {
   const now = new Date();
   const windowEnd = new Date(now.getTime() - config.notificationReminderIntervalMs);
   const remindersEnabled = await areNotificationRemindersEnabled();
-  const subscriptionStats = getNotificationSubscriptionStats();
   const dueCandidates = remindersEnabled ? findReminderCandidates(now, windowEnd) : [];
+  const dueUsers = getUniqueDueReminderUsers(dueCandidates);
 
   return {
     enabled: remindersEnabled,
     intervalMs: config.notificationReminderIntervalMs,
-    dueCandidateCount: dueCandidates.length,
-    activeSubscriptions: subscriptionStats.active_subscriptions,
-    disabledSubscriptions: subscriptionStats.disabled_subscriptions,
-    totalSubscriptions: subscriptionStats.total_subscriptions,
-    usersWithActiveSubscriptions: subscriptionStats.users_with_active_subscriptions,
+    usersToNotifyNowCount: dueUsers.length,
     lastRun: await getLastNotificationReminderRun(),
-    dueCandidates: dueCandidates.slice(0, dueReminderCandidateLimit).map((candidate) => ({
-      userId: candidate.user_id,
-      username: candidate.username,
-      predictionRound: candidate.prediction_round,
-      deadlineAt: candidate.deadline_at,
-      expectedCount: candidate.expected_count,
-      submittedCount: candidate.submitted_count,
-      reminderHours: candidate.reminder_hours
-    })),
+    dueUsers: dueUsers.slice(0, dueReminderCandidateLimit),
     recentDeliveries: listRecentReminderDeliveries(recentReminderDeliveryLimit).map((delivery) => ({
       userId: delivery.user_id,
       username: delivery.username,
@@ -95,6 +82,36 @@ export async function getNotificationReminderJobSnapshot() {
       deliveredAt: delivery.created_at
     }))
   };
+}
+
+function getUniqueDueReminderUsers(candidates: ReturnType<typeof findReminderCandidates>) {
+  const users = new Map<string, {
+    readonly userId: number;
+    readonly username: string;
+    readonly predictionRound: string;
+    readonly deadlineAt: string;
+    readonly expectedCount: number;
+    readonly submittedCount: number;
+    readonly reminderHours: 1 | 9;
+  }>();
+
+  for (const candidate of candidates) {
+    const key = `${candidate.user_id}:${candidate.prediction_round}:${candidate.reminder_hours}`;
+
+    if (!users.has(key)) {
+      users.set(key, {
+        userId: candidate.user_id,
+        username: candidate.username,
+        predictionRound: candidate.prediction_round,
+        deadlineAt: candidate.deadline_at,
+        expectedCount: candidate.expected_count,
+        submittedCount: candidate.submitted_count,
+        reminderHours: candidate.reminder_hours
+      });
+    }
+  }
+
+  return [...users.values()];
 }
 
 export async function updateNotificationSettings(

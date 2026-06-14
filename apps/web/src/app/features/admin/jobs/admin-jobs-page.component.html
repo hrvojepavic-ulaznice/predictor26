@@ -5,8 +5,6 @@
       <h1 id="admin-jobs-title">Scheduled jobs</h1>
       <a class="back-link" routerLink="/admin">Back to admin tools</a>
     </div>
-
-    <button class="secondary-button" type="button" [disabled]="loading()" (click)="refresh()">Refresh</button>
   </header>
 
   @if (errorMessage(); as message) {
@@ -38,30 +36,14 @@
         </div>
       </div>
 
-      <div class="metrics-grid" aria-label="Prediction reminder job metrics">
+      <div class="metrics-grid" aria-label="Prediction reminder job summary">
         <div class="metric">
           <span class="metric-label">Interval</span>
           <strong>{{ intervalMinutes() | number: '1.0-0' }} min</strong>
         </div>
         <div class="metric">
-          <span class="metric-label">Due now</span>
-          <strong>{{ notificationJob.dueCandidateCount }}</strong>
-        </div>
-        <div class="metric">
-          <span class="metric-label">Active subscriptions</span>
-          <strong>{{ notificationJob.activeSubscriptions }}</strong>
-        </div>
-        <div class="metric">
-          <span class="metric-label">Subscribed users</span>
-          <strong>{{ notificationJob.usersWithActiveSubscriptions }}</strong>
-        </div>
-        <div class="metric">
-          <span class="metric-label">Disabled subscriptions</span>
-          <strong>{{ notificationJob.disabledSubscriptions }}</strong>
-        </div>
-        <div class="metric">
-          <span class="metric-label">Total subscriptions</span>
-          <strong>{{ notificationJob.totalSubscriptions }}</strong>
+          <span class="metric-label">Users to notify now</span>
+          <strong>{{ notificationJob.usersToNotifyNowCount }}</strong>
         </div>
       </div>
 
@@ -105,9 +87,9 @@
       </section>
 
       <section class="details-section" aria-labelledby="due-candidates-title">
-        <h3 id="due-candidates-title">Due if run now</h3>
+        <h3 id="due-candidates-title">Users to notify if run now</h3>
 
-        @if (notificationJob.dueCandidates.length > 0) {
+        @if (notificationJob.dueUsers.length > 0) {
           <div class="deliveries-table-shell">
             <table class="deliveries-table">
               <thead>
@@ -120,7 +102,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (candidate of notificationJob.dueCandidates; track candidate.userId + ':' + candidate.predictionRound + ':' + candidate.reminderHours) {
+                @for (candidate of notificationJob.dueUsers; track candidate.userId + ':' + candidate.predictionRound + ':' + candidate.reminderHours) {
                   <tr>
                     <td>{{ candidate.username }}</td>
                     <td>{{ candidate.predictionRound }}</td>
@@ -133,7 +115,7 @@
             </table>
           </div>
         } @else {
-          <p class="empty-message">No reminder candidates are due in the current interval window.</p>
+          <p class="empty-message">No users are due for a reminder in the current interval window.</p>
         }
       </section>
 
@@ -168,5 +150,26 @@
         }
       </section>
     </section>
+  }
+
+  @if (confirmingRun()) {
+    <app-modal-shell
+      labelledBy="secret-code-title"
+      panelWidth="420px"
+      [closeOnBackdrop]="true"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelRunNow()"
+    >
+      <app-secret-code-modal
+        title="Run scheduled job"
+        label="What is the secret code?"
+        confirmLabel="Run job"
+        [errorMessage]="secretCodeErrorMessage()"
+        [isSubmitting]="running()"
+        (confirmSecretCode)="confirmRunNow($event)"
+        (cancelModal)="cancelRunNow()"
+      />
+    </app-modal-shell>
   }
 </section>

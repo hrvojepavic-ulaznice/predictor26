@@ -8,10 +8,6 @@
 }
 
 .page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
   margin-bottom: 20px;
 }
 
@@ -153,15 +149,9 @@ button:disabled {
   color: #ffffff;
 }
 
-.secondary-button {
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  color: #374151;
-}
-
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 18px;
 }
@@ -255,7 +245,6 @@ button:disabled {
     margin-top: 24px;
   }
 
-  .page-header,
   .job-heading {
     display: grid;
   }

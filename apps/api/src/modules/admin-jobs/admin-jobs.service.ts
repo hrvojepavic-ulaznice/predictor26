@@ -2,6 +2,8 @@ import {
   getNotificationReminderJobSnapshot,
   sendDuePredictionReminders
 } from '../notifications/notifications.service.js';
+import { getSuperAdminUser } from '../../database/queries/users.queries.js';
+import { verifyPassword } from '../../shared/utils/password.js';
 import {
   AdminJobDetailsResponse,
   AdminJobsResponse,
@@ -10,6 +12,22 @@ import {
 } from './admin-jobs.interfaces.js';
 
 const notificationReminderJobId = 'prediction-reminders';
+const secretCodeMaxLength = 128;
+
+export type RunAdminJobResult =
+  | {
+      readonly status: 'ran';
+      readonly response: RunAdminJobResponse;
+    }
+  | {
+      readonly status: 'not_found';
+    }
+  | {
+      readonly status: 'invalid';
+    }
+  | {
+      readonly status: 'invalid_secret';
+    };
 
 export async function getAdminJobs(): Promise<AdminJobsResponse> {
   const notificationJob = await getNotificationReminderJobDetails();
@@ -38,16 +56,31 @@ export async function getAdminJob(jobId: string): Promise<AdminJobDetailsRespons
   };
 }
 
-export async function runAdminJob(jobId: string): Promise<RunAdminJobResponse | null> {
+export async function runAdminJob(jobId: string, input: { readonly secretCode?: unknown } | undefined): Promise<RunAdminJobResult> {
   if (jobId !== notificationReminderJobId) {
-    return null;
+    return { status: 'not_found' };
+  }
+
+  if (
+    typeof input?.secretCode !== 'string' ||
+    input.secretCode.length < 1 ||
+    input.secretCode.length > secretCodeMaxLength
+  ) {
+    return { status: 'invalid' };
+  }
+
+  if (!(await isValidSecretCode(input.secretCode))) {
+    return { status: 'invalid_secret' };
   }
 
   const run = await sendDuePredictionReminders();
 
   return {
-    run,
-    job: await getNotificationReminderJobDetails()
+    status: 'ran',
+    response: {
+      run,
+      job: await getNotificationReminderJobDetails()
+    }
   };
 }
 
@@ -61,12 +94,14 @@ async function getNotificationReminderJobDetails(): Promise<AdminNotificationRem
     enabled: snapshot.enabled,
     intervalMs: snapshot.intervalMs,
     lastRun: snapshot.lastRun,
-    dueCandidateCount: snapshot.dueCandidateCount,
-    activeSubscriptions: snapshot.activeSubscriptions,
-    disabledSubscriptions: snapshot.disabledSubscriptions,
-    totalSubscriptions: snapshot.totalSubscriptions,
-    usersWithActiveSubscriptions: snapshot.usersWithActiveSubscriptions,
-    dueCandidates: snapshot.dueCandidates,
+    usersToNotifyNowCount: snapshot.usersToNotifyNowCount,
+    dueUsers: snapshot.dueUsers,
     recentDeliveries: snapshot.recentDeliveries
   };
+}
+
+async function isValidSecretCode(secretCode: string): Promise<boolean> {
+  const superAdmin = await getSuperAdminUser();
+
+  return Boolean(superAdmin && verifyPassword(secretCode, superAdmin.password_hash));
 }
