@@ -17,7 +17,8 @@
 
   @if (loading()) {
     <p class="status-message">Loading scheduled job details...</p>
-  } @else if (job(); as notificationJob) {
+  } @else {
+    @if (notificationJob(); as notificationJob) {
     <section class="job-panel" aria-labelledby="notification-reminders-title">
       <div class="job-heading">
         <div>
@@ -30,8 +31,8 @@
           <span class="status-pill" [class.status-pill-on]="notificationJob.enabled">
             {{ notificationJob.enabled ? 'Enabled' : 'Disabled' }}
           </span>
-          <button class="primary-button" type="button" [disabled]="running()" (click)="runNow()">
-            {{ running() ? 'Running...' : 'Run now' }}
+          <button class="primary-button" type="button" [disabled]="runningJobId()" (click)="runNow(notificationJob.id)">
+            {{ runningJobId() === notificationJob.id ? 'Running...' : 'Run now' }}
           </button>
         </div>
       </div>
@@ -39,7 +40,7 @@
       <div class="metrics-grid" aria-label="Prediction reminder job summary">
         <div class="metric">
           <span class="metric-label">Interval</span>
-          <strong>{{ intervalMinutes() | number: '1.0-0' }} min</strong>
+          <strong>{{ notificationIntervalMinutes() | number: '1.0-0' }} min</strong>
         </div>
         <div class="metric">
           <span class="metric-label">Users to notify now</span>
@@ -152,7 +153,168 @@
     </section>
   }
 
-  @if (confirmingRun()) {
+    @if (liveScoreJobView(); as liveJob) {
+      <section class="job-panel" aria-labelledby="live-score-sync-title">
+        <div class="job-heading">
+          <div>
+            <p class="job-kicker">Current job</p>
+            <h2 id="live-score-sync-title">{{ liveJob.name }}</h2>
+            <p>{{ liveJob.description }}</p>
+          </div>
+
+          <div class="job-actions">
+            <span class="status-pill" [class.status-pill-on]="liveJob.enabled">
+              {{ liveJob.enabled ? 'Enabled' : 'Disabled' }}
+            </span>
+            <button class="secondary-button" type="button" [disabled]="runningJobId()" (click)="toggleJobEnabled(liveJob.id, !liveJob.enabled)">
+              {{ liveJob.enabled ? 'Disable' : 'Enable' }}
+            </button>
+            <button class="primary-button" type="button" [disabled]="runningJobId()" (click)="runNow(liveJob.id)">
+              {{ runningJobId() === liveJob.id ? 'Running...' : 'Run now' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="metrics-grid" aria-label="Live score job summary">
+          <div class="metric">
+            <span class="metric-label">Poll interval</span>
+            <strong>{{ liveScoreIntervalMinutes() | number: '1.0-0' }} min</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Status</span>
+            <strong>{{ liveJob.status }}</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Next check</span>
+            <strong>{{ liveJob.nextRunAt ? (liveJob.nextRunAt | date: 'medium') : 'None' }}</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Active matches</span>
+            <strong>{{ liveJob.activeMatches.length }}</strong>
+          </div>
+        </div>
+
+        <section class="details-section" aria-labelledby="active-live-matches-title">
+          <h3 id="active-live-matches-title">Active matches</h3>
+
+          @if (liveJob.activeMatches.length > 0) {
+            <div class="deliveries-table-shell">
+              <table class="deliveries-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Match</th>
+                    <th scope="col">Kickoff</th>
+                    <th scope="col">Score</th>
+                    <th scope="col">Provider status</th>
+                    <th scope="col">Synced</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (match of liveJob.activeMatches; track match.matchId) {
+                    <tr>
+                      <td>#{{ match.matchNumber }} {{ match.homeTeamName }} - {{ match.awayTeamName }}</td>
+                      <td>{{ match.kickoffAt | date: 'medium' }}</td>
+                      <td>
+                        @if (match.currentScore) {
+                          {{ match.currentScore.home }}-{{ match.currentScore.away }}
+                        } @else {
+                          -
+                        }
+                      </td>
+                      <td>{{ match.providerStatus || '-' }}</td>
+                      <td>{{ match.syncedAt ? (match.syncedAt | date: 'medium') : '-' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="empty-message">No matches are inside the live score polling window.</p>
+          }
+        </section>
+
+        <section class="details-section" aria-labelledby="live-score-runs-title">
+          <h3 id="live-score-runs-title">Recent live score runs</h3>
+
+          @if (liveJob.recentRuns.length > 0) {
+            <div class="deliveries-table-shell">
+              <table class="deliveries-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Started</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Checked</th>
+                    <th scope="col">Updated</th>
+                    <th scope="col">Live</th>
+                    <th scope="col">Finished</th>
+                    <th scope="col">Next check</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (run of liveJob.recentRuns; track run.startedAt) {
+                    <tr class="live-score-history-row" [class.live-score-linked-row]="run.rowColor !== null" [style.--run-color]="run.rowColor">
+                      <td>{{ run.startedAt | date: 'medium' }}</td>
+                      <td>{{ run.status }}</td>
+                      <td>{{ run.checkedMatches }}</td>
+                      <td>{{ run.updatedMatches }}</td>
+                      <td>{{ run.liveMatches }}</td>
+                      <td>{{ run.finishedMatches }}</td>
+                      <td>{{ run.nextRunAt ? (run.nextRunAt | date: 'medium') : '-' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="empty-message">No live score runs have been recorded yet.</p>
+          }
+        </section>
+
+        <section class="details-section" aria-labelledby="live-score-updates-title">
+          <h3 id="live-score-updates-title">Recent score updates</h3>
+
+          @if (liveJob.recentUpdates.length > 0) {
+            <div class="deliveries-table-shell">
+              <table class="deliveries-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Time</th>
+                    <th scope="col">Match</th>
+                    <th scope="col">Previous</th>
+                    <th scope="col">New</th>
+                    <th scope="col">Provider status</th>
+                    <th scope="col">Applied</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (update of liveJob.recentUpdates; track update.createdAt + ':' + update.matchId) {
+                    <tr class="live-score-history-row" [class.live-score-linked-row]="update.rowColor !== null" [style.--run-color]="update.rowColor">
+                      <td>{{ update.createdAt | date: 'medium' }}</td>
+                      <td>#{{ update.matchNumber }} {{ update.homeTeamName }} - {{ update.awayTeamName }}</td>
+                      <td>
+                        @if (update.previousScore) {
+                          {{ update.previousScore.home }}-{{ update.previousScore.away }}
+                        } @else {
+                          -
+                        }
+                      </td>
+                      <td>{{ update.newScore.home }}-{{ update.newScore.away }}</td>
+                      <td>{{ update.providerStatus }}</td>
+                      <td>{{ update.appliedToFinalScore ? 'Yes' : 'No' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="empty-message">No score updates have been recorded yet.</p>
+          }
+        </section>
+      </section>
+    }
+  }
+
+  @if (confirmingRunJobId()) {
     <app-modal-shell
       labelledBy="secret-code-title"
       panelWidth="420px"
@@ -166,8 +328,29 @@
         label="What is the secret code?"
         confirmLabel="Run job"
         [errorMessage]="secretCodeErrorMessage()"
-        [isSubmitting]="running()"
+        [isSubmitting]="runningJobId() !== null"
         (confirmSecretCode)="confirmRunNow($event)"
+        (cancelModal)="cancelRunNow()"
+      />
+    </app-modal-shell>
+  }
+
+  @if (confirmingToggleJob(); as toggle) {
+    <app-modal-shell
+      labelledBy="secret-code-title"
+      panelWidth="420px"
+      [closeOnBackdrop]="true"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelRunNow()"
+    >
+      <app-secret-code-modal
+        [title]="toggle.enabled ? 'Enable scheduled job' : 'Disable scheduled job'"
+        label="What is the secret code?"
+        [confirmLabel]="toggle.enabled ? 'Enable job' : 'Disable job'"
+        [errorMessage]="secretCodeErrorMessage()"
+        [isSubmitting]="runningJobId() !== null"
+        (confirmSecretCode)="confirmToggle($event)"
         (cancelModal)="cancelRunNow()"
       />
     </app-modal-shell>

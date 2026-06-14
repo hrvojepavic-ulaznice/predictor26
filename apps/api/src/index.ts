@@ -15,6 +15,7 @@ import { leaderboardRoutes } from './modules/leaderboard/leaderboard.routes.js';
 import { matchesRoutes } from './modules/matches/matches.routes.js';
 import { notificationsRoutes } from './modules/notifications/notifications.routes.js';
 import { startNotificationReminderScheduler } from './modules/notifications/notifications.service.js';
+import { startLiveScoreScheduler } from './modules/live-scores/live-scores.service.js';
 import { paymentsRoutes } from './modules/payments/payments.routes.js';
 import { worldCupTeamsRoutes } from './modules/world-cup-teams/world-cup-teams.routes.js';
 
@@ -41,3 +42,4 @@ app.listen(config.port, () => {
 });
 
 startNotificationReminderScheduler();
+startLiveScoreScheduler();

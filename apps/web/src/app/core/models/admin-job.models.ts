@@ -9,16 +9,32 @@ export interface AdminJobRunReport {
   readonly errorMessage: string | null;
 }
 
+export interface LiveScoreJobRunReport {
+  readonly runId: number | null;
+  readonly startedAt: string;
+  readonly finishedAt: string;
+  readonly enabled: boolean;
+  readonly status: 'success' | 'skipped' | 'failed';
+  readonly checkedMatches: number;
+  readonly updatedMatches: number;
+  readonly liveMatches: number;
+  readonly finishedMatches: number;
+  readonly nextRunAt: string | null;
+  readonly errorMessage: string | null;
+}
+
 export interface AdminJobSummary {
   readonly id: string;
   readonly name: string;
   readonly description: string;
   readonly enabled: boolean;
   readonly intervalMs: number;
-  readonly lastRun: AdminJobRunReport | null;
+  readonly lastRun: AdminJobRunReport | LiveScoreJobRunReport | null;
 }
 
 export interface AdminNotificationReminderJob extends AdminJobSummary {
+  readonly id: 'prediction-reminders';
+  readonly lastRun: AdminJobRunReport | null;
   readonly usersToNotifyNowCount: number;
   readonly dueUsers: Array<{
     readonly userId: number;
@@ -38,19 +54,65 @@ export interface AdminNotificationReminderJob extends AdminJobSummary {
   }>;
 }
 
+export interface AdminLiveScoreJob extends AdminJobSummary {
+  readonly id: 'live-score-sync';
+  readonly lastRun: LiveScoreJobRunReport | null;
+  readonly status: 'disabled' | 'polling_live_match' | 'waiting_for_next_match';
+  readonly nextRunAt: string | null;
+  readonly activeMatches: Array<{
+    readonly matchId: number;
+    readonly matchNumber: number;
+    readonly homeTeamName: string;
+    readonly awayTeamName: string;
+    readonly kickoffAt: string;
+    readonly currentScore: {
+      readonly home: number;
+      readonly away: number;
+    } | null;
+    readonly providerStatus: string | null;
+    readonly syncedAt: string | null;
+  }>;
+  readonly recentRuns: LiveScoreJobRunReport[];
+  readonly recentUpdates: Array<{
+    readonly runId: number | null;
+    readonly matchId: number;
+    readonly matchNumber: number;
+    readonly homeTeamName: string;
+    readonly awayTeamName: string;
+    readonly previousScore: {
+      readonly home: number;
+      readonly away: number;
+    } | null;
+    readonly newScore: {
+      readonly home: number;
+      readonly away: number;
+    };
+    readonly providerStatus: string;
+    readonly appliedToFinalScore: boolean;
+    readonly createdAt: string;
+  }>;
+}
+
+export type AdminJob = AdminNotificationReminderJob | AdminLiveScoreJob;
+
 export interface AdminJobsResponse {
   readonly jobs: AdminJobSummary[];
 }
 
 export interface AdminJobDetailsResponse {
-  readonly job: AdminNotificationReminderJob;
+  readonly job: AdminJob;
 }
 
 export interface RunAdminJobResponse {
-  readonly job: AdminNotificationReminderJob;
-  readonly run: AdminJobRunReport;
+  readonly job: AdminJob;
+  readonly run: AdminJobRunReport | LiveScoreJobRunReport;
 }
 
 export interface RunAdminJobRequest {
+  readonly secretCode: string;
+}
+
+export interface UpdateAdminJobEnabledRequest {
+  readonly enabled: boolean;
   readonly secretCode: string;
 }
