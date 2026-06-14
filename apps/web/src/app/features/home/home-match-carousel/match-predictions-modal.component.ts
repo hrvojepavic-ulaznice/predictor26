@@ -14,7 +14,7 @@ export class MatchPredictionsModalComponent {
   readonly match = input.required<LeaderboardDayMatch>();
   readonly details = input<LeaderboardMatchPredictionsResponse | null>(null);
   readonly loading = input(false);
-  readonly skeletonRows = input(6);
+  readonly skeletonRows = input(7);
   readonly errorMessage = input<string | null>(null);
   readonly closeModal = output<void>();
 
