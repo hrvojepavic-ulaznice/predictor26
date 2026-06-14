@@ -341,6 +341,32 @@ export function updateFinalScore(
   }
 }
 
+export function updateFinalScoreIfChanged(matchId: number, finalHomeScore: number, finalAwayScore: number): boolean {
+  const db = openDatabase();
+
+  try {
+    const result = db
+      .prepare(
+        `
+          UPDATE matches
+          SET final_home_score = ?, final_away_score = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+            AND (
+              final_home_score IS NULL
+              OR final_away_score IS NULL
+              OR final_home_score != ?
+              OR final_away_score != ?
+            )
+        `
+      )
+      .run(finalHomeScore, finalAwayScore, matchId, finalHomeScore, finalAwayScore);
+
+    return result.changes > 0;
+  } finally {
+    db.close();
+  }
+}
+
 export function updateMatchKickoff(matchId: number, kickoffAt: string): MatchRow | undefined {
   const db = openDatabase();
 

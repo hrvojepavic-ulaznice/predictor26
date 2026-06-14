@@ -96,6 +96,10 @@ p {
   padding: 18px;
 }
 
+.job-panel + .job-panel {
+  margin-top: 18px;
+}
+
 .job-heading {
   display: flex;
   align-items: flex-start;
@@ -147,6 +151,12 @@ button:disabled {
   border: 1px solid #111827;
   background: #111827;
   color: #ffffff;
+}
+
+.secondary-button {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
 }
 
 .metrics-grid {
@@ -233,6 +243,10 @@ button:disabled {
 
 .deliveries-table td {
   color: #111827;
+}
+
+.deliveries-table tr.live-score-linked-row td {
+  background: var(--run-color);
 }
 
 .empty-message {

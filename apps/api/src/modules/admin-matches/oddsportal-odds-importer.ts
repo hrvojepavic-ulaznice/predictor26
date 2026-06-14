@@ -19,6 +19,7 @@ export interface OddsPortalSportData {
 }
 
 export interface OddsPortalEventRow {
+  readonly [key: string]: unknown;
   readonly encodeEventId?: string;
   readonly 'home-name'?: string;
   readonly 'away-name'?: string;

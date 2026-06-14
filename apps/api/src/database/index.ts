@@ -122,6 +122,45 @@ export function openDatabase() {
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(user_id, prediction_round, reminder_hours)
     );
+
+    CREATE TABLE IF NOT EXISTS live_score_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+      provider TEXT NOT NULL,
+      provider_event_id TEXT,
+      status TEXT NOT NULL CHECK(status IN ('scheduled', 'live', 'finished', 'unknown')),
+      raw_status TEXT,
+      home_score INTEGER CHECK(home_score IS NULL OR home_score >= 0),
+      away_score INTEGER CHECK(away_score IS NULL OR away_score >= 0),
+      raw_payload_json TEXT NOT NULL,
+      fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS live_score_job_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      started_at TEXT NOT NULL,
+      finished_at TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('success', 'skipped', 'failed')),
+      checked_matches INTEGER NOT NULL DEFAULT 0,
+      updated_matches INTEGER NOT NULL DEFAULT 0,
+      live_matches INTEGER NOT NULL DEFAULT 0,
+      finished_matches INTEGER NOT NULL DEFAULT 0,
+      next_run_at TEXT,
+      error_message TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS live_score_updates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      run_id INTEGER REFERENCES live_score_job_runs(id) ON DELETE SET NULL,
+      match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+      previous_home_score INTEGER,
+      previous_away_score INTEGER,
+      new_home_score INTEGER NOT NULL,
+      new_away_score INTEGER NOT NULL,
+      provider_status TEXT NOT NULL,
+      applied_to_final_score INTEGER NOT NULL DEFAULT 1 CHECK(applied_to_final_score IN (0, 1)),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   seedPaymentSettings(db);

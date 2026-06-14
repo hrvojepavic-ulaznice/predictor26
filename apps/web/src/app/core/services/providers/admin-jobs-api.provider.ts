@@ -1,7 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
-import { AdminJobDetailsResponse, AdminJobsResponse, RunAdminJobRequest, RunAdminJobResponse } from '@models/admin-job.models';
+import {
+  AdminJobDetailsResponse,
+  AdminJobsResponse,
+  RunAdminJobRequest,
+  RunAdminJobResponse,
+  UpdateAdminJobEnabledRequest
+} from '@models/admin-job.models';
 
 @Injectable({
   providedIn: 'root'
@@ -19,5 +25,9 @@ export class AdminJobsApiProvider {
 
   runJob(jobId: string, request: RunAdminJobRequest) {
     return this.http.post<RunAdminJobResponse>(`/api/admin/jobs/${encodeURIComponent(jobId)}/run`, request);
+  }
+
+  updateJobEnabled(jobId: string, request: UpdateAdminJobEnabledRequest) {
+    return this.http.patch<AdminJobDetailsResponse>(`/api/admin/jobs/${encodeURIComponent(jobId)}/enabled`, request);
   }
 }
