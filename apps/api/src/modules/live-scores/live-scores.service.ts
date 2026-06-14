@@ -176,7 +176,7 @@ async function runLiveScoreSync(options: { readonly force: boolean }): Promise<L
       status = 'skipped';
     } else {
       const providerScores = await fetchLiveScoresWithRetry();
-      const matchesByProviderScore = mapProviderScoresToMatches(matches, providerScores);
+      const matchesByProviderScore = mapProviderScoresToMatches(activeMatches, providerScores);
       const fetchedAt = new Date().toISOString();
 
       checkedMatches = matchesByProviderScore.length;
@@ -301,7 +301,12 @@ function calculateNextRunAt(matches: readonly MatchRow[], now: Date, hasLiveMatc
     return null;
   }
 
-  const nextRunTime = Math.max(nextKickoff + config.liveScoreKickoffBufferMs, now.getTime() + schedulerMinimumDelayMs);
+  const bufferedKickoffTime = nextKickoff + config.liveScoreKickoffBufferMs;
+  const nextRunTime =
+    bufferedKickoffTime > now.getTime()
+      ? bufferedKickoffTime
+      : now.getTime() + config.liveScorePollIntervalMs;
+
   return new Date(nextRunTime).toISOString();
 }
 
