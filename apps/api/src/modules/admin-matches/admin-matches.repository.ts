@@ -7,6 +7,7 @@ import {
   MatchOddsInput,
   MatchImportInput,
   updateFinalScore,
+  updateMatchKickoff,
   updateMatchOdds,
   upsertImportedMatches
 } from '../../database/queries/matches.queries.js';
@@ -47,6 +48,10 @@ export function clearPendingPredictions(nowIso: string) {
 
 export function setFinalScore(matchId: number, homeScore: number | null, awayScore: number | null) {
   return updateFinalScore(matchId, homeScore, awayScore);
+}
+
+export function setKickoff(matchId: number, kickoffAt: string) {
+  return updateMatchKickoff(matchId, kickoffAt);
 }
 
 export function setMatchOdds(odds: readonly MatchOddsInput[]) {

@@ -341,6 +341,51 @@ export function updateFinalScore(
   }
 }
 
+export function updateMatchKickoff(matchId: number, kickoffAt: string): MatchRow | undefined {
+  const db = openDatabase();
+
+  try {
+    db.prepare(
+      `
+        UPDATE matches
+        SET kickoff_at = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `
+    ).run(kickoffAt, matchId);
+
+    return db
+      .prepare(
+        `
+          SELECT
+            id,
+            match_number,
+            stage,
+            group_name,
+            round_label,
+            kickoff_at,
+            source_time_zone,
+            home_team_name,
+            away_team_name,
+            home_team_flag,
+            away_team_flag,
+            venue,
+            city,
+            home_win_odds,
+            draw_odds,
+            away_win_odds,
+            odds_synced_at,
+            final_home_score,
+            final_away_score
+          FROM matches
+          WHERE id = ?
+        `
+      )
+      .get(matchId) as MatchRow | undefined;
+  } finally {
+    db.close();
+  }
+}
+
 export function clearFinalScoresBeforeKickoff(nowIso: string): number {
   const db = openDatabase();
 

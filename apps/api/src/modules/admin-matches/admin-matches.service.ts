@@ -6,7 +6,8 @@ import {
   AdminMatchesResponse,
   ImportMatchesResponse,
   SyncMatchOddsResponse,
-  UpdateFinalScoreRequest
+  UpdateFinalScoreRequest,
+  UpdateKickoffRequest
 } from './admin-matches.interfaces.js';
 import {
   backfillPredictionOdds,
@@ -18,6 +19,7 @@ import {
   importMatches,
   pruneMatchesAfter,
   setFinalScore,
+  setKickoff,
   setMetadataValue,
   setMatchOdds
 } from './admin-matches.repository.js';
@@ -71,6 +73,16 @@ export type UpdateFinalScoreResult =
   | {
       readonly status: 'invalid';
     }
+  | {
+      readonly status: 'not_found';
+  };
+
+export type UpdateKickoffResult =
+  | {
+      readonly status: 'updated';
+      readonly match: MatchResponse;
+    }
+  | Exclude<SecretCodeResult, { readonly status: 'valid' }>
   | {
       readonly status: 'not_found';
     };
@@ -194,6 +206,32 @@ export async function changeFinalScore(
   };
 }
 
+export async function changeKickoff(
+  matchId: number,
+  input: Partial<UpdateKickoffRequest> | undefined
+): Promise<UpdateKickoffResult> {
+  if (!Number.isInteger(matchId) || matchId < 1 || typeof input?.kickoffAt !== 'string' || !isValidIsoDate(input.kickoffAt)) {
+    return { status: 'invalid' };
+  }
+
+  const secretCodeResult = await validateSecretCode(input);
+
+  if (secretCodeResult.status !== 'valid') {
+    return secretCodeResult;
+  }
+
+  const match = setKickoff(matchId, input.kickoffAt);
+
+  if (!match) {
+    return { status: 'not_found' };
+  }
+
+  return {
+    status: 'updated',
+    match: toMatchResponse(match)
+  };
+}
+
 function toMatchResponse(match: MatchRow): MatchResponse {
   return {
     id: match.id,
@@ -237,6 +275,10 @@ function toMatchResponse(match: MatchRow): MatchResponse {
 
 function isValidNullableScore(score: unknown): score is number | null {
   return score === null || (typeof score === 'number' && Number.isInteger(score) && score >= 0 && score <= 99);
+}
+
+function isValidIsoDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) && !Number.isNaN(Date.parse(value));
 }
 
 function mapImportedOddsToMatches(matches: readonly MatchRow[], importedOdds: readonly ImportedMatchOdds[]): MatchOddsInput[] {
