@@ -76,11 +76,25 @@
               </th>
               @for (livePrediction of user.livePredictions; track livePrediction.matchId) {
                 <td class="live-score-cell">
-                  @if (livePrediction.prediction; as prediction) {
-                    {{ prediction.home }}-{{ prediction.away }}
-                  } @else {
-                    <span class="live-score-empty">-</span>
-                  }
+                  <span class="live-score-content">
+                    @if (user.showLiveMovement && livePrediction.matchId === table.liveMovementMatchId) {
+                      <span
+                        class="live-rank-movement"
+                        [class.live-rank-movement-up]="user.liveMovementState === 'up'"
+                        [class.live-rank-movement-down]="user.liveMovementState === 'down'"
+                        [attr.aria-label]="'Live rank movement ' + user.liveMovementLabel"
+                      >
+                        @if (user.liveMovementLabel) {
+                          <span>{{ user.liveMovementLabel }}</span>
+                        }
+                      </span>
+                    }
+                    @if (livePrediction.prediction; as prediction) {
+                      <span>{{ prediction.home }}-{{ prediction.away }}</span>
+                    } @else {
+                      <span class="live-score-empty">-</span>
+                    }
+                  </span>
                 </td>
               }
               @for (comingUpPrediction of user.comingUpPredictions; track comingUpPrediction.matchId) {

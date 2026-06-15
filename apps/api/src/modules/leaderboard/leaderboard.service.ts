@@ -36,6 +36,36 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
   const comingUpMatches = getComingUpMatches(roundSummaries, liveMatches);
   const users = findLeaderboardUsers();
   const predictionsByUser = groupPredictionsByUser(findLeaderboardPredictions());
+  const liveMatchIds = new Set(liveMatches.map((match) => match.id));
+  const leaderboardUsers = users.map<LeaderboardUserResponse>((user) => {
+    const userPredictions = predictionsByUser.get(user.id) ?? [];
+    const rounds = roundSummaries.map((round) => getUserRoundSummary(round, userPredictions));
+    const totalPoints = roundPoints(rounds.reduce((total, round) => total + round.points, 0));
+
+    return {
+      id: user.id,
+      username: user.username,
+      totalPoints,
+      liveRankMovement: 0,
+      livePredictions: getUserLivePredictions(liveMatches, userPredictions),
+      comingUpPredictions: getUserComingUpPredictions(comingUpMatches, userPredictions),
+      rounds
+    };
+  });
+  const baselineRankByUserId = rankUsers(
+    leaderboardUsers.map((user) => ({
+      userId: user.id,
+      username: user.username,
+      points: getBaselineTotalPoints(user.totalPoints, predictionsByUser.get(user.id) ?? [], liveMatchIds)
+    }))
+  );
+  const currentRankByUserId = rankUsers(
+    leaderboardUsers.map((user) => ({
+      userId: user.id,
+      username: user.username,
+      points: user.totalPoints
+    }))
+  );
 
   return {
     rounds: roundSummaries.map((round) => ({
@@ -46,21 +76,11 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
     liveMatches: liveMatches.map(toLiveMatchResponse),
     comingUpMatches: comingUpMatches.map(toComingUpMatchResponse),
     totalUsers: users.length,
-    users: users
-      .map<LeaderboardUserResponse>((user) => {
-        const userPredictions = predictionsByUser.get(user.id) ?? [];
-        const rounds = roundSummaries.map((round) => getUserRoundSummary(round, userPredictions));
-        const totalPoints = roundPoints(rounds.reduce((total, round) => total + round.points, 0));
-
-        return {
-          id: user.id,
-          username: user.username,
-          totalPoints,
-          livePredictions: getUserLivePredictions(liveMatches, userPredictions),
-          comingUpPredictions: getUserComingUpPredictions(comingUpMatches, userPredictions),
-          rounds
-        };
-      })
+    users: leaderboardUsers
+      .map((user) => ({
+        ...user,
+        liveRankMovement: liveMatches.length === 0 ? 0 : (baselineRankByUserId.get(user.id) ?? 0) - (currentRankByUserId.get(user.id) ?? 0)
+      }))
       .sort((firstUser, secondUser) => {
         const pointsComparison = secondUser.totalPoints - firstUser.totalPoints;
 
@@ -491,6 +511,43 @@ function groupPredictionsByUser(
   }
 
   return groups;
+}
+
+function getBaselineTotalPoints(
+  currentTotalPoints: number,
+  predictions: readonly LeaderboardPredictionRow[],
+  liveMatchIds: ReadonlySet<number>
+): number {
+  const livePoints = predictions
+    .filter((prediction) => liveMatchIds.has(prediction.match_id))
+    .reduce((total, prediction) => total + (calculatePredictionPoints(prediction).earned ?? 0), 0);
+
+  return roundPoints(currentTotalPoints - livePoints);
+}
+
+function rankUsers(users: ReadonlyArray<{ readonly userId: number; readonly username: string; readonly points: number }>): Map<number, number> {
+  const ranks = new Map<number, number>();
+  let lastPoints: number | null = null;
+  let lastRank = 0;
+
+  for (const user of [...users].sort((firstUser, secondUser) => {
+    const pointsComparison = secondUser.points - firstUser.points;
+
+    if (pointsComparison !== 0) {
+      return pointsComparison;
+    }
+
+    return firstUser.username.localeCompare(secondUser.username, undefined, { sensitivity: 'base' });
+  })) {
+    if (lastPoints === null || user.points !== lastPoints) {
+      lastRank += 1;
+      lastPoints = user.points;
+    }
+
+    ranks.set(user.userId, lastRank);
+  }
+
+  return ranks;
 }
 
 function calculatePredictionPoints(prediction: LeaderboardPredictionRow): LeaderboardPredictionPointsResponse {

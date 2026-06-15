@@ -70,6 +70,7 @@ export interface LeaderboardUserResponse {
   readonly id: number;
   readonly username: string;
   readonly totalPoints: number;
+  readonly liveRankMovement: number;
   readonly livePredictions: LeaderboardLivePredictionResponse[];
   readonly comingUpPredictions: LeaderboardComingUpPredictionResponse[];
   readonly rounds: LeaderboardRoundResponse[];

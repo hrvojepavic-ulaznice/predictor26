@@ -203,6 +203,55 @@ tbody tr:last-child td {
   line-height: 1;
 }
 
+.live-score-content {
+  display: inline-block;
+}
+
+.live-rank-movement {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 0.6rem;
+  font-weight: 950;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: background-color 180ms ease;
+}
+
+.live-rank-movement::before {
+  position: absolute;
+  inset: 0;
+  background: var(--live-rank-movement-icon) center / contain no-repeat;
+  content: '';
+  filter: drop-shadow(0 3px 6px rgba(17, 24, 39, 0.14));
+}
+
+.live-rank-movement span {
+  position: relative;
+  color: #ffffff;
+  font-size: 0.42rem;
+  font-weight: 700;
+  text-shadow: none;
+}
+
+.live-rank-movement-up {
+  --live-rank-movement-icon: url('/icons/rank-arrow-up.svg');
+  color: #16a34a;
+}
+
+.live-rank-movement-down {
+  --live-rank-movement-icon: url('/icons/rank-arrow-down.svg');
+  color: #dc2626;
+}
+
 .top-three-row .user-cell,
 .top-three-row .total-cell {
   font-weight: 950;
@@ -294,6 +343,7 @@ tbody tr:last-child td {
 }
 
 .live-score-cell {
+  position: relative;
   color: #991b1b;
   font-weight: 900;
 }
@@ -419,4 +469,10 @@ td {
     right: -8px;
     font-size: 0.56rem;
   }
+
+  .live-rank-movement {
+    width: 24px;
+    height: 24px;
+  }
+
 }

@@ -17,6 +17,9 @@ import { LeaderboardRoundModalComponent } from './leaderboard-round-modal.compon
 interface RankedLeaderboardUser extends LeaderboardUser {
   readonly rank: number;
   readonly rankLabel: string;
+  readonly liveMovementLabel: string;
+  readonly liveMovementState: 'up' | 'down' | 'same';
+  readonly showLiveMovement: boolean;
 }
 
 interface LeaderboardLiveMatchHeading extends LeaderboardLiveMatch {
@@ -40,6 +43,7 @@ interface RankedLeaderboardResponse extends Omit<LeaderboardResponse, 'comingUpM
   readonly comingUpMatches: LeaderboardComingUpMatchHeading[];
   readonly rounds: LeaderboardRoundHeading[];
   readonly users: RankedLeaderboardUser[];
+  readonly liveMovementMatchId: number | null;
 }
 
 interface SelectedLeaderboardRound {
@@ -107,6 +111,7 @@ export class HomeLeaderboardComponent {
 
     return {
       ...leaderboard,
+      liveMovementMatchId: leaderboard.liveMatches.find((match) => match.finalScore)?.matchId ?? null,
       liveMatches: leaderboard.liveMatches.map((match) => ({
         ...match,
         label: this.getMatchLabel(match),
@@ -131,10 +136,29 @@ export class HomeLeaderboardComponent {
         return {
           ...user,
           rank: lastRank,
-          rankLabel: this.getRankLabel(lastRank)
+          rankLabel: this.getRankLabel(lastRank),
+          liveMovementLabel: this.getLiveMovementLabel(user.liveRankMovement),
+          liveMovementState: this.getLiveMovementState(user.liveRankMovement),
+          showLiveMovement: leaderboard.liveMatches.some((match) => match.finalScore) && user.liveRankMovement !== 0
         };
       })
     };
+  }
+
+  private getLiveMovementLabel(movement: number): string {
+    return movement === 0 ? '' : String(Math.abs(movement));
+  }
+
+  private getLiveMovementState(movement: number): RankedLeaderboardUser['liveMovementState'] {
+    if (movement > 0) {
+      return 'up';
+    }
+
+    if (movement < 0) {
+      return 'down';
+    }
+
+    return 'same';
   }
 
   private getRankLabel(rank: number): string {
