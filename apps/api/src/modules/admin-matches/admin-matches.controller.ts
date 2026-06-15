@@ -1,7 +1,19 @@
 import { NextFunction, Request, Response } from 'express';
 
-import { AdminActionSecretRequest, UpdateFinalScoreRequest, UpdateKickoffRequest } from './admin-matches.interfaces.js';
-import { changeFinalScore, changeKickoff, getAdminMatches, importSchedule, syncOdds } from './admin-matches.service.js';
+import {
+  AdminActionSecretRequest,
+  UpdateFinalScoreRequest,
+  UpdateKickoffRequest,
+  UpdatePlayoffMappingRequest
+} from './admin-matches.interfaces.js';
+import {
+  changeFinalScore,
+  changeKickoff,
+  changePlayoffMapping,
+  getAdminMatches,
+  importSchedule,
+  syncOdds
+} from './admin-matches.service.js';
 
 interface MatchIdParams {
   readonly matchId: string;
@@ -105,6 +117,32 @@ export async function updateKickoffController(
 
     if (result.status === 'invalid_secret') {
       res.status(403).json({ message: 'Secret code is incorrect.' });
+      return;
+    }
+
+    if (result.status === 'not_found') {
+      res.status(404).json({ message: 'Match could not be found.' });
+      return;
+    }
+
+    res.json({
+      match: result.match
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updatePlayoffMappingController(
+  req: Request<MatchIdParams, object, UpdatePlayoffMappingRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const result = await changePlayoffMapping(Number(req.params.matchId), req.body);
+
+    if (result.status === 'invalid') {
+      res.status(400).json({ message: 'Please select a valid playoff team.' });
       return;
     }
 

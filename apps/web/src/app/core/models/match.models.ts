@@ -1,6 +1,7 @@
 export interface MatchTeam {
   readonly name: string;
   readonly flag: string | null;
+  readonly placeholderName: string | null;
 }
 
 export interface MatchScore {
@@ -67,6 +68,11 @@ export interface ImportMatchesResponse {
 
 export interface SyncMatchOddsResponse {
   readonly synced: number;
+  readonly matched: number;
+  readonly skippedExisting: number;
+  readonly skippedFinished: number;
+  readonly skippedUnresolved: number;
+  readonly unmatched: number;
   readonly backfilled: number;
   readonly matches: Match[];
 }
@@ -96,5 +102,17 @@ export interface UpdateKickoffRequest {
 }
 
 export interface UpdateKickoffResponse {
+  readonly match: Match;
+}
+
+export type PlayoffMappingSide = 'home' | 'away';
+
+export interface UpdatePlayoffMappingRequest {
+  readonly side: PlayoffMappingSide;
+  readonly teamName: string | null;
+  readonly teamFlag: string | null;
+}
+
+export interface UpdatePlayoffMappingResponse {
   readonly match: Match;
 }

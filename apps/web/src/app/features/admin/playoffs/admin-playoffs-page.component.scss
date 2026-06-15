@@ -1,0 +1,167 @@
+:host {
+  display: block;
+}
+
+.admin-playoffs-page {
+  width: min(960px, calc(100% - 32px));
+  margin: 32px auto 56px;
+}
+
+.page-header {
+  margin-bottom: 20px;
+}
+
+.section-label {
+  margin: 0 0 6px;
+  color: #4b5563;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.8rem;
+  line-height: 1.15;
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 10px;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  color: #111827;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.status-message {
+  margin: 16px 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.status-error {
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 12px 14px;
+}
+
+.mapping-list {
+  display: grid;
+  gap: 14px;
+}
+
+.match-card {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.35fr) minmax(0, 1fr);
+  gap: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px;
+}
+
+.match-meta {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  color: #6b7280;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.match-meta span:first-child {
+  color: #111827;
+  font-size: 0.96rem;
+  font-weight: 850;
+}
+
+.slot-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.slot-field {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.45fr) minmax(220px, 1fr) 64px;
+  align-items: center;
+  gap: 10px;
+}
+
+.slot-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.slot-side {
+  color: #6b7280;
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.placeholder {
+  color: #111827;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.group-badge {
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 3px 7px;
+}
+
+select {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 11px;
+}
+
+select:disabled {
+  opacity: 0.7;
+}
+
+.save-state {
+  min-height: 1rem;
+  color: #6b7280;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .admin-playoffs-page {
+    width: min(100% - 24px, 960px);
+    margin-top: 24px;
+  }
+
+  .match-card,
+  .slot-field {
+    grid-template-columns: 1fr;
+  }
+
+  .save-state {
+    min-height: 0;
+  }
+}

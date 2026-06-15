@@ -9,6 +9,7 @@ import {
   updateFinalScore,
   updateMatchKickoff,
   updateMatchOdds,
+  updatePlayoffTeamMapping,
   upsertImportedMatches
 } from '../../database/queries/matches.queries.js';
 import { getAppMetadataValue, setAppMetadataValue } from '../../database/queries/app-metadata.queries.js';
@@ -52,6 +53,10 @@ export function setFinalScore(matchId: number, homeScore: number | null, awaySco
 
 export function setKickoff(matchId: number, kickoffAt: string) {
   return updateMatchKickoff(matchId, kickoffAt);
+}
+
+export function setPlayoffTeamMapping(matchId: number, side: 'home' | 'away', teamName: string | null, teamFlag: string | null) {
+  return updatePlayoffTeamMapping(matchId, side, teamName, teamFlag);
 }
 
 export function setMatchOdds(odds: readonly MatchOddsInput[]) {

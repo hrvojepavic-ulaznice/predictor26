@@ -7,7 +7,8 @@ import {
   ImportMatchesResponse,
   SyncMatchOddsResponse,
   UpdateFinalScoreRequest,
-  UpdateKickoffRequest
+  UpdateKickoffRequest,
+  UpdatePlayoffMappingRequest
 } from './admin-matches.interfaces.js';
 import {
   backfillPredictionOdds,
@@ -20,6 +21,7 @@ import {
   pruneMatchesAfter,
   setFinalScore,
   setKickoff,
+  setPlayoffTeamMapping,
   setMetadataValue,
   setMatchOdds
 } from './admin-matches.repository.js';
@@ -65,6 +67,15 @@ export type SyncOddsResult =
     }
   | Exclude<SecretCodeResult, { readonly status: 'valid' }>;
 
+interface MatchOddsSyncPlan {
+  readonly odds: MatchOddsInput[];
+  readonly matched: number;
+  readonly skippedExisting: number;
+  readonly skippedFinished: number;
+  readonly skippedUnresolved: number;
+  readonly unmatched: number;
+}
+
 export type UpdateFinalScoreResult =
   | {
       readonly status: 'updated';
@@ -83,6 +94,18 @@ export type UpdateKickoffResult =
       readonly match: MatchResponse;
     }
   | Exclude<SecretCodeResult, { readonly status: 'valid' }>
+  | {
+      readonly status: 'not_found';
+    };
+
+export type UpdatePlayoffMappingResult =
+  | {
+      readonly status: 'updated';
+      readonly match: MatchResponse;
+    }
+  | {
+      readonly status: 'invalid';
+    }
   | {
       readonly status: 'not_found';
     };
@@ -151,14 +174,19 @@ export async function syncOdds(input: Partial<AdminActionSecretRequest> | undefi
 
   const matches = findAdminMatches();
   const importedOdds = await importOddsPortalOdds(oddsPortalSourceUrl);
-  const odds = mapImportedOddsToMatches(matches, importedOdds);
-  const synced = setMatchOdds(odds);
+  const syncPlan = mapImportedOddsToMatches(matches, importedOdds);
+  const synced = setMatchOdds(syncPlan.odds);
   const backfilled = backfillPredictionOdds();
 
   return {
     status: 'synced',
     response: {
       synced,
+      matched: syncPlan.matched,
+      skippedExisting: syncPlan.skippedExisting,
+      skippedFinished: syncPlan.skippedFinished,
+      skippedUnresolved: syncPlan.skippedUnresolved,
+      unmatched: syncPlan.unmatched,
       backfilled,
       matches: findAdminMatches().map(toMatchResponse)
     }
@@ -232,6 +260,36 @@ export async function changeKickoff(
   };
 }
 
+export async function changePlayoffMapping(
+  matchId: number,
+  input: Partial<UpdatePlayoffMappingRequest> | undefined
+): Promise<UpdatePlayoffMappingResult> {
+  if (
+    !Number.isInteger(matchId) ||
+    matchId < 1 ||
+    (input?.side !== 'home' && input?.side !== 'away') ||
+    !isValidNullableTeamName(input.teamName) ||
+    !isValidNullableTeamFlag(input.teamFlag)
+  ) {
+    return { status: 'invalid' };
+  }
+
+  if (input.teamName === null && input.teamFlag !== null) {
+    return { status: 'invalid' };
+  }
+
+  const match = setPlayoffTeamMapping(matchId, input.side, input.teamName, input.teamFlag);
+
+  if (!match) {
+    return { status: 'not_found' };
+  }
+
+  return {
+    status: 'updated',
+    match: toMatchResponse(match)
+  };
+}
+
 function toMatchResponse(match: MatchRow): MatchResponse {
   return {
     id: match.id,
@@ -245,12 +303,14 @@ function toMatchResponse(match: MatchRow): MatchResponse {
     kickoffAt: match.kickoff_at,
     sourceTimeZone: match.source_time_zone,
     homeTeam: {
-      name: match.home_team_name,
-      flag: match.home_team_flag
+      name: match.home_mapped_team_name ?? match.home_team_name,
+      flag: match.home_mapped_team_flag ?? match.home_team_flag,
+      placeholderName: match.home_mapped_team_name ? match.home_team_name : null
     },
     awayTeam: {
-      name: match.away_team_name,
-      flag: match.away_team_flag
+      name: match.away_mapped_team_name ?? match.away_team_name,
+      flag: match.away_mapped_team_flag ?? match.away_team_flag,
+      placeholderName: match.away_mapped_team_name ? match.away_team_name : null
     },
     venue: match.venue,
     city: match.city,
@@ -281,18 +341,49 @@ function isValidIsoDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) && !Number.isNaN(Date.parse(value));
 }
 
-function mapImportedOddsToMatches(matches: readonly MatchRow[], importedOdds: readonly ImportedMatchOdds[]): MatchOddsInput[] {
+function isValidNullableTeamName(value: unknown): value is string | null {
+  return value === null || (typeof value === 'string' && value.trim().length >= 1 && value.trim().length <= 80);
+}
+
+function isValidNullableTeamFlag(value: unknown): value is string | null {
+  return value === null || (typeof value === 'string' && value.length <= 16);
+}
+
+function mapImportedOddsToMatches(matches: readonly MatchRow[], importedOdds: readonly ImportedMatchOdds[]): MatchOddsSyncPlan {
   const matchedOdds: MatchOddsInput[] = [];
   const oddsByTeams = new Map<string, ImportedMatchOdds>();
+  let skippedExisting = 0;
+  let skippedFinished = 0;
+  let skippedUnresolved = 0;
+  let unmatched = 0;
 
   for (const odds of importedOdds) {
     oddsByTeams.set(toTeamKey(odds.homeTeamName, odds.awayTeamName), odds);
   }
 
   for (const match of matches) {
-    const odds = oddsByTeams.get(toTeamKey(match.home_team_name, match.away_team_name));
+    if (hasOdds(match)) {
+      skippedExisting += 1;
+      continue;
+    }
+
+    if (isFinished(match)) {
+      skippedFinished += 1;
+      continue;
+    }
+
+    const homeTeamName = getResolvedHomeTeamName(match);
+    const awayTeamName = getResolvedAwayTeamName(match);
+
+    if (isUnresolvedTeamSlot(homeTeamName) || isUnresolvedTeamSlot(awayTeamName)) {
+      skippedUnresolved += 1;
+      continue;
+    }
+
+    const odds = oddsByTeams.get(toTeamKey(homeTeamName, awayTeamName));
 
     if (!odds) {
+      unmatched += 1;
       continue;
     }
 
@@ -304,11 +395,45 @@ function mapImportedOddsToMatches(matches: readonly MatchRow[], importedOdds: re
     });
   }
 
-  return matchedOdds;
+  return {
+    odds: matchedOdds,
+    matched: matchedOdds.length,
+    skippedExisting,
+    skippedFinished,
+    skippedUnresolved,
+    unmatched
+  };
 }
 
 function toTeamKey(homeTeamName: string, awayTeamName: string): string {
   return `${normalizeTeamName(homeTeamName)}|${normalizeTeamName(awayTeamName)}`;
+}
+
+function getResolvedHomeTeamName(match: MatchRow): string {
+  return match.home_mapped_team_name ?? match.home_team_name;
+}
+
+function getResolvedAwayTeamName(match: MatchRow): string {
+  return match.away_mapped_team_name ?? match.away_team_name;
+}
+
+function hasOdds(match: MatchRow): boolean {
+  return match.home_win_odds !== null || match.draw_odds !== null || match.away_win_odds !== null;
+}
+
+function isFinished(match: MatchRow): boolean {
+  return match.final_home_score !== null && match.final_away_score !== null;
+}
+
+function isUnresolvedTeamSlot(teamName: string): boolean {
+  const normalized = teamName.trim().toUpperCase();
+
+  return (
+    /^([A-L]\s*[1-4]|[1-4]\s*[A-L])$/.test(normalized) ||
+    /^[WL]\s*\d{1,3}$/.test(normalized) ||
+    /\b(?:WINNER|LOSER)\b/.test(normalized) ||
+    /\bGROUP\s+[A-L]\b/.test(normalized)
+  );
 }
 
 function normalizeTeamName(teamName: string): string {

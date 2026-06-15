@@ -63,8 +63,8 @@ export async function getLiveScoreJobSnapshot() {
       return {
         matchId: match.id,
         matchNumber: match.match_number,
-        homeTeamName: match.home_team_name,
-        awayTeamName: match.away_team_name,
+        homeTeamName: getResolvedHomeTeamName(match),
+        awayTeamName: getResolvedAwayTeamName(match),
         kickoffAt: match.kickoff_at,
         currentScore:
           snapshot?.home_score === null || snapshot?.away_score === null || !snapshot
@@ -341,7 +341,7 @@ function mapProviderScoresToMatches(matches: readonly MatchRow[], scores: readon
   }
 
   for (const match of matches) {
-    const candidates = scoresByTeamKey.get(toTeamKey(match.home_team_name, match.away_team_name)) ?? [];
+    const candidates = scoresByTeamKey.get(toTeamKey(getResolvedHomeTeamName(match), getResolvedAwayTeamName(match))) ?? [];
     const matchKickoffTime = Date.parse(match.kickoff_at);
     const providerScore =
       candidates.find((score) => {
@@ -459,6 +459,14 @@ function toUtcIsoString(value: string): string {
 
 function toTeamKey(homeTeamName: string, awayTeamName: string): string {
   return `${normalizeTeamName(homeTeamName)}|${normalizeTeamName(awayTeamName)}`;
+}
+
+function getResolvedHomeTeamName(match: MatchRow): string {
+  return match.home_mapped_team_name ?? match.home_team_name;
+}
+
+function getResolvedAwayTeamName(match: MatchRow): string {
+  return match.away_mapped_team_name ?? match.away_team_name;
 }
 
 function normalizeTeamName(teamName: string): string {

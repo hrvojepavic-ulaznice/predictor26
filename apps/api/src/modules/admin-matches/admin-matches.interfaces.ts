@@ -15,6 +15,11 @@ export interface ImportMatchesResponse {
 
 export interface SyncMatchOddsResponse {
   readonly synced: number;
+  readonly matched: number;
+  readonly skippedExisting: number;
+  readonly skippedFinished: number;
+  readonly skippedUnresolved: number;
+  readonly unmatched: number;
   readonly backfilled: number;
   readonly matches: MatchResponse[];
 }
@@ -35,5 +40,17 @@ export interface UpdateKickoffRequest {
 }
 
 export interface UpdateKickoffResponse {
+  readonly match: MatchResponse;
+}
+
+export type PlayoffMappingSide = 'home' | 'away';
+
+export interface UpdatePlayoffMappingRequest {
+  readonly side: PlayoffMappingSide;
+  readonly teamName: string | null;
+  readonly teamFlag: string | null;
+}
+
+export interface UpdatePlayoffMappingResponse {
   readonly match: MatchResponse;
 }

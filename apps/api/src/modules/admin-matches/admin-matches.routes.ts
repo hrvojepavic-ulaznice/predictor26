@@ -6,7 +6,8 @@ import {
   importMatchesController,
   syncMatchOddsController,
   updateFinalScoreController,
-  updateKickoffController
+  updateKickoffController,
+  updatePlayoffMappingController
 } from './admin-matches.controller.js';
 
 export const adminMatchesRoutes = Router();
@@ -17,3 +18,4 @@ adminMatchesRoutes.post('/admin/matches/import', importMatchesController);
 adminMatchesRoutes.post('/admin/matches/sync-odds', syncMatchOddsController);
 adminMatchesRoutes.patch('/admin/matches/:matchId/final-score', updateFinalScoreController);
 adminMatchesRoutes.patch('/admin/matches/:matchId/kickoff', updateKickoffController);
+adminMatchesRoutes.patch('/admin/matches/:matchId/playoff-mapping', updatePlayoffMappingController);

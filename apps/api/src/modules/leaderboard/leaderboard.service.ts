@@ -202,14 +202,8 @@ function toLiveMatchResponse(match: MatchRow): LeaderboardLiveMatchResponse {
     matchId: match.id,
     matchNumber: match.match_number,
     kickoffAt: match.kickoff_at,
-    homeTeam: {
-      name: match.home_team_name,
-      flag: match.home_team_flag
-    },
-    awayTeam: {
-      name: match.away_team_name,
-      flag: match.away_team_flag
-    },
+    homeTeam: toHomeTeamResponse(match),
+    awayTeam: toAwayTeamResponse(match),
     finalScore:
       match.final_home_score === null || match.final_away_score === null
         ? null
@@ -225,14 +219,8 @@ function toComingUpMatchResponse(match: MatchRow): LeaderboardComingUpMatchRespo
     matchId: match.id,
     matchNumber: match.match_number,
     kickoffAt: match.kickoff_at,
-    homeTeam: {
-      name: match.home_team_name,
-      flag: match.home_team_flag
-    },
-    awayTeam: {
-      name: match.away_team_name,
-      flag: match.away_team_flag
-    }
+    homeTeam: toHomeTeamResponse(match),
+    awayTeam: toAwayTeamResponse(match)
   };
 }
 
@@ -243,14 +231,8 @@ function toDayMatchResponse(match: MatchRow, roundLocked: boolean, snapshot: Lat
     kickoffAt: match.kickoff_at,
     status: getMatchStatus(match, snapshot),
     roundLocked,
-    homeTeam: {
-      name: match.home_team_name,
-      flag: match.home_team_flag
-    },
-    awayTeam: {
-      name: match.away_team_name,
-      flag: match.away_team_flag
-    },
+    homeTeam: toHomeTeamResponse(match),
+    awayTeam: toAwayTeamResponse(match),
     odds:
       match.home_win_odds === null || match.draw_odds === null || match.away_win_odds === null
         ? null
@@ -267,6 +249,22 @@ function toDayMatchResponse(match: MatchRow, roundLocked: boolean, snapshot: Lat
             home: match.final_home_score,
             away: match.final_away_score
           }
+  };
+}
+
+function toHomeTeamResponse(match: MatchRow) {
+  return {
+    name: match.home_mapped_team_name ?? match.home_team_name,
+    flag: match.home_mapped_team_flag ?? match.home_team_flag,
+    placeholderName: null
+  };
+}
+
+function toAwayTeamResponse(match: MatchRow) {
+  return {
+    name: match.away_mapped_team_name ?? match.away_team_name,
+    flag: match.away_mapped_team_flag ?? match.away_team_flag,
+    placeholderName: null
   };
 }
 
@@ -388,14 +386,8 @@ function getHiddenLeaderboardRoundMatches(round: RoundSummary): LeaderboardRound
     matchId: match.id,
     matchNumber: match.match_number,
     kickoffAt: match.kickoff_at,
-    homeTeam: {
-      name: match.home_team_name,
-      flag: match.home_team_flag
-    },
-    awayTeam: {
-      name: match.away_team_name,
-      flag: match.away_team_flag
-    },
+    homeTeam: toHomeTeamResponse(match),
+    awayTeam: toAwayTeamResponse(match),
     prediction: null,
     predictionHidden: true,
     finalScore: null,
@@ -420,14 +412,8 @@ function getViewerOpenRoundMatches(
       matchId: match.id,
       matchNumber: match.match_number,
       kickoffAt: match.kickoff_at,
-      homeTeam: {
-        name: match.home_team_name,
-        flag: match.home_team_flag
-      },
-      awayTeam: {
-        name: match.away_team_name,
-        flag: match.away_team_flag
-      },
+      homeTeam: toHomeTeamResponse(match),
+      awayTeam: toAwayTeamResponse(match),
       prediction: prediction ? toPredictionResponse(prediction) : null,
       predictionHidden: false,
       finalScore: null,
@@ -468,14 +454,8 @@ function getLeaderboardRoundMatches(
       matchId: match.id,
       matchNumber: match.match_number,
       kickoffAt: match.kickoff_at,
-      homeTeam: {
-        name: match.home_team_name,
-        flag: match.home_team_flag
-      },
-      awayTeam: {
-        name: match.away_team_name,
-        flag: match.away_team_flag
-      },
+      homeTeam: toHomeTeamResponse(match),
+      awayTeam: toAwayTeamResponse(match),
       prediction: toPredictionResponse(prediction),
       predictionHidden: false,
       finalScore,

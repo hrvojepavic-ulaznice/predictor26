@@ -47,6 +47,7 @@ export function openDatabase() {
   ensureUsersTableSupportsTiebreaker(db);
   ensureUsersTableSupportsVerification(db);
   ensureMatchesTableSupportsOdds(db);
+  ensureMatchesTableSupportsPlayoffMappings(db);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS payment_settings (
@@ -77,6 +78,10 @@ export function openDatabase() {
       away_team_name TEXT NOT NULL,
       home_team_flag TEXT,
       away_team_flag TEXT,
+      home_mapped_team_name TEXT,
+      away_mapped_team_name TEXT,
+      home_mapped_team_flag TEXT,
+      away_mapped_team_flag TEXT,
       venue TEXT NOT NULL,
       city TEXT NOT NULL,
       home_win_odds REAL CHECK(home_win_odds IS NULL OR home_win_odds > 1),
@@ -355,6 +360,31 @@ function ensureMatchesTableSupportsOdds(db: Database.Database) {
 
   if (!columnNames.has('odds_synced_at')) {
     db.exec('ALTER TABLE matches ADD COLUMN odds_synced_at TEXT');
+  }
+}
+
+function ensureMatchesTableSupportsPlayoffMappings(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(matches)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columns.length === 0) {
+    return;
+  }
+
+  if (!columnNames.has('home_mapped_team_name')) {
+    db.exec('ALTER TABLE matches ADD COLUMN home_mapped_team_name TEXT');
+  }
+
+  if (!columnNames.has('away_mapped_team_name')) {
+    db.exec('ALTER TABLE matches ADD COLUMN away_mapped_team_name TEXT');
+  }
+
+  if (!columnNames.has('home_mapped_team_flag')) {
+    db.exec('ALTER TABLE matches ADD COLUMN home_mapped_team_flag TEXT');
+  }
+
+  if (!columnNames.has('away_mapped_team_flag')) {
+    db.exec('ALTER TABLE matches ADD COLUMN away_mapped_team_flag TEXT');
   }
 }
 

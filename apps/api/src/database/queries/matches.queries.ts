@@ -12,6 +12,10 @@ export interface MatchRow {
   readonly away_team_name: string;
   readonly home_team_flag: string | null;
   readonly away_team_flag: string | null;
+  readonly home_mapped_team_name: string | null;
+  readonly away_mapped_team_name: string | null;
+  readonly home_mapped_team_flag: string | null;
+  readonly away_mapped_team_flag: string | null;
   readonly venue: string;
   readonly city: string;
   readonly home_win_odds: number | null;
@@ -55,6 +59,8 @@ export interface MatchOddsInput {
   readonly awayWinOdds: number;
 }
 
+export type MatchSide = 'home' | 'away';
+
 export function listMatches(): MatchRow[] {
   const db = openDatabase();
 
@@ -74,6 +80,10 @@ export function listMatches(): MatchRow[] {
             away_team_name,
             home_team_flag,
             away_team_flag,
+            home_mapped_team_name,
+            away_mapped_team_name,
+            home_mapped_team_flag,
+            away_mapped_team_flag,
             venue,
             city,
             home_win_odds,
@@ -118,6 +128,40 @@ export function listDistinctMatchTeamNames(): string[] {
   }
 }
 
+export interface GroupTeamRow {
+  readonly group_name: string;
+  readonly team_name: string;
+  readonly team_flag: string | null;
+}
+
+export function listGroupTeams(): GroupTeamRow[] {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+          SELECT group_name, team_name, team_flag
+          FROM (
+            SELECT group_name, home_team_name AS team_name, home_team_flag AS team_flag
+            FROM matches
+            WHERE group_name IS NOT NULL
+            UNION
+            SELECT group_name, away_team_name AS team_name, away_team_flag AS team_flag
+            FROM matches
+            WHERE group_name IS NOT NULL
+          )
+          WHERE team_name IS NOT NULL
+            AND team_name != ''
+          ORDER BY group_name ASC, team_name COLLATE NOCASE ASC
+        `
+      )
+      .all() as GroupTeamRow[];
+  } finally {
+    db.close();
+  }
+}
+
 export function listMatchesWithPredictions(userId: number): Array<MatchRow & PredictionRowNullable> {
   const db = openDatabase();
 
@@ -137,6 +181,10 @@ export function listMatchesWithPredictions(userId: number): Array<MatchRow & Pre
             matches.away_team_name,
             matches.home_team_flag,
             matches.away_team_flag,
+            matches.home_mapped_team_name,
+            matches.away_mapped_team_name,
+            matches.home_mapped_team_flag,
+            matches.away_mapped_team_flag,
             matches.venue,
             matches.city,
             matches.home_win_odds,
@@ -182,6 +230,10 @@ export function listPredictedMatchesWithPredictions(userId: number): Array<Match
             matches.away_team_name,
             matches.home_team_flag,
             matches.away_team_flag,
+            matches.home_mapped_team_name,
+            matches.away_mapped_team_name,
+            matches.home_mapped_team_flag,
+            matches.away_mapped_team_flag,
             matches.venue,
             matches.city,
             matches.home_win_odds,
@@ -323,6 +375,10 @@ export function updateFinalScore(
             away_team_name,
             home_team_flag,
             away_team_flag,
+            home_mapped_team_name,
+            away_mapped_team_name,
+            home_mapped_team_flag,
+            away_mapped_team_flag,
             venue,
             city,
             home_win_odds,
@@ -394,6 +450,66 @@ export function updateMatchKickoff(matchId: number, kickoffAt: string): MatchRow
             away_team_name,
             home_team_flag,
             away_team_flag,
+            home_mapped_team_name,
+            away_mapped_team_name,
+            home_mapped_team_flag,
+            away_mapped_team_flag,
+            venue,
+            city,
+            home_win_odds,
+            draw_odds,
+            away_win_odds,
+            odds_synced_at,
+            final_home_score,
+            final_away_score
+          FROM matches
+          WHERE id = ?
+        `
+      )
+      .get(matchId) as MatchRow | undefined;
+  } finally {
+    db.close();
+  }
+}
+
+export function updatePlayoffTeamMapping(
+  matchId: number,
+  side: MatchSide,
+  teamName: string | null,
+  teamFlag: string | null
+): MatchRow | undefined {
+  const db = openDatabase();
+  const nameColumn = side === 'home' ? 'home_mapped_team_name' : 'away_mapped_team_name';
+  const flagColumn = side === 'home' ? 'home_mapped_team_flag' : 'away_mapped_team_flag';
+
+  try {
+    db.prepare(
+      `
+        UPDATE matches
+        SET ${nameColumn} = ?, ${flagColumn} = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `
+    ).run(teamName, teamFlag, matchId);
+
+    return db
+      .prepare(
+        `
+          SELECT
+            id,
+            match_number,
+            stage,
+            group_name,
+            round_label,
+            kickoff_at,
+            source_time_zone,
+            home_team_name,
+            away_team_name,
+            home_team_flag,
+            away_team_flag,
+            home_mapped_team_name,
+            away_mapped_team_name,
+            home_mapped_team_flag,
+            away_mapped_team_flag,
             venue,
             city,
             home_win_odds,
@@ -474,18 +590,25 @@ export function updateMatchOdds(odds: readonly MatchOddsInput[]): number {
           odds_synced_at = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
+          AND home_win_odds IS NULL
+          AND draw_odds IS NULL
+          AND away_win_odds IS NULL
+          AND final_home_score IS NULL
+          AND final_away_score IS NULL
       `
     );
 
     const transaction = db.transaction((items: readonly MatchOddsInput[]) => {
+      let changes = 0;
+
       for (const item of items) {
-        updateOdds.run(item.homeWinOdds, item.drawOdds, item.awayWinOdds, item.matchId);
+        changes += updateOdds.run(item.homeWinOdds, item.drawOdds, item.awayWinOdds, item.matchId).changes;
       }
+
+      return changes;
     });
 
-    transaction(odds);
-
-    return odds.length;
+    return transaction(odds) as number;
   } finally {
     db.close();
   }

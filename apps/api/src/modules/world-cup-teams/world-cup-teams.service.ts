@@ -1,9 +1,14 @@
 import { WorldCupTeamsResponse } from './world-cup-teams.interfaces.js';
-import { findWorldCupTeamNames } from './world-cup-teams.repository.js';
+import { findWorldCupGroupTeams, findWorldCupTeamNames } from './world-cup-teams.repository.js';
 
 export function getWorldCupTeams(): WorldCupTeamsResponse {
   return {
-    teams: getWorldCupTeamNames()
+    teams: getWorldCupTeamNames(),
+    groupTeams: findWorldCupGroupTeams().map((team) => ({
+      name: team.team_name,
+      flag: team.team_flag,
+      groupName: team.group_name
+    }))
   };
 }
 

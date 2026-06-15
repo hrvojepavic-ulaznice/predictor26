@@ -119,12 +119,14 @@ function toMatchResponse(match: MatchRowWithLockData): Omit<MatchWithPredictionR
     kickoffAt: match.kickoff_at,
     sourceTimeZone: match.source_time_zone,
     homeTeam: {
-      name: match.home_team_name,
-      flag: match.home_team_flag
+      name: match.home_mapped_team_name ?? match.home_team_name,
+      flag: match.home_mapped_team_flag ?? match.home_team_flag,
+      placeholderName: match.home_mapped_team_name ? match.home_team_name : null
     },
     awayTeam: {
-      name: match.away_team_name,
-      flag: match.away_team_flag
+      name: match.away_mapped_team_name ?? match.away_team_name,
+      flag: match.away_mapped_team_flag ?? match.away_team_flag,
+      placeholderName: match.away_mapped_team_name ? match.away_team_name : null
     },
     venue: match.venue,
     city: match.city,

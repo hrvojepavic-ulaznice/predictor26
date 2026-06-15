@@ -69,6 +69,14 @@ export const routes: Routes = [
       )
   },
   {
+    path: 'admin/playoffs',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./features/admin/playoffs/admin-playoffs-page.component').then(
+        (component) => component.AdminPlayoffsPageComponent
+      )
+  },
+  {
     path: 'admin/payments',
     canActivate: [adminGuard],
     loadComponent: () =>

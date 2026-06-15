@@ -1,0 +1,62 @@
+<section class="admin-playoffs-page" aria-labelledby="admin-playoffs-title">
+  <header class="page-header">
+    <div>
+      <p class="section-label">Admin</p>
+      <h1 id="admin-playoffs-title">Playoffs</h1>
+      <a class="back-link" routerLink="/admin">Back to admin tools</a>
+    </div>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="status-message status-error">{{ message }}</p>
+  }
+
+  @if (successMessage(); as message) {
+    <p class="status-message">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Loading playoff mappings...</p>
+  } @else {
+    <div class="mapping-list">
+      @for (match of playoffMatches(); track match.id) {
+        <article class="match-card">
+          <div class="match-meta">
+            <span>Match {{ match.matchNumber }}</span>
+            <span>{{ match.roundLabel }}</span>
+            <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
+          </div>
+
+          <div class="slot-grid">
+            @for (context of contextsByMatch()[match.id]; track context.side) {
+              <label class="slot-field">
+                <span class="slot-label">
+                  <span class="slot-side">{{ context.side === 'home' ? 'Home' : 'Away' }}</span>
+                  <span class="placeholder">{{ context.placeholder }}</span>
+                  @if (context.sourceLabel) {
+                    <span class="group-badge">{{ context.sourceLabel }}</span>
+                  }
+                </span>
+
+                <select
+                  [value]="context.selectedTeamName"
+                  [disabled]="isSaving(context)"
+                  (change)="updateMapping(context, $any($event.target).value)"
+                >
+                  <option value="">Keep placeholder</option>
+                  @for (team of context.options; track team.groupName + team.name) {
+                    <option [value]="team.name">{{ team.flag }} {{ team.name }}</option>
+                  }
+                </select>
+
+                <span class="save-state">{{ isSaving(context) ? 'Saving...' : '' }}</span>
+              </label>
+            }
+          </div>
+        </article>
+      } @empty {
+        <p class="status-message">No playoff matches found.</p>
+      }
+    </div>
+  }
+</section>

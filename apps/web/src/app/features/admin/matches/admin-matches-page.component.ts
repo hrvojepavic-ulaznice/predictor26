@@ -211,9 +211,19 @@ export class AdminMatchesPageComponent {
     this.secretCodeErrorMessage.set(null);
 
     this.adminMatchesApi.syncOdds({ secretCode }).subscribe({
-      next: ({ synced, matches }) => {
+      next: ({ synced, skippedExisting, skippedFinished, skippedUnresolved, unmatched, matches }) => {
         this.setMatches(matches);
-        this.importMessage.set(`${synced} match odds synced.`);
+        this.importMessage.set(
+          [
+            `${synced} new match odds synced.`,
+            skippedExisting > 0 ? `${skippedExisting} skipped because odds already exist.` : null,
+            skippedFinished > 0 ? `${skippedFinished} skipped because matches are finished.` : null,
+            skippedUnresolved > 0 ? `${skippedUnresolved} skipped because teams are still placeholders.` : null,
+            unmatched > 0 ? `${unmatched} eligible matches were not found in the odds source.` : null
+          ]
+            .filter((message): message is string => message !== null)
+            .join(' ')
+        );
         this.pendingSecretAction.set(null);
         this.syncingOdds.set(false);
       },

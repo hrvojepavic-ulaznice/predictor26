@@ -1,0 +1,238 @@
+import { DatePipe } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+
+import { Match, PlayoffMappingSide } from '@models/match.models';
+import { WorldCupGroupTeam } from '@models/world-cup-team.models';
+import { AdminMatchesApiProvider } from '@services/providers/admin-matches-api.provider';
+import { WorldCupTeamsApiProvider } from '@services/providers/world-cup-teams-api.provider';
+
+interface TeamSlotContext {
+  readonly match: Match;
+  readonly side: PlayoffMappingSide;
+  readonly placeholder: string;
+  readonly selectedTeamName: string;
+  readonly sourceLabel: string | null;
+  readonly options: WorldCupGroupTeam[];
+}
+
+@Component({
+  selector: 'app-admin-playoffs-page',
+  imports: [DatePipe, RouterLink],
+  templateUrl: './admin-playoffs-page.component.html',
+  styleUrl: './admin-playoffs-page.component.scss'
+})
+export class AdminPlayoffsPageComponent {
+  private readonly adminMatchesApi = inject(AdminMatchesApiProvider);
+  private readonly worldCupTeamsApi = inject(WorldCupTeamsApiProvider);
+
+  protected readonly matches = signal<Match[]>([]);
+  protected readonly groupTeams = signal<WorldCupGroupTeam[]>([]);
+  protected readonly loading = signal(true);
+  protected readonly savingKeys = signal<ReadonlySet<string>>(new Set<string>());
+  protected readonly errorMessage = signal<string | null>(null);
+  protected readonly successMessage = signal<string | null>(null);
+  protected readonly playoffMatches = computed(() =>
+    this.matches().filter((match) => !match.groupName || match.matchNumber > 72)
+  );
+  protected readonly contextsByMatch = computed(() =>
+    Object.fromEntries(
+      this.playoffMatches().map((match) => [match.id, [this.toSlotContext(match, 'home'), this.toSlotContext(match, 'away')]])
+    )
+  );
+
+  constructor() {
+    this.loadData();
+  }
+
+  protected updateMapping(context: TeamSlotContext, teamName: string): void {
+    const key = slotKey(context.match.id, context.side);
+
+    if (this.savingKeys().has(key)) {
+      return;
+    }
+
+    const selectedTeam = teamName ? context.options.find((team) => team.name === teamName) : null;
+
+    this.setSaving(key, true);
+    this.errorMessage.set(null);
+    this.successMessage.set(`Saving match ${context.match.matchNumber} ${context.side} slot...`);
+
+    this.adminMatchesApi
+      .updatePlayoffMapping(context.match.id, {
+        side: context.side,
+        teamName: selectedTeam?.name ?? null,
+        teamFlag: selectedTeam?.flag ?? null
+      })
+      .subscribe({
+        next: ({ match }) => {
+          this.matches.update((matches) => matches.map((currentMatch) => (currentMatch.id === match.id ? match : currentMatch)));
+          this.successMessage.set(`Match ${match.matchNumber} ${context.side} slot saved.`);
+          this.setSaving(key, false);
+        },
+        error: () => {
+          this.errorMessage.set('Playoff mapping could not be saved.');
+          this.setSaving(key, false);
+        }
+      });
+  }
+
+  protected isSaving(context: TeamSlotContext): boolean {
+    return this.savingKeys().has(slotKey(context.match.id, context.side));
+  }
+
+  private loadData(): void {
+    this.loading.set(true);
+    this.errorMessage.set(null);
+
+    this.adminMatchesApi.getMatches().subscribe({
+      next: ({ matches }) => {
+        this.matches.set(matches);
+        this.worldCupTeamsApi.getWorldCupTeams().subscribe({
+          next: ({ groupTeams }) => {
+            this.groupTeams.set(groupTeams);
+            this.loading.set(false);
+          },
+          error: () => {
+            this.errorMessage.set('Teams could not be loaded.');
+            this.loading.set(false);
+          }
+        });
+      },
+      error: () => {
+        this.errorMessage.set('Playoff matches could not be loaded.');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  private toSlotContext(match: Match, side: PlayoffMappingSide): TeamSlotContext {
+    const team = side === 'home' ? match.homeTeam : match.awayTeam;
+    const placeholder = team.placeholderName ?? team.name;
+    const sourceLabel = getPlaceholderSourceLabel(placeholder);
+    const options = getPossibleTeamsForPlaceholder(placeholder, this.matches(), this.groupTeams());
+
+    return {
+      match,
+      side,
+      placeholder,
+      selectedTeamName: team.placeholderName ? team.name : '',
+      sourceLabel,
+      options
+    };
+  }
+
+  private setSaving(key: string, saving: boolean): void {
+    this.savingKeys.update((savingKeys) => {
+      const nextSavingKeys = new Set(savingKeys);
+
+      if (saving) {
+        nextSavingKeys.add(key);
+      } else {
+        nextSavingKeys.delete(key);
+      }
+
+      return nextSavingKeys;
+    });
+  }
+}
+
+function getPossibleTeamsForPlaceholder(
+  placeholder: string,
+  matches: readonly Match[],
+  groupTeams: readonly WorldCupGroupTeam[],
+  visitedMatchNumbers = new Set<number>()
+): WorldCupGroupTeam[] {
+  const groupName = getPlaceholderGroupName(placeholder);
+
+  if (groupName) {
+    return groupTeams.filter((groupTeam) => groupTeam.groupName === groupName);
+  }
+
+  const sourceMatchNumber = getSourceMatchNumber(placeholder);
+
+  if (!sourceMatchNumber || visitedMatchNumbers.has(sourceMatchNumber)) {
+    return [...groupTeams];
+  }
+
+  const sourceMatch = matches.find((match) => match.matchNumber === sourceMatchNumber);
+
+  if (!sourceMatch) {
+    return [...groupTeams];
+  }
+
+  const nextVisitedMatchNumbers = new Set(visitedMatchNumbers).add(sourceMatchNumber);
+  const homeOptions = getPossibleTeamsForTeamSlot(sourceMatch.homeTeam, matches, groupTeams, nextVisitedMatchNumbers);
+  const awayOptions = getPossibleTeamsForTeamSlot(sourceMatch.awayTeam, matches, groupTeams, nextVisitedMatchNumbers);
+
+  return uniqueTeams([...homeOptions, ...awayOptions]);
+}
+
+function getPossibleTeamsForTeamSlot(
+  team: Match['homeTeam'],
+  matches: readonly Match[],
+  groupTeams: readonly WorldCupGroupTeam[],
+  visitedMatchNumbers: ReadonlySet<number>
+): WorldCupGroupTeam[] {
+  if (team.placeholderName) {
+    const mappedTeam = groupTeams.find((groupTeam) => groupTeam.name === team.name);
+
+    return mappedTeam ? [mappedTeam] : [{ name: team.name, flag: team.flag, groupName: '' }];
+  }
+
+  return getPossibleTeamsForPlaceholder(team.name, matches, groupTeams, new Set(visitedMatchNumbers));
+}
+
+function getPlaceholderSourceLabel(placeholder: string): string | null {
+  const groupName = getPlaceholderGroupName(placeholder);
+
+  if (groupName) {
+    return `Group ${groupName}`;
+  }
+
+  const sourceMatchNumber = getSourceMatchNumber(placeholder);
+
+  return sourceMatchNumber ? `Match ${sourceMatchNumber}` : null;
+}
+
+function getPlaceholderGroupName(placeholder: string): string | null {
+  const normalized = placeholder.trim().toUpperCase();
+  const compactMatch = normalized.match(/^([A-L])\s*[1-4]$/) ?? normalized.match(/^[1-4]\s*([A-L])$/);
+
+  if (compactMatch) {
+    return compactMatch[1];
+  }
+
+  const phraseMatch = normalized.match(/GROUP\s+([A-L])/);
+
+  return phraseMatch?.[1] ?? null;
+}
+
+function getSourceMatchNumber(placeholder: string): number | null {
+  const normalized = placeholder.trim().toUpperCase();
+  const compactMatch = normalized.match(/^[WL]\s*(\d{1,3})$/);
+
+  if (compactMatch) {
+    return Number(compactMatch[1]);
+  }
+
+  const phraseMatch = normalized.match(/\b(?:WINNER|LOSER)\b(?:\s+OF)?(?:\s+MATCH)?\s+(\d{1,3})\b/);
+
+  return phraseMatch ? Number(phraseMatch[1]) : null;
+}
+
+function uniqueTeams(teams: readonly WorldCupGroupTeam[]): WorldCupGroupTeam[] {
+  const teamsByName = new Map<string, WorldCupGroupTeam>();
+
+  for (const team of teams) {
+    teamsByName.set(team.name, team);
+  }
+
+  return Array.from(teamsByName.values()).sort((firstTeam, secondTeam) =>
+    firstTeam.name.localeCompare(secondTeam.name, undefined, { sensitivity: 'base' })
+  );
+}
+
+function slotKey(matchId: number, side: PlayoffMappingSide): string {
+  return `${matchId}:${side}`;
+}
