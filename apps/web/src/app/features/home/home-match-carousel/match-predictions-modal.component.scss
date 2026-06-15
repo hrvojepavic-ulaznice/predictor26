@@ -60,6 +60,7 @@ p {
   grid-template-columns: minmax(0, 1fr) 72px 86px;
   align-items: center;
   gap: 10px;
+  min-height: 46px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #ffffff;
@@ -73,7 +74,8 @@ p {
 }
 
 .modal-skeleton-row {
-  height: 43px;
+  min-height: 46px;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #e5e7eb;
 }
