@@ -138,23 +138,38 @@ export interface LeaderboardStatsExactScoreLeaderResponse {
   readonly userId: number;
   readonly username: string;
   readonly exactScores: number;
+  readonly matches: LeaderboardStatsExactScoreMatchResponse[];
+}
+
+export interface LeaderboardStatsExactScoreMatchResponse {
+  readonly matchNumber: number;
+  readonly homeTeam: TeamSlotResponse;
+  readonly awayTeam: TeamSlotResponse;
+  readonly finalScore: ScoreResponse;
 }
 
 export interface LeaderboardStatsOutcomeLeaderResponse {
   readonly userId: number;
   readonly username: string;
   readonly correctOutcomes: number;
+  readonly matches: LeaderboardStatsOutcomeMatchResponse[];
+}
+
+export interface LeaderboardStatsOutcomeMatchResponse {
+  readonly matchNumber: number;
+  readonly homeTeam: TeamSlotResponse;
+  readonly awayTeam: TeamSlotResponse;
+  readonly outcome: '1' | 'X' | '2';
 }
 
 export interface LeaderboardStatsBiggestOddsWinResponse {
   readonly userId: number;
   readonly username: string;
   readonly odds: number;
+  readonly outcome: '1' | 'X' | '2';
   readonly matchNumber: number;
   readonly homeTeam: TeamSlotResponse;
   readonly awayTeam: TeamSlotResponse;
-  readonly prediction: PredictionResponse;
-  readonly finalScore: ScoreResponse;
 }
 
 export interface LeaderboardStatsResponse {

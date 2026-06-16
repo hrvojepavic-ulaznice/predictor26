@@ -16,6 +16,8 @@ export class StatsPageComponent {
   protected readonly stats = this.leaderboardService.stats;
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly expandedExactScoreUserId = signal<number | null>(null);
+  protected readonly expandedOutcomeUserId = signal<number | null>(null);
   protected readonly hasStats = computed(() => {
     const stats = this.stats();
 
@@ -30,6 +32,14 @@ export class StatsPageComponent {
 
   constructor() {
     this.loadStats();
+  }
+
+  protected toggleExactScoreLeader(userId: number): void {
+    this.expandedExactScoreUserId.update((expandedUserId) => (expandedUserId === userId ? null : userId));
+  }
+
+  protected toggleOutcomeLeader(userId: number): void {
+    this.expandedOutcomeUserId.update((expandedUserId) => (expandedUserId === userId ? null : userId));
   }
 
   private loadStats(): void {

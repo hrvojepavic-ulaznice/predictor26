@@ -158,6 +158,27 @@ h3 {
   min-height: 38px;
 }
 
+.rank-row-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+}
+
+.rank-row-button:hover .rank-name,
+.rank-row-button:focus-visible .rank-name {
+  color: #3730a3;
+}
+
+.rank-row-button:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid #c7d2fe;
+  outline-offset: 3px;
+}
+
 .rank-number {
   display: grid;
   justify-self: center;
@@ -169,6 +190,11 @@ h3 {
   color: #3730a3;
   font-size: 0.82rem;
   font-weight: 900;
+}
+
+.group-card .rank-number {
+  background: var(--group-accent-soft);
+  color: var(--group-accent);
 }
 
 .rank-name {
@@ -183,6 +209,55 @@ h3 {
 
 .rank-value {
   color: #111827;
+  font-weight: 900;
+}
+
+.rank-value-expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.expand-arrow {
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.expand-arrow-open {
+  transform: rotate(180deg);
+}
+
+.exact-score-list {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 4px 44px;
+  padding: 8px 0 0;
+  border-top: 1px solid #eef2f7;
+}
+
+.exact-score-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+}
+
+.exact-score-teams {
+  min-width: 0;
+  overflow: hidden;
+  color: #4b5563;
+  font-size: 0.84rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exact-score-value {
+  color: #111827;
+  font-size: 0.84rem;
   font-weight: 900;
 }
 

@@ -163,12 +163,25 @@ export async function getLeaderboardStats(): Promise<LeaderboardStatsResponse> {
       const currentLeader = exactScoresByUserId.get(user.id) ?? {
         userId: user.id,
         username: user.username,
-        exactScores: 0
+        exactScores: 0,
+        matches: []
       };
 
       exactScoresByUserId.set(user.id, {
         ...currentLeader,
-        exactScores: currentLeader.exactScores + 1
+        exactScores: currentLeader.exactScores + 1,
+        matches: [
+          ...currentLeader.matches,
+          {
+            matchNumber: match.match_number,
+            homeTeam: toHomeTeamResponse(match),
+            awayTeam: toAwayTeamResponse(match),
+            finalScore: {
+              home: match.final_home_score,
+              away: match.final_away_score
+            }
+          }
+        ]
       });
     }
 
@@ -176,29 +189,37 @@ export async function getLeaderboardStats(): Promise<LeaderboardStatsResponse> {
       const currentLeader = outcomesByUserId.get(user.id) ?? {
         userId: user.id,
         username: user.username,
-        correctOutcomes: 0
+        correctOutcomes: 0,
+        matches: []
       };
 
       outcomesByUserId.set(user.id, {
         ...currentLeader,
-        correctOutcomes: currentLeader.correctOutcomes + 1
+        correctOutcomes: currentLeader.correctOutcomes + 1,
+        matches: prediction.prediction_odds_outcome
+          ? [
+              ...currentLeader.matches,
+              {
+                matchNumber: match.match_number,
+                homeTeam: toHomeTeamResponse(match),
+                awayTeam: toAwayTeamResponse(match),
+                outcome: prediction.prediction_odds_outcome
+              }
+            ]
+          : currentLeader.matches
       });
 
       const odds = prediction.prediction_odds_value;
 
-      if (odds !== null) {
+      if (odds !== null && prediction.prediction_odds_outcome !== null) {
         const oddsWin: LeaderboardStatsBiggestOddsWinResponse = {
           userId: user.id,
           username: user.username,
           odds,
+          outcome: prediction.prediction_odds_outcome,
           matchNumber: match.match_number,
           homeTeam: toHomeTeamResponse(match),
-          awayTeam: toAwayTeamResponse(match),
-          prediction: toPredictionResponse(prediction)!,
-          finalScore: {
-            home: match.final_home_score,
-            away: match.final_away_score
-          }
+          awayTeam: toAwayTeamResponse(match)
         };
 
         if (!biggestOddsWin || sortBiggestOddsWins(oddsWin, biggestOddsWin) < 0) {
@@ -213,8 +234,20 @@ export async function getLeaderboardStats(): Promise<LeaderboardStatsResponse> {
       groupName,
       leaders: Array.from(statsByUserId.values()).sort(sortStatsUserRanks).slice(0, 5)
     })).sort((firstGroup, secondGroup) => firstGroup.groupName.localeCompare(secondGroup.groupName, undefined, { sensitivity: 'base' })),
-    exactScoreLeaders: Array.from(exactScoresByUserId.values()).sort(sortExactScoreLeaders).slice(0, 5),
-    outcomeLeaders: Array.from(outcomesByUserId.values()).sort(sortOutcomeLeaders).slice(0, 5),
+    exactScoreLeaders: Array.from(exactScoresByUserId.values())
+      .map((leader) => ({
+        ...leader,
+        matches: [...leader.matches].sort((firstMatch, secondMatch) => firstMatch.matchNumber - secondMatch.matchNumber)
+      }))
+      .sort(sortExactScoreLeaders)
+      .slice(0, 5),
+    outcomeLeaders: Array.from(outcomesByUserId.values())
+      .map((leader) => ({
+        ...leader,
+        matches: [...leader.matches].sort((firstMatch, secondMatch) => firstMatch.matchNumber - secondMatch.matchNumber)
+      }))
+      .sort(sortOutcomeLeaders)
+      .slice(0, 5),
     biggestOddsWin
   };
 }

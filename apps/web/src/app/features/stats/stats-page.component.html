@@ -17,10 +17,23 @@
             <span class="stat-kicker">Biggest odds hit</span>
             <h2>{{ oddsWin.odds | oddsFormat }}</h2>
             <p>
-              <strong>{{ oddsWin.username }}</strong>
-              hit it on {{ oddsWin.homeTeam.flag }} {{ oddsWin.homeTeam.name }} - {{ oddsWin.awayTeam.flag }}
-              {{ oddsWin.awayTeam.name }} with final score
-              <strong>{{ oddsWin.finalScore.home }}:{{ oddsWin.finalScore.away }}</strong>
+              @switch (oddsWin.outcome) {
+                @case ('1') {
+                  <strong>{{ oddsWin.username }}</strong>
+                  backed {{ oddsWin.homeTeam.flag }} {{ oddsWin.homeTeam.name }} to win against
+                  {{ oddsWin.awayTeam.flag }} {{ oddsWin.awayTeam.name }}.
+                }
+                @case ('X') {
+                  <strong>{{ oddsWin.username }}</strong>
+                  backed {{ oddsWin.homeTeam.flag }} {{ oddsWin.homeTeam.name }} and {{ oddsWin.awayTeam.flag }}
+                  {{ oddsWin.awayTeam.name }} to draw.
+                }
+                @case ('2') {
+                  <strong>{{ oddsWin.username }}</strong>
+                  backed {{ oddsWin.awayTeam.flag }} {{ oddsWin.awayTeam.name }} to win against
+                  {{ oddsWin.homeTeam.flag }} {{ oddsWin.homeTeam.name }}.
+                }
+              }
             </p>
           </div>
         </article>
@@ -33,10 +46,35 @@
           </header>
           <div class="rank-list">
             @for (leader of loadedStats.exactScoreLeaders; track leader.userId; let rank = $index) {
-              <article class="rank-row">
-                <span class="rank-number">{{ rank + 1 }}</span>
-                <span class="rank-name">{{ leader.username }}</span>
-                <span class="rank-value">{{ leader.exactScores }}</span>
+              <article class="accordion-rank">
+                <button
+                  class="rank-row rank-row-button"
+                  type="button"
+                  [attr.aria-expanded]="expandedExactScoreUserId() === leader.userId"
+                  (click)="toggleExactScoreLeader(leader.userId)"
+                >
+                  <span class="rank-number">{{ rank + 1 }}</span>
+                  <span class="rank-name">{{ leader.username }}</span>
+                  <span class="rank-value rank-value-expand">
+                    <span>{{ leader.exactScores }}</span>
+                    <span class="expand-arrow" [class.expand-arrow-open]="expandedExactScoreUserId() === leader.userId">
+                      ▾
+                    </span>
+                  </span>
+                </button>
+                @if (expandedExactScoreUserId() === leader.userId) {
+                  <div class="exact-score-list">
+                    @for (match of leader.matches; track match.matchNumber) {
+                      <div class="exact-score-row">
+                        <span class="exact-score-teams">
+                          {{ match.homeTeam.flag }} {{ match.homeTeam.name }} - {{ match.awayTeam.flag }}
+                          {{ match.awayTeam.name }}
+                        </span>
+                        <span class="exact-score-value">{{ match.finalScore.home }}:{{ match.finalScore.away }}</span>
+                      </div>
+                    }
+                  </div>
+                }
               </article>
             } @empty {
               <p class="empty-message">No correct scores yet.</p>
@@ -50,10 +88,35 @@
           </header>
           <div class="rank-list">
             @for (leader of loadedStats.outcomeLeaders; track leader.userId; let rank = $index) {
-              <article class="rank-row">
-                <span class="rank-number">{{ rank + 1 }}</span>
-                <span class="rank-name">{{ leader.username }}</span>
-                <span class="rank-value">{{ leader.correctOutcomes }}</span>
+              <article class="accordion-rank">
+                <button
+                  class="rank-row rank-row-button"
+                  type="button"
+                  [attr.aria-expanded]="expandedOutcomeUserId() === leader.userId"
+                  (click)="toggleOutcomeLeader(leader.userId)"
+                >
+                  <span class="rank-number">{{ rank + 1 }}</span>
+                  <span class="rank-name">{{ leader.username }}</span>
+                  <span class="rank-value rank-value-expand">
+                    <span>{{ leader.correctOutcomes }}</span>
+                    <span class="expand-arrow" [class.expand-arrow-open]="expandedOutcomeUserId() === leader.userId">
+                      ▾
+                    </span>
+                  </span>
+                </button>
+                @if (expandedOutcomeUserId() === leader.userId) {
+                  <div class="exact-score-list">
+                    @for (match of leader.matches; track match.matchNumber) {
+                      <div class="exact-score-row">
+                        <span class="exact-score-teams">
+                          {{ match.homeTeam.flag }} {{ match.homeTeam.name }} - {{ match.awayTeam.flag }}
+                          {{ match.awayTeam.name }}
+                        </span>
+                        <span class="exact-score-value">{{ match.outcome }}</span>
+                      </div>
+                    }
+                  </div>
+                }
               </article>
             } @empty {
               <p class="empty-message">No correct outcomes yet.</p>
