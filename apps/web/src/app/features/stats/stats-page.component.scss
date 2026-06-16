@@ -1,0 +1,258 @@
+.stats-page {
+  width: min(1120px, calc(100% - 32px));
+  margin: 32px auto 56px;
+}
+
+.section-label,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+.section-label {
+  margin: 0 0 14px;
+  color: #4b5563;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+h2 {
+  color: #111827;
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+h3 {
+  color: #111827;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.hero-stat,
+.stat-panel,
+.group-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.hero-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 14px;
+  padding: 20px;
+}
+
+.stat-kicker,
+.panel-header span,
+.section-header span {
+  color: #6b7280;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.hero-stat h2 {
+  margin-top: 5px;
+  color: #3730a3;
+  font-size: 2rem;
+}
+
+.hero-stat p {
+  margin-top: 8px;
+  color: #4b5563;
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.hero-stat strong {
+  color: #111827;
+  font-weight: 900;
+}
+
+.summary-grid,
+.group-grid,
+.stats-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 22px;
+}
+
+.group-card {
+  --group-accent: #3730a3;
+  --group-accent-soft: #eef2ff;
+  --group-accent-border: #c7d2fe;
+}
+
+.stat-panel {
+  padding: 16px;
+}
+
+.group-card:nth-child(4n + 2) {
+  --group-accent: #047857;
+  --group-accent-soft: #d1fae5;
+  --group-accent-border: #a7f3d0;
+}
+
+.group-card:nth-child(4n + 3) {
+  --group-accent: #b45309;
+  --group-accent-soft: #fef3c7;
+  --group-accent-border: #fde68a;
+}
+
+.group-card:nth-child(4n + 4) {
+  --group-accent: #be123c;
+  --group-accent-soft: #ffe4e6;
+  --group-accent-border: #fecdd3;
+}
+
+.group-card {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--group-accent-border);
+  padding: 18px 16px 16px;
+}
+
+.group-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: var(--group-accent);
+}
+
+.panel-header,
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.section-header {
+  margin-bottom: 14px;
+}
+
+.rank-list {
+  display: grid;
+  gap: 8px;
+}
+
+.rank-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+}
+
+.rank-number {
+  display: grid;
+  justify-self: center;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.rank-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #111827;
+  font-size: 0.94rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rank-value {
+  color: #111827;
+  font-weight: 900;
+}
+
+.group-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+}
+
+.group-card-header {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.group-badge {
+  display: inline-grid;
+  justify-self: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--group-accent-soft);
+  color: var(--group-accent);
+  font-size: 0.86rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.status-message,
+.empty-message {
+  color: #6b7280;
+  font-size: 0.92rem;
+}
+
+.status-error {
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 12px 14px;
+}
+
+.stats-skeleton {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stats-skeleton span {
+  min-height: 170px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%);
+}
+
+@media (max-width: 760px) {
+  .stats-page {
+    width: min(100% - 24px, 1120px);
+    margin-top: 24px;
+  }
+
+  .hero-stat,
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-stat {
+    display: grid;
+  }
+
+  .stats-skeleton {
+    grid-template-columns: 1fr;
+  }
+}

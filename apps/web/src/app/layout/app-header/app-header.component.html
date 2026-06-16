@@ -17,6 +17,9 @@
       @if (user.role === 'super_admin' || user.role === 'admin') {
         <a class="nav-link" routerLink="/admin" animate.enter="account-nav-enter">Admin</a>
       }
+      <a class="stats-link" routerLink="/stats" aria-label="View stats" animate.enter="account-nav-enter">
+        <span class="stats-icon" aria-hidden="true"></span>
+      </a>
     } @else if (appState.isLoggedIn()) {
     } @else {
       <span class="guest-actions" animate.enter="account-nav-enter">

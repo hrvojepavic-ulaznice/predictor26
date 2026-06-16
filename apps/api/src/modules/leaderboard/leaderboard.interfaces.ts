@@ -120,3 +120,46 @@ export interface LeaderboardMatchPredictionsResponse {
   readonly locked: boolean;
   readonly users: LeaderboardMatchPredictionUserResponse[];
 }
+
+export interface LeaderboardStatsUserRankResponse {
+  readonly userId: number;
+  readonly username: string;
+  readonly points: number;
+  readonly exactScores: number;
+  readonly correctOutcomes: number;
+}
+
+export interface LeaderboardStatsGroupResponse {
+  readonly groupName: string;
+  readonly leaders: LeaderboardStatsUserRankResponse[];
+}
+
+export interface LeaderboardStatsExactScoreLeaderResponse {
+  readonly userId: number;
+  readonly username: string;
+  readonly exactScores: number;
+}
+
+export interface LeaderboardStatsOutcomeLeaderResponse {
+  readonly userId: number;
+  readonly username: string;
+  readonly correctOutcomes: number;
+}
+
+export interface LeaderboardStatsBiggestOddsWinResponse {
+  readonly userId: number;
+  readonly username: string;
+  readonly odds: number;
+  readonly matchNumber: number;
+  readonly homeTeam: TeamSlotResponse;
+  readonly awayTeam: TeamSlotResponse;
+  readonly prediction: PredictionResponse;
+  readonly finalScore: ScoreResponse;
+}
+
+export interface LeaderboardStatsResponse {
+  readonly groupLeaders: LeaderboardStatsGroupResponse[];
+  readonly exactScoreLeaders: LeaderboardStatsExactScoreLeaderResponse[];
+  readonly outcomeLeaders: LeaderboardStatsOutcomeLeaderResponse[];
+  readonly biggestOddsWin: LeaderboardStatsBiggestOddsWinResponse | null;
+}

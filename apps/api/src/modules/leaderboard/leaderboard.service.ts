@@ -7,6 +7,11 @@ import {
   LeaderboardPredictionPointsResponse,
   LeaderboardMatchDayResponse,
   LeaderboardMatchPredictionsResponse,
+  LeaderboardStatsBiggestOddsWinResponse,
+  LeaderboardStatsExactScoreLeaderResponse,
+  LeaderboardStatsOutcomeLeaderResponse,
+  LeaderboardStatsResponse,
+  LeaderboardStatsUserRankResponse,
   LeaderboardMatchStatusResponse,
   LeaderboardResponse,
   LeaderboardUserRoundDetailsResponse,
@@ -112,6 +117,108 @@ export async function getLeaderboardMatchDays(): Promise<LeaderboardMatchDayResp
   }));
 }
 
+export async function getLeaderboardStats(): Promise<LeaderboardStatsResponse> {
+  const matches = findLeaderboardMatches();
+  const matchesById = new Map(matches.map((match) => [match.id, match]));
+  const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
+  const usersById = new Map(findLeaderboardUsers().map((user) => [user.id, user]));
+  const predictions = findLeaderboardPredictions().filter(isPredictionSettled);
+  const groupStats = new Map<string, Map<number, LeaderboardStatsUserRankResponse>>();
+  const exactScoresByUserId = new Map<number, LeaderboardStatsExactScoreLeaderResponse>();
+  const outcomesByUserId = new Map<number, LeaderboardStatsOutcomeLeaderResponse>();
+  let biggestOddsWin: LeaderboardStatsBiggestOddsWinResponse | null = null;
+
+  for (const prediction of predictions) {
+    const user = usersById.get(prediction.user_id);
+    const match = matchesById.get(prediction.match_id);
+
+    if (
+      !user ||
+      !match ||
+      match.final_home_score === null ||
+      match.final_away_score === null ||
+      getMatchStatus(match, latestSnapshotsByMatchId.get(match.id)) !== 'finished'
+    ) {
+      continue;
+    }
+
+    const points = calculatePredictionPoints(prediction);
+    const earnedPoints = points.earned ?? 0;
+    const exactScore = points.state === 'exact';
+    const correctOutcome = points.state === 'outcome' || points.state === 'exact';
+
+    if (prediction.group_name && (earnedPoints > 0 || correctOutcome)) {
+      const statsByUserId = getOrCreateGroupStats(groupStats, prediction.group_name);
+      const currentStats = statsByUserId.get(user.id) ?? createStatsUserRank(user.id, user.username);
+
+      statsByUserId.set(user.id, {
+        ...currentStats,
+        points: roundPoints(currentStats.points + earnedPoints),
+        exactScores: currentStats.exactScores + (exactScore ? 1 : 0),
+        correctOutcomes: currentStats.correctOutcomes + (correctOutcome ? 1 : 0)
+      });
+    }
+
+    if (exactScore) {
+      const currentLeader = exactScoresByUserId.get(user.id) ?? {
+        userId: user.id,
+        username: user.username,
+        exactScores: 0
+      };
+
+      exactScoresByUserId.set(user.id, {
+        ...currentLeader,
+        exactScores: currentLeader.exactScores + 1
+      });
+    }
+
+    if (correctOutcome) {
+      const currentLeader = outcomesByUserId.get(user.id) ?? {
+        userId: user.id,
+        username: user.username,
+        correctOutcomes: 0
+      };
+
+      outcomesByUserId.set(user.id, {
+        ...currentLeader,
+        correctOutcomes: currentLeader.correctOutcomes + 1
+      });
+
+      const odds = prediction.prediction_odds_value;
+
+      if (odds !== null) {
+        const oddsWin: LeaderboardStatsBiggestOddsWinResponse = {
+          userId: user.id,
+          username: user.username,
+          odds,
+          matchNumber: match.match_number,
+          homeTeam: toHomeTeamResponse(match),
+          awayTeam: toAwayTeamResponse(match),
+          prediction: toPredictionResponse(prediction)!,
+          finalScore: {
+            home: match.final_home_score,
+            away: match.final_away_score
+          }
+        };
+
+        if (!biggestOddsWin || sortBiggestOddsWins(oddsWin, biggestOddsWin) < 0) {
+          biggestOddsWin = oddsWin;
+        }
+      }
+    }
+  }
+
+  return {
+    groupLeaders: Array.from(groupStats, ([groupName, statsByUserId]) => ({
+      groupName,
+      leaders: Array.from(statsByUserId.values()).sort(sortStatsUserRanks).slice(0, 5)
+    })).sort((firstGroup, secondGroup) => firstGroup.groupName.localeCompare(secondGroup.groupName, undefined, { sensitivity: 'base' })),
+    exactScoreLeaders: Array.from(exactScoresByUserId.values()).sort(sortExactScoreLeaders).slice(0, 5),
+    outcomeLeaders: Array.from(outcomesByUserId.values()).sort(sortOutcomeLeaders).slice(0, 5),
+    biggestOddsWin
+  };
+}
+
 export async function getLeaderboardMatchPredictions(
   matchId: number,
   viewerUserId: number | null
@@ -144,18 +251,20 @@ export async function getLeaderboardMatchPredictions(
   return {
     match: toDayMatchResponse(match, locked, latestSnapshotsByMatchId.get(match.id)),
     locked,
-    users: findLeaderboardUsers().map((user) => {
-      const prediction = predictionsByUserId.get(user.id);
-      const predictionHidden = !locked && user.id !== viewerUserId && prediction !== undefined;
+    users: findLeaderboardUsers()
+      .map((user) => {
+        const prediction = predictionsByUserId.get(user.id);
+        const predictionHidden = !locked && user.id !== viewerUserId && prediction !== undefined;
 
-      return {
-        userId: user.id,
-        username: user.username,
-        prediction: prediction && !predictionHidden ? toPredictionResponse(prediction) : null,
-        predictionHidden,
-        points: prediction && (locked || user.id === viewerUserId) ? calculatePredictionPoints(prediction) : hiddenPredictionPoints()
-      };
-    })
+        return {
+          userId: user.id,
+          username: user.username,
+          prediction: prediction && !predictionHidden ? toPredictionResponse(prediction) : null,
+          predictionHidden,
+          points: prediction && (locked || user.id === viewerUserId) ? calculatePredictionPoints(prediction) : hiddenPredictionPoints()
+        };
+      })
+      .sort(sortMatchPredictionUsers)
   };
 }
 
@@ -548,6 +657,115 @@ function rankUsers(users: ReadonlyArray<{ readonly userId: number; readonly user
   }
 
   return ranks;
+}
+
+function getOrCreateGroupStats(
+  groupStats: Map<string, Map<number, LeaderboardStatsUserRankResponse>>,
+  groupName: string
+): Map<number, LeaderboardStatsUserRankResponse> {
+  const currentGroupStats = groupStats.get(groupName);
+
+  if (currentGroupStats) {
+    return currentGroupStats;
+  }
+
+  const nextGroupStats = new Map<number, LeaderboardStatsUserRankResponse>();
+
+  groupStats.set(groupName, nextGroupStats);
+
+  return nextGroupStats;
+}
+
+function createStatsUserRank(userId: number, username: string): LeaderboardStatsUserRankResponse {
+  return {
+    userId,
+    username,
+    points: 0,
+    exactScores: 0,
+    correctOutcomes: 0
+  };
+}
+
+function sortStatsUserRanks(firstUser: LeaderboardStatsUserRankResponse, secondUser: LeaderboardStatsUserRankResponse): number {
+  const pointsComparison = secondUser.points - firstUser.points;
+
+  if (pointsComparison !== 0) {
+    return pointsComparison;
+  }
+
+  const exactScoreComparison = secondUser.exactScores - firstUser.exactScores;
+
+  if (exactScoreComparison !== 0) {
+    return exactScoreComparison;
+  }
+
+  return firstUser.username.localeCompare(secondUser.username, undefined, { sensitivity: 'base' });
+}
+
+function sortExactScoreLeaders(
+  firstUser: LeaderboardStatsExactScoreLeaderResponse,
+  secondUser: LeaderboardStatsExactScoreLeaderResponse
+): number {
+  const exactScoreComparison = secondUser.exactScores - firstUser.exactScores;
+
+  if (exactScoreComparison !== 0) {
+    return exactScoreComparison;
+  }
+
+  return firstUser.username.localeCompare(secondUser.username, undefined, { sensitivity: 'base' });
+}
+
+function sortOutcomeLeaders(
+  firstUser: LeaderboardStatsOutcomeLeaderResponse,
+  secondUser: LeaderboardStatsOutcomeLeaderResponse
+): number {
+  const outcomeComparison = secondUser.correctOutcomes - firstUser.correctOutcomes;
+
+  if (outcomeComparison !== 0) {
+    return outcomeComparison;
+  }
+
+  return firstUser.username.localeCompare(secondUser.username, undefined, { sensitivity: 'base' });
+}
+
+function sortBiggestOddsWins(
+  firstWin: LeaderboardStatsBiggestOddsWinResponse,
+  secondWin: LeaderboardStatsBiggestOddsWinResponse
+): number {
+  const oddsComparison = secondWin.odds - firstWin.odds;
+
+  if (oddsComparison !== 0) {
+    return oddsComparison;
+  }
+
+  const matchComparison = firstWin.matchNumber - secondWin.matchNumber;
+
+  return matchComparison !== 0
+    ? matchComparison
+    : firstWin.username.localeCompare(secondWin.username, undefined, { sensitivity: 'base' });
+}
+
+function isPredictionSettled(
+  prediction: LeaderboardPredictionRow
+): prediction is LeaderboardPredictionRow & { readonly final_home_score: number; readonly final_away_score: number } {
+  return prediction.final_home_score !== null && prediction.final_away_score !== null;
+}
+
+function sortMatchPredictionUsers(
+  firstUser: LeaderboardMatchPredictionsResponse['users'][number],
+  secondUser: LeaderboardMatchPredictionsResponse['users'][number]
+): number {
+  const pointsComparison = getSortableMatchPoints(secondUser) - getSortableMatchPoints(firstUser);
+
+  if (pointsComparison !== 0) {
+    return pointsComparison;
+  }
+
+  return firstUser.username.localeCompare(secondUser.username, undefined, { sensitivity: 'base' });
+}
+
+function getSortableMatchPoints(user: LeaderboardMatchPredictionsResponse['users'][number]): number {
+  return user.points.earned ?? Number.NEGATIVE_INFINITY;
 }
 
 function calculatePredictionPoints(prediction: LeaderboardPredictionRow): LeaderboardPredictionPointsResponse {

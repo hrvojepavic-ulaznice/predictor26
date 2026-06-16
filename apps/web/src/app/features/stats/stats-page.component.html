@@ -1,0 +1,94 @@
+<section class="stats-page" aria-label="Stats">
+  <p class="section-label">Stats</p>
+
+  @if (loading()) {
+    <div class="stats-grid stats-skeleton" role="status" aria-label="Loading stats">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  } @else if (errorMessage(); as message) {
+    <p class="status-message status-error">{{ message }}</p>
+  } @else if (stats(); as loadedStats) {
+    @if (hasStats()) {
+      @if (loadedStats.biggestOddsWin; as oddsWin) {
+        <article class="hero-stat">
+          <div>
+            <span class="stat-kicker">Biggest odds hit</span>
+            <h2>{{ oddsWin.odds | oddsFormat }}</h2>
+            <p>
+              <strong>{{ oddsWin.username }}</strong>
+              hit it on {{ oddsWin.homeTeam.flag }} {{ oddsWin.homeTeam.name }} - {{ oddsWin.awayTeam.flag }}
+              {{ oddsWin.awayTeam.name }} with final score
+              <strong>{{ oddsWin.finalScore.home }}:{{ oddsWin.finalScore.away }}</strong>
+            </p>
+          </div>
+        </article>
+      }
+
+      <div class="summary-grid">
+        <section class="stat-panel" aria-labelledby="exact-score-title">
+          <header class="panel-header">
+            <h2 id="exact-score-title">Correct scores</h2>
+          </header>
+          <div class="rank-list">
+            @for (leader of loadedStats.exactScoreLeaders; track leader.userId; let rank = $index) {
+              <article class="rank-row">
+                <span class="rank-number">{{ rank + 1 }}</span>
+                <span class="rank-name">{{ leader.username }}</span>
+                <span class="rank-value">{{ leader.exactScores }}</span>
+              </article>
+            } @empty {
+              <p class="empty-message">No correct scores yet.</p>
+            }
+          </div>
+        </section>
+
+        <section class="stat-panel" aria-labelledby="outcome-title">
+          <header class="panel-header">
+            <h2 id="outcome-title">Correct outcomes</h2>
+          </header>
+          <div class="rank-list">
+            @for (leader of loadedStats.outcomeLeaders; track leader.userId; let rank = $index) {
+              <article class="rank-row">
+                <span class="rank-number">{{ rank + 1 }}</span>
+                <span class="rank-name">{{ leader.username }}</span>
+                <span class="rank-value">{{ leader.correctOutcomes }}</span>
+              </article>
+            } @empty {
+              <p class="empty-message">No correct outcomes yet.</p>
+            }
+          </div>
+        </section>
+      </div>
+
+      <section class="groups-section" aria-labelledby="group-points-title">
+        <header class="section-header">
+          <h2 id="group-points-title">Group point leaders</h2>
+        </header>
+        <div class="group-grid">
+          @for (group of loadedStats.groupLeaders; track group.groupName) {
+            <article class="group-card">
+              <header class="group-card-header">
+                <span class="group-badge">{{ group.groupName }}</span>
+              </header>
+              <div class="rank-list">
+                @for (leader of group.leaders; track leader.userId; let rank = $index) {
+                  <article class="rank-row">
+                    <span class="rank-number">{{ rank + 1 }}</span>
+                    <span class="rank-name">{{ leader.username }}</span>
+                    <span class="rank-value">{{ leader.points | number: '1.0-2' }}</span>
+                  </article>
+                } @empty {
+                  <p class="empty-message">No points yet.</p>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    } @else {
+      <p class="status-message">Stats will appear after finished matches have winning tips.</p>
+    }
+  }
+</section>

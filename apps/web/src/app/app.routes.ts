@@ -50,6 +50,12 @@ export const routes: Routes = [
       )
   },
   {
+    path: 'stats',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/stats/stats-page.component').then((component) => component.StatsPageComponent)
+  },
+  {
     path: 'admin',
     canActivate: [adminGuard],
     loadComponent: () => import('./features/admin/admin-page.component').then((component) => component.AdminPageComponent)

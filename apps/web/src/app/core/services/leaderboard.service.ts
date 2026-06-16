@@ -7,6 +7,7 @@ import {
   LeaderboardMatchPredictionsResponse,
   LeaderboardResponse,
   LeaderboardRoundDetails,
+  LeaderboardStatsResponse,
   LeaderboardUserRoundDetailsResponse
 } from '@models/leaderboard.models';
 import { LeaderboardApiProvider } from '@services/providers/leaderboard-api.provider';
@@ -24,11 +25,14 @@ export class LeaderboardService {
   private readonly matchDaysSignal = signal<LeaderboardMatchDay[] | null>(null);
   private readonly loadedSignal = signal(false);
   private readonly matchDaysLoadedSignal = signal(false);
+  private readonly statsSignal = signal<LeaderboardStatsResponse | null>(null);
+  private readonly statsLoadedSignal = signal(false);
   private readonly roundDetailsCache = new Map<string, LeaderboardRoundDetails>();
   private readonly matchPredictionsCache = new Map<number, LeaderboardMatchPredictionsResponse>();
 
   readonly leaderboard = this.leaderboardSignal.asReadonly();
   readonly matchDays = this.matchDaysSignal.asReadonly();
+  readonly stats = this.statsSignal.asReadonly();
   readonly loaded = this.loadedSignal.asReadonly();
 
   ensureLeaderboard(options: EnsureLeaderboardOptions = {}): Observable<LeaderboardResponse> | null {
@@ -52,12 +56,27 @@ export class LeaderboardService {
     );
   }
 
+  ensureStats(options: EnsureLeaderboardOptions = {}): Observable<LeaderboardStatsResponse> | null {
+    if (!options.force && this.statsLoadedSignal()) {
+      return null;
+    }
+
+    return this.leaderboardApi.getStats().pipe(
+      tap((stats) => {
+        this.statsSignal.set(stats);
+        this.statsLoadedSignal.set(true);
+      })
+    );
+  }
+
   refreshLeaderboard(): Observable<LeaderboardResponse> {
     return this.leaderboardApi.getLeaderboard().pipe(
       tap((leaderboard) => {
         this.leaderboardSignal.set(leaderboard);
         this.loadedSignal.set(true);
         this.roundDetailsCache.clear();
+        this.statsLoadedSignal.set(false);
+        this.statsSignal.set(null);
       })
     );
   }
@@ -121,6 +140,8 @@ export class LeaderboardService {
 
     this.roundDetailsCache.delete(this.getRoundDetailsCacheKey(userId, roundLabel));
     this.matchPredictionsCache.clear();
+    this.statsLoadedSignal.set(false);
+    this.statsSignal.set(null);
   }
 
   private getRoundDetailsCacheKey(userId: number, roundLabel: string): string {

@@ -10,6 +10,7 @@ export interface LeaderboardPredictionRow {
   readonly user_id: number;
   readonly match_id: number;
   readonly match_number: number;
+  readonly group_name: string | null;
   readonly round_label: string;
   readonly final_home_score: number | null;
   readonly final_away_score: number | null;
@@ -49,6 +50,7 @@ export function listLeaderboardPredictions(): LeaderboardPredictionRow[] {
             predictions.user_id,
             matches.id AS match_id,
             matches.match_number,
+            matches.group_name,
             matches.round_label,
             matches.final_home_score,
             matches.final_away_score,

@@ -2,7 +2,13 @@ import { Request, Response } from 'express';
 
 import { getUserById } from '../../database/queries/users.queries.js';
 import { verifyAuthToken } from '../../shared/utils/auth-token.js';
-import { getLeaderboard, getLeaderboardMatchDays, getLeaderboardMatchPredictions, getLeaderboardUserRoundDetails } from './leaderboard.service.js';
+import {
+  getLeaderboard,
+  getLeaderboardMatchDays,
+  getLeaderboardMatchPredictions,
+  getLeaderboardStats,
+  getLeaderboardUserRoundDetails
+} from './leaderboard.service.js';
 
 interface UserRoundParams extends Record<string, string> {
   readonly userId: string;
@@ -19,6 +25,10 @@ export async function getLeaderboardController(req: Request, res: Response): Pro
 
 export async function getLeaderboardMatchDaysController(_req: Request, res: Response): Promise<void> {
   res.json({ days: await getLeaderboardMatchDays() });
+}
+
+export async function getLeaderboardStatsController(_req: Request, res: Response): Promise<void> {
+  res.json(await getLeaderboardStats());
 }
 
 export async function getLeaderboardUserRoundController(req: Request<UserRoundParams>, res: Response): Promise<void> {

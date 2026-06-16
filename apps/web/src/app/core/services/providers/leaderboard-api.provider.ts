@@ -5,6 +5,7 @@ import {
   LeaderboardMatchDaysResponse,
   LeaderboardMatchPredictionsResponse,
   LeaderboardResponse,
+  LeaderboardStatsResponse,
   LeaderboardUserRoundDetailsResponse
 } from '@models/leaderboard.models';
 
@@ -30,5 +31,9 @@ export class LeaderboardApiProvider {
 
   getMatchPredictions(matchId: number) {
     return this.http.get<LeaderboardMatchPredictionsResponse>(`/api/leaderboard/matches/${matchId}/predictions`);
+  }
+
+  getStats() {
+    return this.http.get<LeaderboardStatsResponse>('/api/leaderboard/stats');
   }
 }

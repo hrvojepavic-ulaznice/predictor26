@@ -124,3 +124,46 @@ export interface LeaderboardMatchPredictionsResponse {
 export interface LeaderboardMatchDaysResponse {
   readonly days: LeaderboardMatchDay[];
 }
+
+export interface LeaderboardStatsUserRank {
+  readonly userId: number;
+  readonly username: string;
+  readonly points: number;
+  readonly exactScores: number;
+  readonly correctOutcomes: number;
+}
+
+export interface LeaderboardStatsGroup {
+  readonly groupName: string;
+  readonly leaders: LeaderboardStatsUserRank[];
+}
+
+export interface LeaderboardStatsExactScoreLeader {
+  readonly userId: number;
+  readonly username: string;
+  readonly exactScores: number;
+}
+
+export interface LeaderboardStatsOutcomeLeader {
+  readonly userId: number;
+  readonly username: string;
+  readonly correctOutcomes: number;
+}
+
+export interface LeaderboardStatsBiggestOddsWin {
+  readonly userId: number;
+  readonly username: string;
+  readonly odds: number;
+  readonly matchNumber: number;
+  readonly homeTeam: MatchTeam;
+  readonly awayTeam: MatchTeam;
+  readonly prediction: MatchPrediction;
+  readonly finalScore: MatchScore;
+}
+
+export interface LeaderboardStatsResponse {
+  readonly groupLeaders: LeaderboardStatsGroup[];
+  readonly exactScoreLeaders: LeaderboardStatsExactScoreLeader[];
+  readonly outcomeLeaders: LeaderboardStatsOutcomeLeader[];
+  readonly biggestOddsWin: LeaderboardStatsBiggestOddsWin | null;
+}
