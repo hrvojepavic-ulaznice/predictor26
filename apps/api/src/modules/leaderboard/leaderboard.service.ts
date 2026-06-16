@@ -64,14 +64,14 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
       rounds
     };
   });
-  const baselineRankByUserId = rankUsers(
+  const baselinePositionByUserId = positionUsers(
     leaderboardUsers.map((user) => ({
       userId: user.id,
       username: user.username,
       points: getBaselineTotalPoints(user.totalPoints, predictionsByUser.get(user.id) ?? [], liveMatchIds)
     }))
   );
-  const currentRankByUserId = rankUsers(
+  const currentPositionByUserId = positionUsers(
     leaderboardUsers.map((user) => ({
       userId: user.id,
       username: user.username,
@@ -91,7 +91,7 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
     users: leaderboardUsers
       .map((user) => ({
         ...user,
-        liveRankMovement: liveMatches.length === 0 ? 0 : (baselineRankByUserId.get(user.id) ?? 0) - (currentRankByUserId.get(user.id) ?? 0)
+        liveRankMovement: liveMatches.length === 0 ? 0 : (baselinePositionByUserId.get(user.id) ?? 0) - (currentPositionByUserId.get(user.id) ?? 0)
       }))
       .sort((firstUser, secondUser) => {
         const pointsComparison = secondUser.totalPoints - firstUser.totalPoints;
@@ -714,12 +714,10 @@ function getBaselineTotalPoints(
   return roundPoints(currentTotalPoints - livePoints);
 }
 
-function rankUsers(users: ReadonlyArray<{ readonly userId: number; readonly username: string; readonly points: number }>): Map<number, number> {
-  const ranks = new Map<number, number>();
-  let lastPoints: number | null = null;
-  let lastRank = 0;
+function positionUsers(users: ReadonlyArray<{ readonly userId: number; readonly username: string; readonly points: number }>): Map<number, number> {
+  const positions = new Map<number, number>();
 
-  for (const user of [...users].sort((firstUser, secondUser) => {
+  [...users].sort((firstUser, secondUser) => {
     const pointsComparison = secondUser.points - firstUser.points;
 
     if (pointsComparison !== 0) {
@@ -727,16 +725,11 @@ function rankUsers(users: ReadonlyArray<{ readonly userId: number; readonly user
     }
 
     return firstUser.username.localeCompare(secondUser.username, undefined, { sensitivity: 'base' });
-  })) {
-    if (lastPoints === null || user.points !== lastPoints) {
-      lastRank += 1;
-      lastPoints = user.points;
-    }
+  }).forEach((user, index) => {
+    positions.set(user.userId, index + 1);
+  });
 
-    ranks.set(user.userId, lastRank);
-  }
-
-  return ranks;
+  return positions;
 }
 
 function getOrCreateGroupStats(
