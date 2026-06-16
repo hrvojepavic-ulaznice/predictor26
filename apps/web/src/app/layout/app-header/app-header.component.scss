@@ -84,7 +84,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  color: #3730a3;
+  color: #312e81;
   text-decoration: none;
   transition:
     background-color 160ms ease,
@@ -95,7 +95,6 @@
 .stats-link:focus-visible,
 .stats-link:active {
   background: #eef2ff;
-  color: #312e81;
 }
 
 .stats-icon {
