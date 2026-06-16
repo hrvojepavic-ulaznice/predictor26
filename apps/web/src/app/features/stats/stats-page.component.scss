@@ -88,9 +88,9 @@ h3 {
 }
 
 .group-card {
-  --group-accent: #3730a3;
-  --group-accent-soft: #eef2ff;
-  --group-accent-border: #c7d2fe;
+  --group-accent: #7c2d12;
+  --group-accent-soft: #ffedd5;
+  --group-accent-border: #fed7aa;
 }
 
 .stat-panel {
@@ -198,6 +198,9 @@ h3 {
 }
 
 .rank-name {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 2px;
   min-width: 0;
   overflow: hidden;
   color: #111827;
@@ -205,6 +208,17 @@ h3 {
   font-weight: 750;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.current-user-row .rank-name {
+  color: #16a34a;
+}
+
+.current-user-star {
+  flex: 0 0 auto;
+  color: currentColor;
+  font-size: 0.62rem;
+  line-height: 1;
 }
 
 .rank-value {

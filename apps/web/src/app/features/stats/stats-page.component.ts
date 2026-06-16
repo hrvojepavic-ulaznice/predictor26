@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 
+import { AppStateService } from '@core/state/app-state.service';
 import { LeaderboardService } from '@services/leaderboard.service';
 import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
 
@@ -11,9 +12,11 @@ import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
   styleUrl: './stats-page.component.scss'
 })
 export class StatsPageComponent {
+  private readonly appState = inject(AppStateService);
   private readonly leaderboardService = inject(LeaderboardService);
 
   protected readonly stats = this.leaderboardService.stats;
+  protected readonly currentUserId = computed(() => this.appState.currentUser()?.id ?? null);
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly expandedExactScoreUserId = signal<number | null>(null);

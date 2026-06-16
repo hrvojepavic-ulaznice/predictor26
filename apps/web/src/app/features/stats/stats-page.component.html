@@ -49,12 +49,18 @@
               <article class="accordion-rank">
                 <button
                   class="rank-row rank-row-button"
+                  [class.current-user-row]="leader.userId === currentUserId()"
                   type="button"
                   [attr.aria-expanded]="expandedExactScoreUserId() === leader.userId"
                   (click)="toggleExactScoreLeader(leader.userId)"
                 >
                   <span class="rank-number">{{ rank + 1 }}</span>
-                  <span class="rank-name">{{ leader.username }}</span>
+                  <span class="rank-name">
+                    {{ leader.username }}
+                    @if (leader.userId === currentUserId()) {
+                      <span class="current-user-star" aria-label="Your row">★</span>
+                    }
+                  </span>
                   <span class="rank-value rank-value-expand">
                     <span>{{ leader.exactScores }}</span>
                     <span class="expand-arrow" [class.expand-arrow-open]="expandedExactScoreUserId() === leader.userId">
@@ -91,12 +97,18 @@
               <article class="accordion-rank">
                 <button
                   class="rank-row rank-row-button"
+                  [class.current-user-row]="leader.userId === currentUserId()"
                   type="button"
                   [attr.aria-expanded]="expandedOutcomeUserId() === leader.userId"
                   (click)="toggleOutcomeLeader(leader.userId)"
                 >
                   <span class="rank-number">{{ rank + 1 }}</span>
-                  <span class="rank-name">{{ leader.username }}</span>
+                  <span class="rank-name">
+                    {{ leader.username }}
+                    @if (leader.userId === currentUserId()) {
+                      <span class="current-user-star" aria-label="Your row">★</span>
+                    }
+                  </span>
                   <span class="rank-value rank-value-expand">
                     <span>{{ leader.correctOutcomes }}</span>
                     <span class="expand-arrow" [class.expand-arrow-open]="expandedOutcomeUserId() === leader.userId">
@@ -137,9 +149,14 @@
               </header>
               <div class="rank-list">
                 @for (leader of group.leaders; track leader.userId; let rank = $index) {
-                  <article class="rank-row">
+                  <article class="rank-row" [class.current-user-row]="leader.userId === currentUserId()">
                     <span class="rank-number">{{ rank + 1 }}</span>
-                    <span class="rank-name">{{ leader.username }}</span>
+                    <span class="rank-name">
+                      {{ leader.username }}
+                      @if (leader.userId === currentUserId()) {
+                        <span class="current-user-star" aria-label="Your row">★</span>
+                      }
+                    </span>
                     <span class="rank-value">{{ leader.points | number: '1.0-2' }}</span>
                   </article>
                 } @empty {
