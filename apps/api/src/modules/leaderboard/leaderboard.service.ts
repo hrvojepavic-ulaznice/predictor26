@@ -35,6 +35,7 @@ const matchDayTimeZone = 'Europe/Zagreb';
 
 export async function getLeaderboard(): Promise<LeaderboardResponse> {
   const matches = findLeaderboardMatches();
+  const winnerTeamsByName = getWinnerTeamsByName(matches);
   const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
   const roundSummaries = getRoundSummaries(matches);
   const liveMatches = getLiveMatches(matches, latestSnapshotsByMatchId);
@@ -46,10 +47,16 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
     const userPredictions = predictionsByUser.get(user.id) ?? [];
     const rounds = roundSummaries.map((round) => getUserRoundSummary(round, userPredictions));
     const totalPoints = roundPoints(rounds.reduce((total, round) => total + round.points, 0));
+    const winnerTeamName = normalizeWinnerTeamName(user.tiebreaker_name);
 
     return {
       id: user.id,
       username: user.username,
+      winnerTeam: winnerTeamName ? winnerTeamsByName.get(toTeamLookupKey(winnerTeamName)) ?? {
+        name: winnerTeamName,
+        flag: null,
+        placeholderName: null
+      } : null,
       totalPoints,
       liveRankMovement: 0,
       livePredictions: getUserLivePredictions(liveMatches, userPredictions),
@@ -428,6 +435,46 @@ function toAwayTeamResponse(match: MatchRow) {
     flag: match.away_mapped_team_flag ?? match.away_team_flag,
     placeholderName: null
   };
+}
+
+function getWinnerTeamsByName(matches: readonly MatchRow[]): Map<string, ReturnType<typeof toHomeTeamResponse>> {
+  const teams = new Map<string, ReturnType<typeof toHomeTeamResponse>>();
+
+  for (const match of matches) {
+    const homeTeam = toHomeTeamResponse(match);
+    const awayTeam = toAwayTeamResponse(match);
+
+    teams.set(toTeamLookupKey(homeTeam.name), homeTeam);
+    teams.set(toTeamLookupKey(awayTeam.name), awayTeam);
+
+    if (match.home_team_name && match.home_team_flag) {
+      teams.set(toTeamLookupKey(match.home_team_name), {
+        name: match.home_team_name,
+        flag: match.home_team_flag,
+        placeholderName: null
+      });
+    }
+
+    if (match.away_team_name && match.away_team_flag) {
+      teams.set(toTeamLookupKey(match.away_team_name), {
+        name: match.away_team_name,
+        flag: match.away_team_flag,
+        placeholderName: null
+      });
+    }
+  }
+
+  return teams;
+}
+
+function toTeamLookupKey(teamName: string): string {
+  return teamName.trim().toLocaleLowerCase();
+}
+
+function normalizeWinnerTeamName(teamName: string | null): string | null {
+  const normalizedTeamName = teamName?.trim();
+
+  return normalizedTeamName ? normalizedTeamName : null;
 }
 
 function getUserLivePredictions(

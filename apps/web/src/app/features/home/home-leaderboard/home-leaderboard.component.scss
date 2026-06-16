@@ -358,6 +358,29 @@ tbody tr:last-child td {
   color: #9ca3af;
 }
 
+.winner-heading,
+.winner-cell {
+  min-width: 96px;
+}
+
+.winner-cell {
+  color: #374151;
+  font-weight: 850;
+}
+
+.winner-team {
+  display: inline-block;
+  max-width: 98px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+
+.winner-empty {
+  color: #9ca3af;
+}
+
 .total-heading,
 .total-cell {
   border-left: 2px solid #d1d5db;

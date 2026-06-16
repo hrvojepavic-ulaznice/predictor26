@@ -69,6 +69,7 @@ export interface LeaderboardRoundDetailsResponse extends LeaderboardRoundRespons
 export interface LeaderboardUserResponse {
   readonly id: number;
   readonly username: string;
+  readonly winnerTeam: TeamSlotResponse | null;
   readonly totalPoints: number;
   readonly liveRankMovement: number;
   readonly livePredictions: LeaderboardLivePredictionResponse[];

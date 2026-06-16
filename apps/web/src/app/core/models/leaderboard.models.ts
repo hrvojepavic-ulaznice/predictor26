@@ -69,6 +69,7 @@ export interface LeaderboardRoundDetails extends LeaderboardRound {
 export interface LeaderboardUser {
   readonly id: number;
   readonly username: string;
+  readonly winnerTeam: MatchTeam | null;
   readonly totalPoints: number;
   readonly liveRankMovement: number;
   readonly livePredictions: LeaderboardLivePrediction[];

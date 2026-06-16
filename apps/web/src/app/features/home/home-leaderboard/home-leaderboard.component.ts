@@ -1,4 +1,3 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 
 import {
@@ -53,7 +52,7 @@ interface SelectedLeaderboardRound {
 
 @Component({
   selector: 'app-home-leaderboard',
-  imports: [DecimalPipe, LeaderboardRoundModalComponent, ModalShellComponent],
+  imports: [LeaderboardRoundModalComponent, ModalShellComponent],
   templateUrl: './home-leaderboard.component.html',
   styleUrl: './home-leaderboard.component.scss'
 })
@@ -204,6 +203,10 @@ export class HomeLeaderboardComponent {
 
   protected isOpeningRound(user: RankedLeaderboardUser, round: LeaderboardRound): boolean {
     return this.openingRoundKey() === this.getRoundKey(user.id, round.label);
+  }
+
+  protected formatPoints(points: number): string {
+    return points === 0 ? '0' : points.toFixed(2);
   }
 
   private getMatchLabel(match: LeaderboardLiveMatch | LeaderboardComingUpMatch): string {

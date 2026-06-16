@@ -35,6 +35,7 @@
             @for (round of table.rounds; track round.label) {
               <th class="round-heading" colspan="2" scope="colgroup">{{ round.heading }}</th>
             }
+            <th class="winner-heading" rowspan="2" scope="col">Winner</th>
             <th class="total-heading" rowspan="2" scope="col">Total</th>
           </tr>
           <tr>
@@ -121,13 +122,20 @@
                     {{ round.submittedCount }}/{{ round.expectedCount }}
                   }
                 </td>
-                <td>{{ round.points | number: '1.0-2' }}</td>
+                <td>{{ formatPoints(round.points) }}</td>
               }
-              <td class="total-cell">{{ user.totalPoints | number: '1.0-2' }}</td>
+              <td class="winner-cell">
+                @if (user.winnerTeam; as winnerTeam) {
+                  <span class="winner-team">{{ winnerTeam.flag }} {{ winnerTeam.name }}</span>
+                } @else {
+                  <span class="winner-empty">-</span>
+                }
+              </td>
+              <td class="total-cell">{{ formatPoints(user.totalPoints) }}</td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" [attr.colspan]="table.rounds.length * 2 + table.liveMatches.length + table.comingUpMatches.length + 2">
+              <td class="empty-cell" [attr.colspan]="table.rounds.length * 2 + table.liveMatches.length + table.comingUpMatches.length + 3">
                 No registered users yet.
               </td>
             </tr>
