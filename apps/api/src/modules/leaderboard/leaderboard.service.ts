@@ -38,6 +38,7 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
   const winnerTeamsByName = getWinnerTeamsByName(matches);
   const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
   const roundSummaries = getRoundSummaries(matches);
+  const leaderboardRoundSummaries = orderLeaderboardRounds(roundSummaries);
   const liveMatches = getLiveMatches(matches, latestSnapshotsByMatchId);
   const comingUpMatches = getComingUpMatches(roundSummaries, liveMatches);
   const users = findLeaderboardUsers();
@@ -45,7 +46,7 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
   const liveMatchIds = new Set(liveMatches.map((match) => match.id));
   const leaderboardUsers = users.map<LeaderboardUserResponse>((user) => {
     const userPredictions = predictionsByUser.get(user.id) ?? [];
-    const rounds = roundSummaries.map((round) => getUserRoundSummary(round, userPredictions));
+    const rounds = leaderboardRoundSummaries.map((round) => getUserRoundSummary(round, userPredictions));
     const totalPoints = roundPoints(rounds.reduce((total, round) => total + round.points, 0));
     const winnerTeamName = normalizeWinnerTeamName(user.tiebreaker_name);
 
@@ -80,7 +81,7 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
   );
 
   return {
-    rounds: roundSummaries.map((round) => ({
+    rounds: leaderboardRoundSummaries.map((round) => ({
       label: round.label,
       locked: round.locked,
       viewable: round.viewable
@@ -554,6 +555,26 @@ function getRoundSummaries(matches: readonly MatchRow[]): RoundSummary[] {
     ...round,
     viewable: round.locked || index === firstUnlockedIndex
   }));
+}
+
+function orderLeaderboardRounds(rounds: readonly RoundSummary[]): RoundSummary[] {
+  const focusedRoundIndex = findFocusedRoundIndex(rounds);
+
+  if (focusedRoundIndex <= 0) {
+    return [...rounds];
+  }
+
+  return [...rounds.slice(focusedRoundIndex), ...rounds.slice(0, focusedRoundIndex)];
+}
+
+function findFocusedRoundIndex(rounds: readonly RoundSummary[]): number {
+  for (let index = rounds.length - 1; index >= 0; index -= 1) {
+    if (rounds[index].locked) {
+      return index;
+    }
+  }
+
+  return rounds.findIndex((round) => round.viewable);
 }
 
 function getUserRoundSummary(
