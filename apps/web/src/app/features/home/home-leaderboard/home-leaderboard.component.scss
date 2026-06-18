@@ -348,6 +348,17 @@ tbody tr:last-child td {
   font-weight: 900;
 }
 
+.live-score-cell-exact {
+  color: #14532d;
+}
+
+.live-score-exact-pill {
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #14532d;
+  padding: 4px 8px;
+}
+
 .coming-up-score-cell {
   color: #1e40af;
   font-weight: 900;
@@ -403,9 +414,13 @@ td {
   background: #f3f4f6;
   color: #111827;
   cursor: pointer;
-  font: inherit;
+  font-size: 0.6rem;
   font-weight: 850;
   padding: 5px 8px;
+}
+
+.tips-outcome-number {
+  font-size: 0.6rem;
 }
 
 .tips-button:hover,

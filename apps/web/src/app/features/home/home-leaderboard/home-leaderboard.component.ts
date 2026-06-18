@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 
 import {
   LeaderboardComingUpMatch,
+  LeaderboardLivePrediction,
   LeaderboardLiveMatch,
   LeaderboardResponse,
   LeaderboardRound,
@@ -13,12 +14,17 @@ import { LeaderboardService } from '@services/leaderboard.service';
 import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
 import { LeaderboardRoundModalComponent } from './leaderboard-round-modal.component';
 
-interface RankedLeaderboardUser extends LeaderboardUser {
+interface LeaderboardLivePredictionView extends LeaderboardLivePrediction {
+  readonly matchesLiveScore: boolean;
+}
+
+interface RankedLeaderboardUser extends Omit<LeaderboardUser, 'livePredictions'> {
   readonly rank: number;
   readonly rankLabel: string;
   readonly liveMovementLabel: string;
   readonly liveMovementState: 'up' | 'down' | 'same';
   readonly showLiveMovement: boolean;
+  readonly livePredictions: LeaderboardLivePredictionView[];
 }
 
 interface LeaderboardLiveMatchHeading extends LeaderboardLiveMatch {
@@ -107,6 +113,7 @@ export class HomeLeaderboardComponent {
   private toRankedLeaderboard(leaderboard: LeaderboardResponse): RankedLeaderboardResponse {
     let lastPoints: number | null = null;
     let lastRank = 0;
+    const liveScoresByMatchId = new Map(leaderboard.liveMatches.map((match) => [match.matchId, match.finalScore]));
 
     return {
       ...leaderboard,
@@ -138,7 +145,20 @@ export class HomeLeaderboardComponent {
           rankLabel: this.getRankLabel(lastRank),
           liveMovementLabel: this.getLiveMovementLabel(user.liveRankMovement),
           liveMovementState: this.getLiveMovementState(user.liveRankMovement),
-          showLiveMovement: leaderboard.liveMatches.some((match) => match.finalScore) && user.liveRankMovement !== 0
+          showLiveMovement: leaderboard.liveMatches.some((match) => match.finalScore) && user.liveRankMovement !== 0,
+          livePredictions: user.livePredictions.map((livePrediction) => {
+            const liveScore = liveScoresByMatchId.get(livePrediction.matchId);
+
+            return {
+              ...livePrediction,
+              matchesLiveScore:
+                livePrediction.prediction !== null &&
+                liveScore !== null &&
+                liveScore !== undefined &&
+                livePrediction.prediction.home === liveScore.home &&
+                livePrediction.prediction.away === liveScore.away
+            };
+          })
         };
       })
     };
