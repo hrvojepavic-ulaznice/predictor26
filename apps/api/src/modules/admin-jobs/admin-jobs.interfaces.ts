@@ -37,6 +37,18 @@ export interface AdminNotificationReminderJobDetailsResponse extends AdminJobSum
     readonly reminderHours: 1 | 9;
     readonly deliveredAt: string;
   }>;
+  readonly recentAttempts: Array<{
+    readonly userId: number;
+    readonly username: string;
+    readonly predictionRound: string;
+    readonly reminderHours: 1 | 9;
+    readonly subscriptionId: number | null;
+    readonly browser: string;
+    readonly status: 'accepted' | 'failed' | 'disabled';
+    readonly statusCode: number | null;
+    readonly errorMessage: string | null;
+    readonly attemptedAt: string;
+  }>;
 }
 
 export interface AdminLiveScoreJobDetailsResponse extends AdminLiveScoreJobSummaryResponse {

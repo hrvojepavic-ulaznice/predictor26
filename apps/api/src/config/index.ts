@@ -19,7 +19,7 @@ export const config = {
   superAdminFirstName: process.env.SUPER_ADMIN_FIRST_NAME ?? 'admin',
   superAdminLastName: process.env.SUPER_ADMIN_LAST_NAME ?? 'admin',
   superAdminPassword: process.env.SUPER_ADMIN_PASSWORD ?? null,
-  notificationReminderIntervalMs: Number(process.env.NOTIFICATION_REMINDER_INTERVAL_MS ?? 15 * 60 * 1000),
+  notificationReminderIntervalMs: Number(process.env.NOTIFICATION_REMINDER_INTERVAL_MS ?? 5 * 60 * 1000),
   liveScorePollIntervalMs: Number(process.env.LIVE_SCORE_POLL_INTERVAL_MS ?? 5 * 60 * 1000),
   liveScoreKickoffBufferMs: Number(process.env.LIVE_SCORE_KICKOFF_BUFFER_MS ?? 60 * 1000),
   liveScoreActiveWindowMs: Number(process.env.LIVE_SCORE_ACTIVE_WINDOW_MS ?? (2 * 60 + 15) * 60 * 1000)

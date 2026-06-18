@@ -26,6 +26,7 @@ export class AdminJobsPageComponent {
   private readonly adminJobsApi = inject(AdminJobsApiProvider);
   private readonly notificationReminderJobId = 'prediction-reminders' as const;
   private readonly liveScoreJobId = 'live-score-sync' as const;
+  protected readonly adminTimeZone = 'Europe/Zagreb';
 
   protected readonly loading = signal(true);
   protected readonly runningJobId = signal<string | null>(null);

@@ -171,7 +171,8 @@ async function getNotificationReminderJobDetails(): Promise<AdminNotificationRem
     lastRun: snapshot.lastRun,
     usersToNotifyNowCount: snapshot.usersToNotifyNowCount,
     dueUsers: snapshot.dueUsers,
-    recentDeliveries: snapshot.recentDeliveries
+    recentDeliveries: snapshot.recentDeliveries,
+    recentAttempts: snapshot.recentAttempts
   };
 }
 

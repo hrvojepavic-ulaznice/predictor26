@@ -10,7 +10,9 @@ import {
   disableUserNotificationSubscription,
   findUserNotificationSubscriptions,
   findReminderCandidates,
+  listRecentReminderAttempts,
   listRecentReminderDeliveries,
+  markReminderAttempted,
   markReminderDelivered,
   saveUserNotificationSubscription
 } from './notifications.repository.js';
@@ -21,13 +23,19 @@ const notificationRemindersEnabledKey = 'notification_reminders_enabled';
 const notificationReminderLastRunKey = 'notification_reminder_last_run';
 const secretCodeMaxLength = 128;
 const recentReminderDeliveryLimit = 20;
+const recentReminderAttemptLimit = 30;
 const dueReminderCandidateLimit = 20;
+const reminderCandidateWindowMs = 10 * 60 * 1000;
+
+let activeReminderRun: Promise<NotificationReminderRunReport> | null = null;
 
 export interface NotificationReminderRunReport {
   readonly startedAt: string;
   readonly finishedAt: string;
   readonly enabled: boolean;
   readonly candidateCount: number;
+  readonly attemptedSubscriptionCount: number;
+  readonly acceptedSubscriptionCount: number;
   readonly sentCount: number;
   readonly failedCount: number;
   readonly disabledSubscriptionCount: number;
@@ -63,7 +71,7 @@ export async function getNotificationSettings() {
 
 export async function getNotificationReminderJobSnapshot() {
   const now = new Date();
-  const windowEnd = new Date(now.getTime() - config.notificationReminderIntervalMs);
+  const windowEnd = new Date(now.getTime() - getReminderCandidateWindowMs());
   const remindersEnabled = await areNotificationRemindersEnabled();
   const dueCandidates = remindersEnabled ? findReminderCandidates(now, windowEnd) : [];
   const dueUsers = getUniqueDueReminderUsers(dueCandidates);
@@ -79,7 +87,19 @@ export async function getNotificationReminderJobSnapshot() {
       username: delivery.username,
       predictionRound: delivery.prediction_round,
       reminderHours: delivery.reminder_hours,
-      deliveredAt: delivery.created_at
+      deliveredAt: toUtcIsoTimestamp(delivery.created_at)
+    })),
+    recentAttempts: listRecentReminderAttempts(recentReminderAttemptLimit).map((attempt) => ({
+      userId: attempt.user_id,
+      username: attempt.username,
+      predictionRound: attempt.prediction_round,
+      reminderHours: attempt.reminder_hours,
+      subscriptionId: attempt.subscription_id,
+      browser: formatBrowserLabel(attempt.user_agent),
+      status: attempt.status,
+      statusCode: attempt.status_code,
+      errorMessage: attempt.error_message,
+      attemptedAt: toUtcIsoTimestamp(attempt.created_at)
     }))
   };
 }
@@ -173,39 +193,83 @@ export function startNotificationReminderScheduler(): void {
 }
 
 export async function sendDuePredictionReminders(): Promise<NotificationReminderRunReport> {
+  if (activeReminderRun) {
+    return activeReminderRun;
+  }
+
+  activeReminderRun = runDuePredictionReminders().finally(() => {
+    activeReminderRun = null;
+  });
+
+  return activeReminderRun;
+}
+
+async function runDuePredictionReminders(): Promise<NotificationReminderRunReport> {
   const startedAt = new Date();
   const enabled = await areNotificationRemindersEnabled();
   const now = new Date();
-  const windowEnd = new Date(now.getTime() - config.notificationReminderIntervalMs);
+  const windowEnd = new Date(now.getTime() - getReminderCandidateWindowMs());
   const candidates = enabled ? findReminderCandidates(now, windowEnd) : [];
+  const candidateGroups = groupReminderCandidatesByUser(candidates);
+  let acceptedSubscriptionCount = 0;
   let sentCount = 0;
   let failedCount = 0;
   let disabledSubscriptionCount = 0;
   let errorMessage: string | null = null;
 
-  for (const candidate of candidates) {
-    const payload = buildReminderPayload(candidate);
+  for (const group of candidateGroups) {
+    const payload = buildReminderPayload(group.reminder);
+    let groupAcceptedCount = 0;
 
-    try {
-      await webPush.sendNotification(JSON.parse(candidate.subscription_json) as PushSubscription, JSON.stringify(payload));
-      markReminderDelivered(candidate.user_id, candidate.prediction_round, candidate.reminder_hours);
-      sentCount += 1;
-    } catch (error) {
-      const statusCode = readWebPushStatusCode(error);
-      failedCount += 1;
-      errorMessage = error instanceof Error ? error.message : 'Prediction reminder notification failed.';
+    for (const candidate of group.subscriptions) {
+      try {
+        await webPush.sendNotification(JSON.parse(candidate.subscription_json) as PushSubscription, JSON.stringify(payload));
+        markReminderAttempted({
+          userId: candidate.user_id,
+          subscriptionId: candidate.subscription_id,
+          predictionRound: candidate.prediction_round,
+          reminderHours: candidate.reminder_hours,
+          status: 'accepted',
+          statusCode: null,
+          errorMessage: null
+        });
+        groupAcceptedCount += 1;
+        acceptedSubscriptionCount += 1;
+      } catch (error) {
+        const statusCode = readWebPushStatusCode(error);
+        errorMessage = error instanceof Error ? error.message : 'Prediction reminder notification failed.';
+        const attemptStatus = statusCode === 404 || statusCode === 410 ? 'disabled' : 'failed';
 
-      if (statusCode === 404 || statusCode === 410) {
-        disableUserNotificationSubscription(candidate.endpoint);
-        disabledSubscriptionCount += 1;
+        markReminderAttempted({
+          userId: candidate.user_id,
+          subscriptionId: candidate.subscription_id,
+          predictionRound: candidate.prediction_round,
+          reminderHours: candidate.reminder_hours,
+          status: attemptStatus,
+          statusCode,
+          errorMessage
+        });
+
+        if (statusCode === 404 || statusCode === 410) {
+          disableUserNotificationSubscription(candidate.endpoint);
+          disabledSubscriptionCount += 1;
+        }
+
+        console.error('Prediction reminder notification failed', {
+          userId: candidate.user_id,
+          predictionRound: candidate.prediction_round,
+          reminderHours: candidate.reminder_hours,
+          subscriptionId: candidate.subscription_id,
+          statusCode
+        });
       }
+    }
 
-      console.error('Prediction reminder notification failed', {
-        userId: candidate.user_id,
-        predictionRound: candidate.prediction_round,
-        reminderHours: candidate.reminder_hours,
-        statusCode
-      });
+    if (groupAcceptedCount > 0) {
+      markReminderDelivered(group.reminder.user_id, group.reminder.prediction_round, group.reminder.reminder_hours);
+      sentCount += 1;
+    } else if (group.subscriptions.length > 0) {
+      failedCount += 1;
     }
   }
 
@@ -213,7 +277,9 @@ export async function sendDuePredictionReminders(): Promise<NotificationReminder
     startedAt: startedAt.toISOString(),
     finishedAt: new Date().toISOString(),
     enabled,
-    candidateCount: candidates.length,
+    candidateCount: candidateGroups.length,
+    attemptedSubscriptionCount: candidates.length,
+    acceptedSubscriptionCount,
     sentCount,
     failedCount,
     disabledSubscriptionCount,
@@ -223,6 +289,34 @@ export async function sendDuePredictionReminders(): Promise<NotificationReminder
   setAppMetadataValue(notificationReminderLastRunKey, JSON.stringify(report));
 
   return report;
+}
+
+type ReminderCandidate = ReturnType<typeof findReminderCandidates>[number];
+
+function groupReminderCandidatesByUser(candidates: ReminderCandidate[]) {
+  const groups = new Map<
+    string,
+    {
+      readonly reminder: ReminderCandidate;
+      readonly subscriptions: ReminderCandidate[];
+    }
+  >();
+
+  for (const candidate of candidates) {
+    const key = `${candidate.user_id}:${candidate.prediction_round}:${candidate.reminder_hours}`;
+    const group = groups.get(key);
+
+    if (group) {
+      group.subscriptions.push(candidate);
+    } else {
+      groups.set(key, {
+        reminder: candidate,
+        subscriptions: [candidate]
+      });
+    }
+  }
+
+  return [...groups.values()];
 }
 
 export async function sendTestNotification(userId: number): Promise<{ readonly sent: number; readonly subscriptions: number }> {
@@ -355,4 +449,48 @@ function readWebPushStatusCode(error: unknown): number | null {
 
   const statusCode = (error as { readonly statusCode?: unknown }).statusCode;
   return typeof statusCode === 'number' ? statusCode : null;
+}
+
+function getReminderCandidateWindowMs(): number {
+  return reminderCandidateWindowMs;
+}
+
+function toUtcIsoTimestamp(value: string): string {
+  if (Number.isNaN(Date.parse(value))) {
+    return value;
+  }
+
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(value)) {
+    return new Date(value).toISOString();
+  }
+
+  return new Date(`${value.replace(' ', 'T')}Z`).toISOString();
+}
+
+function formatBrowserLabel(userAgent: string | null): string {
+  if (!userAgent) {
+    return 'Unknown browser';
+  }
+
+  if (userAgent.includes('Edg/')) {
+    return 'Edge';
+  }
+
+  if (userAgent.includes('OPR/') || userAgent.includes('Opera')) {
+    return 'Opera';
+  }
+
+  if (userAgent.includes('Firefox/')) {
+    return 'Firefox';
+  }
+
+  if (userAgent.includes('Chrome/') && userAgent.includes('Safari/')) {
+    return 'Chrome/Chromium';
+  }
+
+  if (userAgent.includes('Safari/') && userAgent.includes('Version/')) {
+    return 'Safari';
+  }
+
+  return 'Unknown browser';
 }

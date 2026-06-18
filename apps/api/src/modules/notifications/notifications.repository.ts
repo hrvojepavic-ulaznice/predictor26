@@ -1,11 +1,14 @@
 import {
   disableNotificationSubscription,
   disableNotificationSubscriptionsForUser,
+  listRecentReminderAttempts,
   listNotificationSubscriptionsForUser,
   listRecentReminderDeliveries,
   listReminderCandidates,
   PushSubscriptionInput,
+  recordReminderAttempt,
   recordReminderDelivery,
+  ReminderAttemptInput,
   upsertNotificationSubscription
 } from '../../database/queries/notifications.queries.js';
 
@@ -33,4 +36,8 @@ export function markReminderDelivered(userId: number, predictionRound: string, r
   recordReminderDelivery(userId, predictionRound, reminderHours);
 }
 
-export { listRecentReminderDeliveries };
+export function markReminderAttempted(input: ReminderAttemptInput): void {
+  recordReminderAttempt(input);
+}
+
+export { listRecentReminderAttempts, listRecentReminderDeliveries };

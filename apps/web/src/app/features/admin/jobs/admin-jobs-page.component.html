@@ -55,19 +55,27 @@
           <dl class="run-details">
             <div>
               <dt>Started</dt>
-              <dd>{{ lastRun.startedAt | date: 'medium' }}</dd>
+              <dd>{{ lastRun.startedAt | date: 'medium' : adminTimeZone }}</dd>
             </div>
             <div>
               <dt>Finished</dt>
-              <dd>{{ lastRun.finishedAt | date: 'medium' }}</dd>
+              <dd>{{ lastRun.finishedAt | date: 'medium' : adminTimeZone }}</dd>
             </div>
             <div>
               <dt>Candidates</dt>
               <dd>{{ lastRun.candidateCount }}</dd>
             </div>
             <div>
+              <dt>Subscriptions checked</dt>
+              <dd>{{ lastRun.attemptedSubscriptionCount ?? lastRun.candidateCount }}</dd>
+            </div>
+            <div>
               <dt>Sent</dt>
               <dd>{{ lastRun.sentCount }}</dd>
+            </div>
+            <div>
+              <dt>Accepted subscriptions</dt>
+              <dd>{{ lastRun.acceptedSubscriptionCount ?? lastRun.sentCount }}</dd>
             </div>
             <div>
               <dt>Failed</dt>
@@ -107,7 +115,7 @@
                   <tr>
                     <td>{{ candidate.username }}</td>
                     <td>{{ candidate.predictionRound }}</td>
-                    <td>{{ candidate.deadlineAt | date: 'medium' }}</td>
+                    <td>{{ candidate.deadlineAt | date: 'medium' : adminTimeZone }}</td>
                     <td>{{ candidate.submittedCount }}/{{ candidate.expectedCount }}</td>
                     <td>{{ candidate.reminderHours }}h before lock</td>
                   </tr>
@@ -137,7 +145,7 @@
               <tbody>
                 @for (delivery of notificationJob.recentDeliveries; track delivery.userId + ':' + delivery.predictionRound + ':' + delivery.reminderHours) {
                   <tr>
-                    <td>{{ delivery.deliveredAt | date: 'medium' }}</td>
+                    <td>{{ delivery.deliveredAt | date: 'medium' : adminTimeZone }}</td>
                     <td>{{ delivery.username }}</td>
                     <td>{{ delivery.predictionRound }}</td>
                     <td>{{ delivery.reminderHours }}h before lock</td>
@@ -148,6 +156,45 @@
           </div>
         } @else {
           <p class="empty-message">No reminder deliveries have been recorded yet.</p>
+        }
+      </section>
+
+      <section class="details-section" aria-labelledby="recent-attempts-title">
+        <h3 id="recent-attempts-title">Recent push attempts</h3>
+
+        @if (notificationJob.recentAttempts.length > 0) {
+          <div class="deliveries-table-shell">
+            <table class="deliveries-table">
+              <thead>
+                <tr>
+                  <th scope="col">Time</th>
+                  <th scope="col">User</th>
+                  <th scope="col">Round</th>
+                  <th scope="col">Window</th>
+                  <th scope="col">Browser</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Code</th>
+                  <th scope="col">Error</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (attempt of notificationJob.recentAttempts; track attempt.attemptedAt + ':' + attempt.userId + ':' + attempt.subscriptionId) {
+                  <tr>
+                    <td>{{ attempt.attemptedAt | date: 'medium' : adminTimeZone }}</td>
+                    <td>{{ attempt.username }}</td>
+                    <td>{{ attempt.predictionRound }}</td>
+                    <td>{{ attempt.reminderHours }}h before lock</td>
+                    <td>{{ attempt.browser }}</td>
+                    <td>{{ attempt.status }}</td>
+                    <td>{{ attempt.statusCode ?? '-' }}</td>
+                    <td>{{ attempt.errorMessage ?? '-' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="empty-message">No push attempts have been recorded yet.</p>
         }
       </section>
     </section>
@@ -186,7 +233,7 @@
           </div>
           <div class="metric">
             <span class="metric-label">Next check</span>
-            <strong>{{ liveJob.nextRunAt ? (liveJob.nextRunAt | date: 'medium') : 'None' }}</strong>
+            <strong>{{ liveJob.nextRunAt ? (liveJob.nextRunAt | date: 'medium' : adminTimeZone) : 'None' }}</strong>
           </div>
           <div class="metric">
             <span class="metric-label">Active matches</span>
@@ -213,7 +260,7 @@
                   @for (match of liveJob.activeMatches; track match.matchId) {
                     <tr>
                       <td>#{{ match.matchNumber }} {{ match.homeTeamName }} - {{ match.awayTeamName }}</td>
-                      <td>{{ match.kickoffAt | date: 'medium' }}</td>
+                      <td>{{ match.kickoffAt | date: 'medium' : adminTimeZone }}</td>
                       <td>
                         @if (match.currentScore) {
                           {{ match.currentScore.home }}-{{ match.currentScore.away }}
@@ -222,7 +269,7 @@
                         }
                       </td>
                       <td>{{ match.providerStatus || '-' }}</td>
-                      <td>{{ match.syncedAt ? (match.syncedAt | date: 'medium') : '-' }}</td>
+                      <td>{{ match.syncedAt ? (match.syncedAt | date: 'medium' : adminTimeZone) : '-' }}</td>
                     </tr>
                   }
                 </tbody>
@@ -253,13 +300,13 @@
                 <tbody>
                   @for (run of liveJob.recentRuns; track run.startedAt) {
                     <tr class="live-score-history-row" [class.live-score-linked-row]="run.rowColor !== null" [style.--run-color]="run.rowColor">
-                      <td>{{ run.startedAt | date: 'medium' }}</td>
+                      <td>{{ run.startedAt | date: 'medium' : adminTimeZone }}</td>
                       <td>{{ run.status }}</td>
                       <td>{{ run.checkedMatches }}</td>
                       <td>{{ run.updatedMatches }}</td>
                       <td>{{ run.liveMatches }}</td>
                       <td>{{ run.finishedMatches }}</td>
-                      <td>{{ run.nextRunAt ? (run.nextRunAt | date: 'medium') : '-' }}</td>
+                      <td>{{ run.nextRunAt ? (run.nextRunAt | date: 'medium' : adminTimeZone) : '-' }}</td>
                     </tr>
                   }
                 </tbody>
@@ -289,7 +336,7 @@
                 <tbody>
                   @for (update of liveJob.recentUpdates; track update.createdAt + ':' + update.matchId) {
                     <tr class="live-score-history-row" [class.live-score-linked-row]="update.rowColor !== null" [style.--run-color]="update.rowColor">
-                      <td>{{ update.createdAt | date: 'medium' }}</td>
+                      <td>{{ update.createdAt | date: 'medium' : adminTimeZone }}</td>
                       <td>#{{ update.matchNumber }} {{ update.homeTeamName }} - {{ update.awayTeamName }}</td>
                       <td>
                         @if (update.previousScore) {

@@ -128,6 +128,18 @@ export function openDatabase() {
       UNIQUE(user_id, prediction_round, reminder_hours)
     );
 
+    CREATE TABLE IF NOT EXISTS notification_reminder_attempts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      subscription_id INTEGER REFERENCES notification_subscriptions(id) ON DELETE SET NULL,
+      prediction_round TEXT NOT NULL,
+      reminder_hours INTEGER NOT NULL CHECK(reminder_hours IN (1, 9)),
+      status TEXT NOT NULL CHECK(status IN ('accepted', 'failed', 'disabled')),
+      status_code INTEGER,
+      error_message TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS live_score_snapshots (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,

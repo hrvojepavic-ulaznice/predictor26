@@ -19,6 +19,7 @@ export interface ReminderCandidateRow {
   readonly subscription_id: number;
   readonly endpoint: string;
   readonly subscription_json: string;
+  readonly user_agent: string | null;
 }
 
 export interface ReminderDeliveryRow {
@@ -29,10 +30,33 @@ export interface ReminderDeliveryRow {
   readonly created_at: string;
 }
 
+export interface ReminderAttemptRow {
+  readonly user_id: number;
+  readonly username: string;
+  readonly prediction_round: string;
+  readonly reminder_hours: 1 | 9;
+  readonly subscription_id: number | null;
+  readonly user_agent: string | null;
+  readonly status: 'accepted' | 'failed' | 'disabled';
+  readonly status_code: number | null;
+  readonly error_message: string | null;
+  readonly created_at: string;
+}
+
 export interface PushSubscriptionInput {
   readonly endpoint: string;
   readonly subscriptionJson: string;
   readonly userAgent: string | null;
+}
+
+export interface ReminderAttemptInput {
+  readonly userId: number;
+  readonly subscriptionId: number;
+  readonly predictionRound: string;
+  readonly reminderHours: 1 | 9;
+  readonly status: 'accepted' | 'failed' | 'disabled';
+  readonly statusCode: number | null;
+  readonly errorMessage: string | null;
 }
 
 export function upsertNotificationSubscription(userId: number, input: PushSubscriptionInput): void {
@@ -138,6 +162,37 @@ export function listRecentReminderDeliveries(limit: number): ReminderDeliveryRow
   }
 }
 
+export function listRecentReminderAttempts(limit: number): ReminderAttemptRow[] {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+          SELECT
+            users.id AS user_id,
+            users.username,
+            notification_reminder_attempts.prediction_round,
+            notification_reminder_attempts.reminder_hours,
+            notification_reminder_attempts.subscription_id,
+            notification_subscriptions.user_agent,
+            notification_reminder_attempts.status,
+            notification_reminder_attempts.status_code,
+            notification_reminder_attempts.error_message,
+            notification_reminder_attempts.created_at
+          FROM notification_reminder_attempts
+          INNER JOIN users ON users.id = notification_reminder_attempts.user_id
+          LEFT JOIN notification_subscriptions ON notification_subscriptions.id = notification_reminder_attempts.subscription_id
+          ORDER BY notification_reminder_attempts.created_at DESC
+          LIMIT ?
+        `
+      )
+      .all(limit) as ReminderAttemptRow[];
+  } finally {
+    db.close();
+  }
+}
+
 export function listReminderCandidates(nowIso: string, windowEndIso: string): ReminderCandidateRow[] {
   const db = openDatabase();
 
@@ -180,7 +235,8 @@ export function listReminderCandidates(nowIso: string, windowEndIso: string): Re
             reminder_windows.reminder_hours,
             notification_subscriptions.id AS subscription_id,
             notification_subscriptions.endpoint,
-            notification_subscriptions.subscription_json
+            notification_subscriptions.subscription_json,
+            notification_subscriptions.user_agent
           FROM users
           INNER JOIN notification_subscriptions
             ON notification_subscriptions.user_id = users.id
@@ -209,7 +265,8 @@ export function listReminderCandidates(nowIso: string, windowEndIso: string): Re
             reminder_windows.reminder_hours,
             notification_subscriptions.id,
             notification_subscriptions.endpoint,
-            notification_subscriptions.subscription_json
+            notification_subscriptions.subscription_json,
+            notification_subscriptions.user_agent
           ORDER BY round_summaries.deadline_at ASC, reminder_windows.reminder_hours DESC
         `
       )
@@ -230,6 +287,37 @@ export function recordReminderDelivery(userId: number, predictionRound: string, 
         ON CONFLICT(user_id, prediction_round, reminder_hours) DO NOTHING
       `
     ).run(userId, predictionRound, reminderHours);
+  } finally {
+    db.close();
+  }
+}
+
+export function recordReminderAttempt(input: ReminderAttemptInput): void {
+  const db = openDatabase();
+
+  try {
+    db.prepare(
+      `
+        INSERT INTO notification_reminder_attempts (
+          user_id,
+          subscription_id,
+          prediction_round,
+          reminder_hours,
+          status,
+          status_code,
+          error_message
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `
+    ).run(
+      input.userId,
+      input.subscriptionId,
+      input.predictionRound,
+      input.reminderHours,
+      input.status,
+      input.statusCode,
+      input.errorMessage
+    );
   } finally {
     db.close();
   }

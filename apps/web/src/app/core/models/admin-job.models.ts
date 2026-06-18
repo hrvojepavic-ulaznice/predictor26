@@ -3,6 +3,8 @@ export interface AdminJobRunReport {
   readonly finishedAt: string;
   readonly enabled: boolean;
   readonly candidateCount: number;
+  readonly attemptedSubscriptionCount?: number;
+  readonly acceptedSubscriptionCount?: number;
   readonly sentCount: number;
   readonly failedCount: number;
   readonly disabledSubscriptionCount: number;
@@ -51,6 +53,18 @@ export interface AdminNotificationReminderJob extends AdminJobSummary {
     readonly predictionRound: string;
     readonly reminderHours: 1 | 9;
     readonly deliveredAt: string;
+  }>;
+  readonly recentAttempts: Array<{
+    readonly userId: number;
+    readonly username: string;
+    readonly predictionRound: string;
+    readonly reminderHours: 1 | 9;
+    readonly subscriptionId: number | null;
+    readonly browser: string;
+    readonly status: 'accepted' | 'failed' | 'disabled';
+    readonly statusCode: number | null;
+    readonly errorMessage: string | null;
+    readonly attemptedAt: string;
   }>;
 }
 
