@@ -193,7 +193,7 @@ export function listRecentReminderAttempts(limit: number): ReminderAttemptRow[] 
   }
 }
 
-export function listReminderCandidates(nowIso: string, windowEndIso: string): ReminderCandidateRow[] {
+export function listReminderCandidates(): ReminderCandidateRow[] {
   const db = openDatabase();
 
   try {
@@ -253,9 +253,18 @@ export function listReminderCandidates(nowIso: string, windowEndIso: string): Re
             AND notification_reminder_deliveries.prediction_round = round_summaries.prediction_round
             AND notification_reminder_deliveries.reminder_hours = reminder_windows.reminder_hours
           WHERE notification_reminder_deliveries.id IS NULL
-            AND datetime(round_summaries.deadline_at, '-' || reminder_windows.reminder_hours || ' hours') <= datetime(?)
-            AND datetime(round_summaries.deadline_at, '-' || reminder_windows.reminder_hours || ' hours') > datetime(?)
-            AND datetime(round_summaries.deadline_at) > datetime(?)
+            AND NOT EXISTS (
+              SELECT 1
+              FROM notification_reminder_deliveries processed_deliveries
+              WHERE processed_deliveries.prediction_round = round_summaries.prediction_round
+                AND processed_deliveries.reminder_hours = reminder_windows.reminder_hours
+            )
+            AND NOT EXISTS (
+              SELECT 1
+              FROM notification_reminder_attempts processed_attempts
+              WHERE processed_attempts.prediction_round = round_summaries.prediction_round
+                AND processed_attempts.reminder_hours = reminder_windows.reminder_hours
+            )
           GROUP BY
             users.id,
             users.username,
@@ -270,7 +279,7 @@ export function listReminderCandidates(nowIso: string, windowEndIso: string): Re
           ORDER BY round_summaries.deadline_at ASC, reminder_windows.reminder_hours DESC
         `
       )
-      .all(nowIso, windowEndIso, nowIso) as ReminderCandidateRow[];
+      .all() as ReminderCandidateRow[];
   } finally {
     db.close();
   }

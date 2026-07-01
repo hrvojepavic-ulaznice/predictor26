@@ -118,7 +118,7 @@ export class AdminMatchesPageComponent {
           matches.map((currentMatch) => (currentMatch.id === updatedMatch.id ? updatedMatch : currentMatch))
         );
         this.editingKickoffMatch.set(null);
-        this.importMessage.set(`Match ${updatedMatch.matchNumber} date saved.`);
+        this.importMessage.set(`Match ${updatedMatch.matchNumber} details saved.`);
         this.ensureSelectedFilterHasResults();
         this.setSaving(match.id, false);
       },
@@ -126,7 +126,7 @@ export class AdminMatchesPageComponent {
         const message =
           error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
             ? error.error.message
-            : 'Match date could not be saved.';
+            : 'Match details could not be saved.';
 
         if (error instanceof HttpErrorResponse && [400, 403].includes(error.status)) {
           this.kickoffErrorMessage.set(message);

@@ -35,7 +35,7 @@
             @for (round of table.rounds; track round.label) {
               <th class="round-heading" colspan="2" scope="colgroup">{{ round.heading }}</th>
               @if ($first) {
-                <th class="total-heading" rowspan="2" scope="col">Total</th>
+                <th class="total-heading interim-total-heading" rowspan="2" scope="col">Total</th>
               }
             }
             <th class="winner-heading" rowspan="2" scope="col">Winner</th>
@@ -136,7 +136,7 @@
                 </td>
                 <td>{{ formatPoints(round.points) }}</td>
                 @if ($first) {
-                  <td class="total-cell">{{ formatPoints(user.totalPoints) }}</td>
+                  <td class="total-cell interim-total-cell">{{ formatPoints(user.totalPoints) }}</td>
                 }
               }
               <td class="winner-cell">

@@ -110,7 +110,6 @@ export class AdminPlayoffsPageComponent {
     const team = side === 'home' ? match.homeTeam : match.awayTeam;
     const placeholder = team.placeholderName ?? team.name;
     const sourceLabel = getPlaceholderSourceLabel(placeholder);
-    const options = getPossibleTeamsForPlaceholder(placeholder, this.matches(), this.groupTeams());
 
     return {
       match,
@@ -118,7 +117,7 @@ export class AdminPlayoffsPageComponent {
       placeholder,
       selectedTeamName: team.placeholderName ? team.name : '',
       sourceLabel,
-      options
+      options: this.groupTeams()
     };
   }
 
@@ -135,52 +134,6 @@ export class AdminPlayoffsPageComponent {
       return nextSavingKeys;
     });
   }
-}
-
-function getPossibleTeamsForPlaceholder(
-  placeholder: string,
-  matches: readonly Match[],
-  groupTeams: readonly WorldCupGroupTeam[],
-  visitedMatchNumbers = new Set<number>()
-): WorldCupGroupTeam[] {
-  const groupName = getPlaceholderGroupName(placeholder);
-
-  if (groupName) {
-    return groupTeams.filter((groupTeam) => groupTeam.groupName === groupName);
-  }
-
-  const sourceMatchNumber = getSourceMatchNumber(placeholder);
-
-  if (!sourceMatchNumber || visitedMatchNumbers.has(sourceMatchNumber)) {
-    return [...groupTeams];
-  }
-
-  const sourceMatch = matches.find((match) => match.matchNumber === sourceMatchNumber);
-
-  if (!sourceMatch) {
-    return [...groupTeams];
-  }
-
-  const nextVisitedMatchNumbers = new Set(visitedMatchNumbers).add(sourceMatchNumber);
-  const homeOptions = getPossibleTeamsForTeamSlot(sourceMatch.homeTeam, matches, groupTeams, nextVisitedMatchNumbers);
-  const awayOptions = getPossibleTeamsForTeamSlot(sourceMatch.awayTeam, matches, groupTeams, nextVisitedMatchNumbers);
-
-  return uniqueTeams([...homeOptions, ...awayOptions]);
-}
-
-function getPossibleTeamsForTeamSlot(
-  team: Match['homeTeam'],
-  matches: readonly Match[],
-  groupTeams: readonly WorldCupGroupTeam[],
-  visitedMatchNumbers: ReadonlySet<number>
-): WorldCupGroupTeam[] {
-  if (team.placeholderName) {
-    const mappedTeam = groupTeams.find((groupTeam) => groupTeam.name === team.name);
-
-    return mappedTeam ? [mappedTeam] : [{ name: team.name, flag: team.flag, groupName: '' }];
-  }
-
-  return getPossibleTeamsForPlaceholder(team.name, matches, groupTeams, new Set(visitedMatchNumbers));
 }
 
 function getPlaceholderSourceLabel(placeholder: string): string | null {
@@ -219,18 +172,6 @@ function getSourceMatchNumber(placeholder: string): number | null {
   const phraseMatch = normalized.match(/\b(?:WINNER|LOSER)\b(?:\s+OF)?(?:\s+MATCH)?\s+(\d{1,3})\b/);
 
   return phraseMatch ? Number(phraseMatch[1]) : null;
-}
-
-function uniqueTeams(teams: readonly WorldCupGroupTeam[]): WorldCupGroupTeam[] {
-  const teamsByName = new Map<string, WorldCupGroupTeam>();
-
-  for (const team of teams) {
-    teamsByName.set(team.name, team);
-  }
-
-  return Array.from(teamsByName.values()).sort((firstTeam, secondTeam) =>
-    firstTeam.name.localeCompare(secondTeam.name, undefined, { sensitivity: 'base' })
-  );
 }
 
 function slotKey(matchId: number, side: PlayoffMappingSide): string {

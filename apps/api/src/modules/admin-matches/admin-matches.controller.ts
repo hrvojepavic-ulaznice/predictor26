@@ -111,7 +111,7 @@ export async function updateKickoffController(
     const result = await changeKickoff(Number(req.params.matchId), req.body);
 
     if (result.status === 'invalid') {
-      res.status(400).json({ message: 'Please enter a valid match date and secret code.' });
+      res.status(400).json({ message: 'Please enter valid match details and secret code.' });
       return;
     }
 

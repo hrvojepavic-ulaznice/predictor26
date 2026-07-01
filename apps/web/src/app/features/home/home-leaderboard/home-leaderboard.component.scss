@@ -402,6 +402,11 @@ tbody tr:last-child td {
   font-weight: 900;
 }
 
+.interim-total-heading,
+.interim-total-cell {
+  display: none;
+}
+
 td {
   color: #111827;
   font-size: 0.9rem;
@@ -511,6 +516,11 @@ td {
   .live-rank-movement {
     width: 24px;
     height: 24px;
+  }
+
+  .interim-total-heading,
+  .interim-total-cell {
+    display: table-cell;
   }
 
 }

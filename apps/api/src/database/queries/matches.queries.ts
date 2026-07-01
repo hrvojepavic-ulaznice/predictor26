@@ -423,17 +423,17 @@ export function updateFinalScoreIfChanged(matchId: number, finalHomeScore: numbe
   }
 }
 
-export function updateMatchKickoff(matchId: number, kickoffAt: string): MatchRow | undefined {
+export function updateMatchKickoff(matchId: number, kickoffAt: string, city: string, venue: string): MatchRow | undefined {
   const db = openDatabase();
 
   try {
     db.prepare(
       `
         UPDATE matches
-        SET kickoff_at = ?, updated_at = CURRENT_TIMESTAMP
+        SET kickoff_at = ?, city = ?, venue = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `
-    ).run(kickoffAt, matchId);
+    ).run(kickoffAt, city, venue, matchId);
 
     return db
       .prepare(

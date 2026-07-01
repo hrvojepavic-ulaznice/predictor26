@@ -1,6 +1,6 @@
 <form class="kickoff-form" [formGroup]="kickoffForm" (ngSubmit)="confirm()">
   <header class="modal-header">
-    <h2 id="kickoff-modal-title">Edit match date</h2>
+    <h2 id="kickoff-modal-title">Edit match details</h2>
     <button class="icon-button" type="button" aria-label="Close" [disabled]="isSubmitting()" (click)="cancel()">×</button>
   </header>
 
@@ -10,6 +10,17 @@
     <label class="field">
       <span>Match date and time</span>
       <input type="datetime-local" autofocus appFormFieldState="invalid" formControlName="kickoffAt" [readonly]="isSubmitting()" />
+    </label>
+
+    <label class="field">
+      <span>Venue</span>
+      <input
+        type="text"
+        maxlength="160"
+        appFormFieldState="invalid"
+        formControlName="venueDisplay"
+        [readonly]="isSubmitting()"
+      />
     </label>
 
     <label class="field">
@@ -30,7 +41,7 @@
   <footer class="modal-footer">
     <button class="secondary-button" type="button" [disabled]="isSubmitting()" (click)="cancel()">Cancel</button>
     <button class="confirm-button" type="submit" [disabled]="isSubmitting() || kickoffForm.invalid">
-      {{ isSubmitting() ? 'Saving...' : 'Save date' }}
+      {{ isSubmitting() ? 'Saving...' : 'Save changes' }}
     </button>
   </footer>
 </form>

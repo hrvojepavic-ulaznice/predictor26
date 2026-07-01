@@ -73,7 +73,7 @@ export async function getNotificationReminderJobSnapshot() {
   const now = new Date();
   const windowEnd = new Date(now.getTime() - getReminderCandidateWindowMs());
   const remindersEnabled = await areNotificationRemindersEnabled();
-  const dueCandidates = remindersEnabled ? findReminderCandidates(now, windowEnd) : [];
+  const dueCandidates = remindersEnabled ? getDueReminderCandidates(now, windowEnd) : [];
   const dueUsers = getUniqueDueReminderUsers(dueCandidates);
 
   return {
@@ -209,7 +209,7 @@ async function runDuePredictionReminders(): Promise<NotificationReminderRunRepor
   const enabled = await areNotificationRemindersEnabled();
   const now = new Date();
   const windowEnd = new Date(now.getTime() - getReminderCandidateWindowMs());
-  const candidates = enabled ? findReminderCandidates(now, windowEnd) : [];
+  const candidates = enabled ? getDueReminderCandidates(now, windowEnd) : [];
   const candidateGroups = groupReminderCandidatesByUser(candidates);
   let acceptedSubscriptionCount = 0;
   let sentCount = 0;
@@ -237,7 +237,7 @@ async function runDuePredictionReminders(): Promise<NotificationReminderRunRepor
         acceptedSubscriptionCount += 1;
       } catch (error) {
         const statusCode = readWebPushStatusCode(error);
-        errorMessage = error instanceof Error ? error.message : 'Prediction reminder notification failed.';
+        errorMessage = readWebPushErrorMessage(error);
         const attemptStatus = statusCode === 404 || statusCode === 410 ? 'disabled' : 'failed';
 
         markReminderAttempted({
@@ -292,6 +292,22 @@ async function runDuePredictionReminders(): Promise<NotificationReminderRunRepor
 }
 
 type ReminderCandidate = ReturnType<typeof findReminderCandidates>[number];
+
+function getDueReminderCandidates(now: Date, windowEnd: Date): ReminderCandidate[] {
+  return findReminderCandidates().filter((candidate) => isReminderCandidateDue(candidate, now, windowEnd));
+}
+
+function isReminderCandidateDue(candidate: ReminderCandidate, now: Date, windowEnd: Date): boolean {
+  const deadlineTime = Date.parse(candidate.deadline_at);
+
+  if (Number.isNaN(deadlineTime) || deadlineTime <= now.getTime()) {
+    return false;
+  }
+
+  const reminderTime = deadlineTime - candidate.reminder_hours * 60 * 60 * 1000;
+
+  return reminderTime <= now.getTime() && reminderTime > windowEnd.getTime();
+}
 
 function groupReminderCandidatesByUser(candidates: ReminderCandidate[]) {
   const groups = new Map<
@@ -449,6 +465,22 @@ function readWebPushStatusCode(error: unknown): number | null {
 
   const statusCode = (error as { readonly statusCode?: unknown }).statusCode;
   return typeof statusCode === 'number' ? statusCode : null;
+}
+
+function readWebPushErrorMessage(error: unknown): string {
+  const fallback = error instanceof Error ? error.message : 'Prediction reminder notification failed.';
+
+  if (typeof error !== 'object' || error === null || !('body' in error)) {
+    return fallback;
+  }
+
+  const body = (error as { readonly body?: unknown }).body;
+
+  if (typeof body !== 'string' || body.trim().length === 0) {
+    return fallback;
+  }
+
+  return `${fallback}: ${body.trim().slice(0, 500)}`;
 }
 
 function getReminderCandidateWindowMs(): number {

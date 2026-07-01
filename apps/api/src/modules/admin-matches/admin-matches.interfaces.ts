@@ -36,6 +36,8 @@ export interface UpdateFinalScoreResponse {
 
 export interface UpdateKickoffRequest {
   readonly kickoffAt: string;
+  readonly city: string;
+  readonly venue: string;
   readonly secretCode: string;
 }
 

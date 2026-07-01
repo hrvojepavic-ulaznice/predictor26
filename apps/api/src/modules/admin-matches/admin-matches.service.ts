@@ -238,7 +238,14 @@ export async function changeKickoff(
   matchId: number,
   input: Partial<UpdateKickoffRequest> | undefined
 ): Promise<UpdateKickoffResult> {
-  if (!Number.isInteger(matchId) || matchId < 1 || typeof input?.kickoffAt !== 'string' || !isValidIsoDate(input.kickoffAt)) {
+  if (
+    !Number.isInteger(matchId) ||
+    matchId < 1 ||
+    typeof input?.kickoffAt !== 'string' ||
+    !isValidIsoDate(input.kickoffAt) ||
+    !isValidVenuePart(input.city, 80) ||
+    !isValidVenuePart(input.venue, 120)
+  ) {
     return { status: 'invalid' };
   }
 
@@ -248,7 +255,7 @@ export async function changeKickoff(
     return secretCodeResult;
   }
 
-  const match = setKickoff(matchId, input.kickoffAt);
+  const match = setKickoff(matchId, input.kickoffAt, input.city.trim(), input.venue.trim());
 
   if (!match) {
     return { status: 'not_found' };
@@ -339,6 +346,10 @@ function isValidNullableScore(score: unknown): score is number | null {
 
 function isValidIsoDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) && !Number.isNaN(Date.parse(value));
+}
+
+function isValidVenuePart(value: unknown, maxLength: number): value is string {
+  return typeof value === 'string' && value.trim().length >= 1 && value.trim().length <= maxLength;
 }
 
 function isValidNullableTeamName(value: unknown): value is string | null {

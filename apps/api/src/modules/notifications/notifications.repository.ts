@@ -28,8 +28,8 @@ export function findUserNotificationSubscriptions(userId: number) {
   return listNotificationSubscriptionsForUser(userId);
 }
 
-export function findReminderCandidates(now: Date, windowEnd: Date) {
-  return listReminderCandidates(now.toISOString(), windowEnd.toISOString());
+export function findReminderCandidates() {
+  return listReminderCandidates();
 }
 
 export function markReminderDelivered(userId: number, predictionRound: string, reminderHours: 1 | 9): void {

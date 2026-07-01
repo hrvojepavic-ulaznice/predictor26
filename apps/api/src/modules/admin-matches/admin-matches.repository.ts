@@ -51,8 +51,8 @@ export function setFinalScore(matchId: number, homeScore: number | null, awaySco
   return updateFinalScore(matchId, homeScore, awayScore);
 }
 
-export function setKickoff(matchId: number, kickoffAt: string) {
-  return updateMatchKickoff(matchId, kickoffAt);
+export function setKickoff(matchId: number, kickoffAt: string, city: string, venue: string) {
+  return updateMatchKickoff(matchId, kickoffAt, city, venue);
 }
 
 export function setPlayoffTeamMapping(matchId: number, side: 'home' | 'away', teamName: string | null, teamFlag: string | null) {
