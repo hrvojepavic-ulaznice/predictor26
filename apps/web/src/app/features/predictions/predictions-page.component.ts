@@ -15,6 +15,7 @@ import {
   PredictionPointsState
 } from '@shared/utils/prediction-points.utils';
 import { isValidScore, ScoreDraft, updateScoreDraft } from '@shared/utils/score-draft.utils';
+import { sortMatchesByKickoff } from '@shared/utils/match-sorting.utils';
 
 interface MatchGroup {
   readonly label: string;
@@ -283,7 +284,7 @@ function groupRoundSections(matches: readonly MatchWithPrediction[]): MatchSecti
 
   return Array.from(sections, ([label, sectionMatches]) => ({
     label,
-    matches: sectionMatches
+    matches: sortMatchesByKickoff(sectionMatches)
   }));
 }
 
@@ -314,6 +315,6 @@ function groupPredictionRoundSections(matches: readonly MatchWithPrediction[]): 
 
   return Array.from(sections, ([label, sectionMatches]) => ({
     label,
-    matches: sectionMatches
+    matches: sortMatchesByKickoff(sectionMatches)
   }));
 }

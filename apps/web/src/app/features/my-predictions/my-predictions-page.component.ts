@@ -8,6 +8,7 @@ import { MatchSortMode, MatchSortPreferenceService } from '@core/state/match-sor
 import { MatchSortMenuComponent } from '@shared/components/match-sort-menu/match-sort-menu.component';
 import { PredictionPointsComponent } from '@shared/components/prediction-points/prediction-points.component';
 import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
+import { sortMatchesByKickoff } from '@shared/utils/match-sorting.utils';
 import { calculatePredictionPoints, getPredictionPointsStateColor } from '@shared/utils/prediction-points.utils';
 
 interface TipGroup {
@@ -126,7 +127,7 @@ function groupByGroupName(matches: readonly MatchWithPrediction[]): TipSection[]
 
   return Array.from(sections, ([label, sectionMatches]) => ({
     label,
-    matches: sectionMatches
+    matches: sortMatchesByKickoff(sectionMatches)
   }));
 }
 
@@ -139,6 +140,6 @@ function groupByPredictionRound(matches: readonly MatchWithPrediction[]): TipSec
 
   return Array.from(sections, ([label, sectionMatches]) => ({
     label,
-    matches: sectionMatches
+    matches: sortMatchesByKickoff(sectionMatches)
   }));
 }
