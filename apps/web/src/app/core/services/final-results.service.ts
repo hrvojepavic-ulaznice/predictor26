@@ -15,6 +15,7 @@ export interface FinalResults {
   readonly totalUsers: number;
   readonly totalPrizePool: number;
   readonly winners: FinalResultsWinner[];
+  readonly pelinkovacUser: LeaderboardUser | null;
 }
 
 const buyInEur = 25;
@@ -54,6 +55,7 @@ export class FinalResultsService {
     return {
       totalUsers: leaderboard.totalUsers,
       totalPrizePool,
+      pelinkovacUser: findPelinkovacUser(leaderboard.users),
       winners: prizeDistribution.flatMap((prize) => {
         const user = leaderboard.users[prize.place - 1];
 
@@ -111,4 +113,16 @@ export class FinalResultsService {
 
 function getSeenStorageKey(userId: number): string {
   return `${seenStorageKeyPrefix}.${userId}`;
+}
+
+function findPelinkovacUser(users: readonly LeaderboardUser[]): LeaderboardUser | null {
+  for (let index = users.length - 2; index >= 0; index -= 1) {
+    const user = users[index];
+
+    if (user.rounds.every((round) => round.submittedCount === round.expectedCount)) {
+      return user;
+    }
+  }
+
+  return null;
 }

@@ -26,6 +26,13 @@
     }
   </div>
 
+  @if (results().pelinkovacUser; as pelinkovacUser) {
+    <div class="pelinkovac-award" aria-label="Pelinkovac award">
+      <img src="icons/pelin.jpg" alt="" width="34" height="34" aria-hidden="true" />
+      <span>{{ pelinkovacUser.username }}</span>
+    </div>
+  }
+
   <footer class="modal-actions">
     <button class="close-button" type="button" (click)="closeModal.emit()">Close</button>
   </footer>
