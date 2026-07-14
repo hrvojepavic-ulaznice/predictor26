@@ -6,6 +6,17 @@
 
   <nav class="account-nav" aria-label="Account">
     @if (appState.currentUser(); as user) {
+      @if (finalResults.available()) {
+        <button
+          class="header-icon-link"
+          type="button"
+          aria-label="View final rankings"
+          animate.enter="account-nav-enter"
+          (click)="finalResults.openFinalResults()"
+        >
+          <span class="final-results-icon" aria-hidden="true"></span>
+        </button>
+      }
       <span class="user-pill" animate.enter="account-nav-enter">
         <a class="user-name" routerLink="/my-predictions" aria-label="View my predictions">{{ user.username }}</a>
         @if (user.isVerified) {
@@ -17,7 +28,7 @@
       @if (user.role === 'super_admin' || user.role === 'admin') {
         <a class="nav-link" routerLink="/admin" animate.enter="account-nav-enter">Admin</a>
       }
-      <a class="stats-link" routerLink="/stats" aria-label="View stats" animate.enter="account-nav-enter">
+      <a class="header-icon-link" routerLink="/stats" aria-label="View stats" animate.enter="account-nav-enter">
         <span class="stats-icon" aria-hidden="true"></span>
       </a>
     } @else if (appState.isLoggedIn()) {

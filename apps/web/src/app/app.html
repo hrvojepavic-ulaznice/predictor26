@@ -10,4 +10,16 @@
   }
 
   <app-notification-reminder-drawer />
+
+  @if (finalResults.modalOpen() && finalResults.results(); as results) {
+    <app-modal-shell
+      labelledBy="final-results-title"
+      panelWidth="680px"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="finalResults.closeFinalResults()"
+    >
+      <app-final-results-modal [results]="results" (closeModal)="finalResults.closeFinalResults()" />
+    </app-modal-shell>
+  }
 </div>
