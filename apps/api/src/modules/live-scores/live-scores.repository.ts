@@ -13,8 +13,8 @@ import {
 } from '../../database/queries/live-scores.queries.js';
 import { listMatches, updateFinalScoreIfChanged } from '../../database/queries/matches.queries.js';
 
-export function findLiveScoreMatches() {
-  return listMatches();
+export function findLiveScoreMatchesForCompetition(competitionId: number) {
+  return listMatches(competitionId);
 }
 
 export function setLiveScoreSnapshot(input: LiveScoreSnapshotInput): void {
@@ -29,22 +29,27 @@ export function addLiveScoreUpdate(input: LiveScoreUpdateInput): void {
   insertLiveScoreUpdate(input);
 }
 
-export function applyLiveScoreToFinalScore(matchId: number, homeScore: number, awayScore: number): boolean {
-  return updateFinalScoreIfChanged(matchId, homeScore, awayScore);
+export function applyLiveScoreToFinalScore(
+  competitionId: number,
+  matchId: number,
+  homeScore: number,
+  awayScore: number
+): boolean {
+  return updateFinalScoreIfChanged(competitionId, matchId, homeScore, awayScore);
 }
 
-export function findLastLiveScoreJobRun() {
-  return getLatestLiveScoreJobRun();
+export function findLastLiveScoreJobRunForCompetition(competitionId: number) {
+  return getLatestLiveScoreJobRun(competitionId);
 }
 
-export function findRecentLiveScoreJobRuns(limit: number) {
-  return listRecentLiveScoreJobRuns(limit);
+export function findRecentLiveScoreJobRunsForCompetition(competitionId: number, limit: number) {
+  return listRecentLiveScoreJobRuns(competitionId, limit);
 }
 
-export function findRecentLiveScoreUpdates(limit: number) {
-  return listRecentLiveScoreUpdates(limit);
+export function findRecentLiveScoreUpdatesForCompetition(competitionId: number, limit: number) {
+  return listRecentLiveScoreUpdates(competitionId, limit);
 }
 
-export function findLatestLiveScoreSnapshots(): LatestLiveScoreSnapshotRow[] {
-  return listLatestLiveScoreSnapshots();
+export function findLatestLiveScoreSnapshotsForCompetition(competitionId: number): LatestLiveScoreSnapshotRow[] {
+  return listLatestLiveScoreSnapshots(competitionId);
 }

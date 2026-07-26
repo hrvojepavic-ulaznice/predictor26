@@ -14,14 +14,22 @@ import {
   importSchedule,
   syncOdds
 } from './admin-matches.service.js';
+import { resolveCompetitionIdForAdmin } from '../competitions/competitions.service.js';
 
 interface MatchIdParams {
   readonly matchId: string;
 }
 
-export async function getAdminMatchesController(_req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getAdminMatchesController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    res.json(await getAdminMatches());
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    res.json(await getAdminMatches(competitionId));
   } catch (error) {
     next(error);
   }
@@ -33,7 +41,14 @@ export async function importMatchesController(
   next: NextFunction
 ): Promise<void> {
   try {
-    const result = await importSchedule(req.body);
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const result = await importSchedule(competitionId, req.body);
 
     if (result.status === 'invalid') {
       res.status(400).json({ message: 'Secret code is required.' });
@@ -57,7 +72,14 @@ export async function syncMatchOddsController(
   next: NextFunction
 ): Promise<void> {
   try {
-    const result = await syncOdds(req.body);
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const result = await syncOdds(competitionId, req.body);
 
     if (result.status === 'invalid') {
       res.status(400).json({ message: 'Secret code is required.' });
@@ -81,7 +103,14 @@ export async function updateFinalScoreController(
   next: NextFunction
 ): Promise<void> {
   try {
-    const result = await changeFinalScore(Number(req.params.matchId), req.body);
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const result = await changeFinalScore(competitionId, Number(req.params.matchId), req.body);
 
     if (result.status === 'invalid') {
       res.status(400).json({ message: 'Please enter a valid final score.' });
@@ -108,7 +137,14 @@ export async function updateKickoffController(
   next: NextFunction
 ): Promise<void> {
   try {
-    const result = await changeKickoff(Number(req.params.matchId), req.body);
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const result = await changeKickoff(competitionId, Number(req.params.matchId), req.body);
 
     if (result.status === 'invalid') {
       res.status(400).json({ message: 'Please enter valid match details and secret code.' });
@@ -139,7 +175,14 @@ export async function updatePlayoffMappingController(
   next: NextFunction
 ): Promise<void> {
   try {
-    const result = await changePlayoffMapping(Number(req.params.matchId), req.body);
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const result = await changePlayoffMapping(competitionId, Number(req.params.matchId), req.body);
 
     if (result.status === 'invalid') {
       res.status(400).json({ message: 'Please select a valid playoff team.' });
@@ -157,4 +200,15 @@ export async function updatePlayoffMappingController(
   } catch (error) {
     next(error);
   }
+}
+
+async function resolveRequestedCompetitionId(req: Pick<Request, 'header' | 'authUser'>): Promise<number | null> {
+  const headerValue = req.header('x-competition-id');
+  const requestedCompetitionId = headerValue ? Number(headerValue) : null;
+
+  if (requestedCompetitionId !== null && (!Number.isInteger(requestedCompetitionId) || requestedCompetitionId < 1)) {
+    return null;
+  }
+
+  return resolveCompetitionIdForAdmin(req.authUser!.id, req.authUser!.role, requestedCompetitionId);
 }

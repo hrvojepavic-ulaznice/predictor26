@@ -1,0 +1,65 @@
+<section class="admin-competition-setup-page" aria-labelledby="admin-competition-setup-title">
+  <header class="page-header">
+    <div>
+      <p class="section-label">Admin competition</p>
+      <h1 id="admin-competition-setup-title">Competition setup</h1>
+      <a class="back-link" routerLink="../">Back to admin competition</a>
+    </div>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="status-message status-error">{{ message }}</p>
+  }
+
+  @if (successMessage(); as message) {
+    <p class="status-message status-success">{{ message }}</p>
+  }
+
+  <section class="settings-panel settings-panel-form" aria-labelledby="competition-sources-title">
+    <div class="settings-copy">
+      <h2 id="competition-sources-title">Sources</h2>
+      <p>Configure the URLs used by fixture import, odds sync, and live score sync for this competition.</p>
+    </div>
+
+    @if (loadingSourceSettings()) {
+      <p class="status-message">Loading source settings...</p>
+    } @else {
+      <form class="source-form" [formGroup]="sourceForm" (ngSubmit)="openSourceSettingsSecretCode()">
+        <label>
+          <span>Schedule source URL</span>
+          <input type="url" formControlName="scheduleSourceUrl" autocomplete="off" />
+        </label>
+
+        <label>
+          <span>Odds and live score source URL</span>
+          <input type="url" formControlName="oddsSourceUrl" autocomplete="off" />
+        </label>
+
+        <button class="primary-button" type="submit" [disabled]="savingSourceSettings() || sourceForm.invalid">
+          {{ savingSourceSettings() ? 'Saving...' : 'Save sources' }}
+        </button>
+      </form>
+    }
+  </section>
+
+  @if (sourceSettingsSecretPromptOpen()) {
+    <app-modal-shell
+      labelledBy="source-secret-code-title"
+      panelWidth="420px"
+      [closeOnBackdrop]="true"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelSourceSecretCode()"
+    >
+      <app-secret-code-modal
+        title="Confirm source settings"
+        label="What is the secret code?"
+        confirmLabel="Save sources"
+        [errorMessage]="sourceSecretCodeErrorMessage()"
+        [isSubmitting]="savingSourceSettings()"
+        (confirmSecretCode)="confirmSourceSecretCode($event)"
+        (cancelModal)="cancelSourceSecretCode()"
+      />
+    </app-modal-shell>
+  }
+</section>

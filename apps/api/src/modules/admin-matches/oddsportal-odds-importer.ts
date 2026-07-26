@@ -1,6 +1,8 @@
 import { createDecipheriv, pbkdf2Sync } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 
+import { defaultOddsPortalSourceUrl } from '../../shared/constants/default-competition.constants.js';
+
 export interface ImportedMatchOdds {
   readonly homeTeamName: string;
   readonly awayTeamName: string;
@@ -45,7 +47,7 @@ interface OddsPortalOutcomeOdds {
   readonly maxOdds?: number;
 }
 
-export const worldCupOddsPortalUrl = 'https://www.oddsportal.com/football/world/world-championship-2026/';
+export const worldCupOddsPortalUrl = defaultOddsPortalSourceUrl;
 export const friendlyInternationalOddsPortalUrl = 'https://www.oddsportal.com/football/world/friendly-international/';
 const productionKey = 'J*8sQ!p$7aD_fR2yW@gHn*3bVp#sAdLd_k';
 const productionSalt = '5b9a8f2c3e6d1a4b7c8e9d0f1a2b3c4d';

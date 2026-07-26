@@ -6,10 +6,8 @@ import { Router } from '@angular/router';
 
 import { AppStateService } from '@core/state/app-state.service';
 import { RulesModalComponent } from '@features/rules/rules-modal.component';
-import { SessionDataRefreshService } from '@services/session-data-refresh.service';
 import { AuthApiProvider } from '@services/providers/auth-api.provider';
 import { CompetitionSettingsApiProvider } from '@services/providers/competition-settings-api.provider';
-import { WorldCupTeamsApiProvider } from '@services/providers/world-cup-teams-api.provider';
 import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
 import { FormFieldStateDirective } from '@shared/directives/form-field-state.directive';
 
@@ -25,16 +23,12 @@ export class RegisterPageComponent {
   private readonly competitionSettingsApi = inject(CompetitionSettingsApiProvider);
   private readonly formBuilder = inject(FormBuilder);
   private readonly router = inject(Router);
-  private readonly sessionDataRefresh = inject(SessionDataRefreshService);
-  private readonly worldCupTeamsApi = inject(WorldCupTeamsApiProvider);
 
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly isRulesModalOpen = signal(false);
   protected readonly registrationsDisabled = signal(false);
-  protected readonly tiebreakerOptions = signal<string[]>([]);
-  protected readonly tiebreakerOptionsLoading = signal(true);
-  protected readonly registrationClosedMessage = 'Competition started and registrations are not possible.';
+  protected readonly registrationClosedMessage = 'Registrations are not possible.';
   protected readonly formMessage = computed(() =>
     this.registrationsDisabled() ? this.registrationClosedMessage : this.errorMessage()
   );
@@ -43,7 +37,6 @@ export class RegisterPageComponent {
     username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(40)]],
     name: ['', [Validators.required, Validators.maxLength(80)]],
     lastname: ['', [Validators.required, Validators.maxLength(80)]],
-    tiebreakerName: ['', [Validators.required, Validators.maxLength(80)]],
     password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(128)]],
     confirmPassword: ['', [Validators.required, Validators.maxLength(128), matchingPasswordValidator]],
     acceptedRules: [false, [Validators.requiredTrue]]
@@ -68,17 +61,6 @@ export class RegisterPageComponent {
       this.registerForm.controls.confirmPassword.updateValueAndValidity({ emitEvent: false });
     });
 
-    this.worldCupTeamsApi.getWorldCupTeams().subscribe({
-      next: ({ teams }) => {
-        this.tiebreakerOptions.set(teams);
-        this.tiebreakerOptionsLoading.set(false);
-      },
-      error: () => {
-        this.errorMessage.set('World Cup teams could not be loaded.');
-        this.tiebreakerOptionsLoading.set(false);
-      }
-    });
-
     this.competitionSettingsApi.getSettings().subscribe({
       next: (settings) => {
         this.registrationsDisabled.set(settings.registrationsDisabled);
@@ -92,7 +74,7 @@ export class RegisterPageComponent {
       return;
     }
 
-    if (this.registerForm.invalid || this.isSubmitting() || this.tiebreakerOptionsLoading()) {
+    if (this.registerForm.invalid || this.isSubmitting()) {
       this.registerForm.markAllAsTouched();
       this.errorMessage.set(
         this.hasOnlyPasswordMinLengthError()
@@ -112,16 +94,13 @@ export class RegisterPageComponent {
         username: registration.username,
         name: registration.name,
         lastname: registration.lastname,
-        tiebreakerName: registration.tiebreakerName,
         password: registration.password,
         acceptedRules: registration.acceptedRules
       })
       .subscribe({
         next: (session) => {
           this.appState.setSession(session);
-          this.sessionDataRefresh.refreshAfterSessionChange().subscribe(() => {
-            void this.router.navigateByUrl('/');
-          });
+          void this.router.navigateByUrl('/');
         },
         error: (error: unknown) => {
           if (error instanceof HttpErrorResponse && error.status === 409) {

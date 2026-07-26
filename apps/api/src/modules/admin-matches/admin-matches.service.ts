@@ -26,21 +26,15 @@ import {
   setMatchOdds
 } from './admin-matches.repository.js';
 import {
-  friendlyInternationalOddsPortalUrl,
   ImportedMatchOdds,
-  importOddsPortalOdds,
-  worldCupOddsPortalUrl
+  importOddsPortalOdds
 } from './oddsportal-odds-importer.js';
-import { importOddsPortalFriendlySchedule } from './oddsportal-schedule-importer.js';
 import { importWorldCupSchedule } from './world-cup-schedule-importer.js';
+import { findCompetitionForAdmin } from '../competitions/competitions.repository.js';
 
-const useOddsPortalFriendlyTestSource = false;
-const oddsPortalSourceUrl = useOddsPortalFriendlyTestSource ? friendlyInternationalOddsPortalUrl : worldCupOddsPortalUrl;
-const scheduleSourceMetadataKey = 'admin_matches_schedule_source';
+const scheduleSourceMetadataKeyPrefix = 'admin_matches_schedule_source';
 const worldCupPendingDataCleanupMetadataKey = 'admin_matches_world_cup_pending_data_cleanup';
 const worldCupPendingDataCleanupVersion = '1';
-
-type ScheduleSource = 'friendly-test' | 'world-cup';
 
 type SecretCodeResult =
   | {
@@ -110,73 +104,83 @@ export type UpdatePlayoffMappingResult =
       readonly status: 'not_found';
     };
 
-export async function getAdminMatches(): Promise<AdminMatchesResponse> {
+export async function getAdminMatches(competitionId: number): Promise<AdminMatchesResponse> {
   return {
-    matches: findAdminMatches().map(toMatchResponse)
+    matches: findAdminMatches(competitionId).map(toMatchResponse)
   };
 }
 
-export async function importSchedule(input: Partial<AdminActionSecretRequest> | undefined): Promise<ImportScheduleResult> {
+export async function importSchedule(
+  competitionId: number,
+  input: Partial<AdminActionSecretRequest> | undefined
+): Promise<ImportScheduleResult> {
   const secretCodeResult = await validateSecretCode(input);
 
   if (secretCodeResult.status !== 'valid') {
     return secretCodeResult;
   }
 
-  const scheduleSource = getScheduleSource();
-  const importedMatches = useOddsPortalFriendlyTestSource
-    ? await importOddsPortalFriendlySchedule()
-    : await importWorldCupSchedule();
+  const competition = findCompetitionForAdmin(competitionId);
+  const scheduleSourceUrl = competition?.schedule_source_url.trim() ?? '';
+
+  if (!isValidSourceUrl(scheduleSourceUrl)) {
+    return { status: 'invalid' };
+  }
+
+  const importedMatches = await importWorldCupSchedule(scheduleSourceUrl);
+  const scheduleSourceMetadataKey = `${scheduleSourceMetadataKeyPrefix}:${competitionId}`;
   const previousScheduleSource = await getMetadataValue(scheduleSourceMetadataKey);
 
-  if (previousScheduleSource && previousScheduleSource !== scheduleSource) {
-    pruneMatchesAfter(0);
+  if (previousScheduleSource && previousScheduleSource !== scheduleSourceUrl) {
+    pruneMatchesAfter(0, competitionId);
   }
 
-  const imported = importMatches(importedMatches);
-  if (scheduleSource === 'world-cup') {
-    await clearWorldCupPendingData();
-  }
-  setMetadataValue(scheduleSourceMetadataKey, scheduleSource);
+  const imported = importMatches(importedMatches, competitionId);
+  await clearCompetitionPendingData(competitionId);
+  setMetadataValue(scheduleSourceMetadataKey, scheduleSourceUrl);
 
   return {
     status: 'imported',
     response: {
       imported,
-      matches: findAdminMatches().map(toMatchResponse)
+      matches: findAdminMatches(competitionId).map(toMatchResponse)
     }
   };
 }
 
-function getScheduleSource(): ScheduleSource {
-  return useOddsPortalFriendlyTestSource ? 'friendly-test' : 'world-cup';
-}
-
-async function clearWorldCupPendingData(): Promise<void> {
-  const cleanupVersion = await getMetadataValue(worldCupPendingDataCleanupMetadataKey);
+async function clearCompetitionPendingData(competitionId: number): Promise<void> {
+  const cleanupKey = `${worldCupPendingDataCleanupMetadataKey}:${competitionId}`;
+  const cleanupVersion = await getMetadataValue(cleanupKey);
 
   if (cleanupVersion === worldCupPendingDataCleanupVersion) {
     return;
   }
 
   const nowIso = new Date().toISOString();
-  clearPendingFinalScores(nowIso);
-  clearPendingPredictions(nowIso);
-  setMetadataValue(worldCupPendingDataCleanupMetadataKey, worldCupPendingDataCleanupVersion);
+  clearPendingFinalScores(competitionId, nowIso);
+  clearPendingPredictions(competitionId, nowIso);
+  setMetadataValue(cleanupKey, worldCupPendingDataCleanupVersion);
 }
 
-export async function syncOdds(input: Partial<AdminActionSecretRequest> | undefined): Promise<SyncOddsResult> {
+export async function syncOdds(competitionId: number, input: Partial<AdminActionSecretRequest> | undefined): Promise<SyncOddsResult> {
   const secretCodeResult = await validateSecretCode(input);
 
   if (secretCodeResult.status !== 'valid') {
     return secretCodeResult;
   }
 
-  const matches = findAdminMatches();
-  const importedOdds = await importOddsPortalOdds(oddsPortalSourceUrl);
+  const competition = findCompetitionForAdmin(competitionId);
+  const oddsSourceUrl = competition?.odds_source_url.trim() ?? '';
+
+  if (!isValidSourceUrl(oddsSourceUrl)) {
+    return { status: 'invalid' };
+  }
+
+  const matches = findAdminMatches(competitionId);
+  const importedOdds = await importOddsPortalOdds(oddsSourceUrl);
   const syncPlan = mapImportedOddsToMatches(matches, importedOdds);
   const synced = setMatchOdds(syncPlan.odds);
-  const backfilled = backfillPredictionOdds();
+  const backfilled = backfillPredictionOdds(competitionId);
 
   return {
     status: 'synced',
@@ -188,9 +192,22 @@ export async function syncOdds(input: Partial<AdminActionSecretRequest> | undefi
       skippedUnresolved: syncPlan.skippedUnresolved,
       unmatched: syncPlan.unmatched,
       backfilled,
-      matches: findAdminMatches().map(toMatchResponse)
+      matches: findAdminMatches(competitionId).map(toMatchResponse)
     }
   };
+}
+
+function isValidSourceUrl(value: string): boolean {
+  if (value.length < 1 || value.length > 500) {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 async function validateSecretCode(input: Partial<AdminActionSecretRequest> | undefined): Promise<SecretCodeResult> {
@@ -208,6 +225,7 @@ async function validateSecretCode(input: Partial<AdminActionSecretRequest> | und
 }
 
 export async function changeFinalScore(
+  competitionId: number,
   matchId: number,
   input: Partial<UpdateFinalScoreRequest> | undefined
 ): Promise<UpdateFinalScoreResult> {
@@ -222,7 +240,7 @@ export async function changeFinalScore(
     return { status: 'invalid' };
   }
 
-  const match = setFinalScore(matchId, input.homeScore, input.awayScore);
+  const match = setFinalScore(competitionId, matchId, input.homeScore, input.awayScore);
 
   if (!match) {
     return { status: 'not_found' };
@@ -235,6 +253,7 @@ export async function changeFinalScore(
 }
 
 export async function changeKickoff(
+  competitionId: number,
   matchId: number,
   input: Partial<UpdateKickoffRequest> | undefined
 ): Promise<UpdateKickoffResult> {
@@ -255,7 +274,7 @@ export async function changeKickoff(
     return secretCodeResult;
   }
 
-  const match = setKickoff(matchId, input.kickoffAt, input.city.trim(), input.venue.trim());
+  const match = setKickoff(competitionId, matchId, input.kickoffAt, input.city.trim(), input.venue.trim());
 
   if (!match) {
     return { status: 'not_found' };
@@ -268,6 +287,7 @@ export async function changeKickoff(
 }
 
 export async function changePlayoffMapping(
+  competitionId: number,
   matchId: number,
   input: Partial<UpdatePlayoffMappingRequest> | undefined
 ): Promise<UpdatePlayoffMappingResult> {
@@ -285,7 +305,7 @@ export async function changePlayoffMapping(
     return { status: 'invalid' };
   }
 
-  const match = setPlayoffTeamMapping(matchId, input.side, input.teamName, input.teamFlag);
+  const match = setPlayoffTeamMapping(competitionId, matchId, input.side, input.teamName, input.teamFlag);
 
   if (!match) {
     return { status: 'not_found' };

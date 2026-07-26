@@ -1,0 +1,96 @@
+import { inject, Injectable, signal } from '@angular/core';
+import { Observable, tap } from 'rxjs';
+
+import { AppStateService } from '@core/state/app-state.service';
+import { Competition, CompetitionsResponse, UpdateCompetitionTiebreakerResponse } from '@models/competition.models';
+import { LeaderboardService } from '@services/leaderboard.service';
+import { MatchesService } from '@services/matches.service';
+import { NotificationRemindersService } from '@services/notification-reminders.service';
+import { PaymentsService } from '@services/payments.service';
+import { AuthApiProvider } from '@services/providers/auth-api.provider';
+import { CompetitionsApiProvider } from '@services/providers/competitions-api.provider';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class CompetitionsService {
+  private readonly appState = inject(AppStateService);
+  private readonly authApi = inject(AuthApiProvider);
+  private readonly leaderboardService = inject(LeaderboardService);
+  private readonly matchesService = inject(MatchesService);
+  private readonly notificationRemindersService = inject(NotificationRemindersService);
+  private readonly paymentsService = inject(PaymentsService);
+  private readonly competitionsApi = inject(CompetitionsApiProvider);
+  private readonly competitionsSignal = signal<Competition[]>([]);
+  private readonly loadedSignal = signal(false);
+
+  readonly competitions = this.competitionsSignal.asReadonly();
+  readonly loaded = this.loadedSignal.asReadonly();
+
+  ensureCompetitions(): Observable<CompetitionsResponse> | null {
+    if (this.loadedSignal()) {
+      return null;
+    }
+
+    return this.refreshCompetitions();
+  }
+
+  refreshCompetitions(): Observable<CompetitionsResponse> {
+    return this.competitionsApi.getCompetitions().pipe(
+      tap(({ competitions }) => {
+        this.competitionsSignal.set(competitions);
+        this.loadedSignal.set(true);
+
+        const activeCompetition = this.appState.activeCompetition();
+
+        if (activeCompetition && !competitions.some((competition) => competition.id === activeCompetition.id)) {
+          this.appState.clearActiveCompetition();
+        }
+      })
+    );
+  }
+
+  refreshAdminCompetitions(): Observable<CompetitionsResponse> {
+    return this.competitionsApi.getAdminCompetitions().pipe(
+      tap(({ competitions }) => {
+        this.competitionsSignal.set(competitions);
+        this.loadedSignal.set(true);
+
+        const activeCompetition = this.appState.activeCompetition();
+
+        if (activeCompetition && !competitions.some((competition) => competition.id === activeCompetition.id)) {
+          this.appState.clearActiveCompetition();
+        }
+      })
+    );
+  }
+
+  enterCompetition(competition: Competition): void {
+    this.appState.setActiveCompetition(competition);
+    this.matchesService.clearCompetitionData();
+    this.leaderboardService.clearCompetitionData();
+    this.notificationRemindersService.clearCompetitionData();
+    this.paymentsService.clearPaymentInfo();
+    this.authApi.getCurrentUser().subscribe((user) => {
+      this.appState.updateCurrentUser(user);
+    });
+  }
+
+  exitCompetition(): void {
+    this.appState.clearActiveCompetition();
+    this.matchesService.clearCompetitionData();
+    this.leaderboardService.clearCompetitionData();
+    this.notificationRemindersService.clearCompetitionData();
+    this.paymentsService.clearPaymentInfo();
+  }
+
+  updateTiebreaker(tiebreakerName: string): Observable<UpdateCompetitionTiebreakerResponse> {
+    return this.competitionsApi.updateTiebreaker({ tiebreakerName }).pipe(
+      tap(({ competition }) => {
+        this.appState.setActiveCompetition(competition);
+        this.leaderboardService.clearCompetitionData();
+        this.notificationRemindersService.clearCompetitionData();
+      })
+    );
+  }
+}

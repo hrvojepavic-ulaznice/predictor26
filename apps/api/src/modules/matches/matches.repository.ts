@@ -5,12 +5,12 @@ import {
   upsertPrediction
 } from '../../database/queries/matches.queries.js';
 
-export function findMatchesForUser(userId: number) {
-  return listMatchesWithPredictions(userId);
+export function findMatchesForUser(userId: number, competitionId: number) {
+  return listMatchesWithPredictions(userId, competitionId);
 }
 
-export function findPredictedMatchesForUser(userId: number) {
-  return listPredictedMatchesWithPredictions(userId);
+export function findPredictedMatchesForUser(userId: number, competitionId: number) {
+  return listPredictedMatchesWithPredictions(userId, competitionId);
 }
 
 export function savePrediction(

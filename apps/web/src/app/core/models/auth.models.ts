@@ -9,7 +9,6 @@ export interface RegisterRequest {
   readonly username: string;
   readonly name: string;
   readonly lastname: string;
-  readonly tiebreakerName: string;
   readonly password: string;
   readonly acceptedRules: boolean;
 }

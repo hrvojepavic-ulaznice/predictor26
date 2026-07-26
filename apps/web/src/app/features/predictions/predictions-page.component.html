@@ -68,6 +68,23 @@
             }
           </div>
 
+          @if (canPostPredictions() && isFirstPredictionRound(group)) {
+            <label class="tiebreaker-field">
+              <span>Competition winner</span>
+              <select
+                [value]="activeCompetition()?.tiebreakerName ?? ''"
+                [disabled]="group.locked === true || savingTiebreaker() || tiebreakerOptions().length === 0"
+                (change)="updateTiebreaker($any($event.target).value)"
+              >
+                <option value="" disabled>Choose team</option>
+                @for (team of tiebreakerOptions(); track team) {
+                  <option [value]="team">{{ team }}</option>
+                }
+              </select>
+              <small>{{ savingTiebreaker() ? 'Saving winner pick...' : 'Required before first-round predictions are saved.' }}</small>
+            </label>
+          }
+
           <div class="match-list">
             @for (section of group.sections; track section.label) {
               <div class="match-section">
@@ -132,7 +149,7 @@
                         pattern="[0-9]*"
                         inputmode="numeric"
                         aria-label="Home team score"
-                        [disabled]="match.predictionLocked"
+                        [disabled]="!canPostPredictions() || match.predictionLocked"
                         [value]="drafts()[match.id]?.home ?? ''"
                         [style.border-color]="predictionStateColor(match)"
                         [style.color]="predictionStateColor(match)"
@@ -145,7 +162,7 @@
                         pattern="[0-9]*"
                         inputmode="numeric"
                         aria-label="Away team score"
-                        [disabled]="match.predictionLocked"
+                        [disabled]="!canPostPredictions() || match.predictionLocked"
                         [value]="drafts()[match.id]?.away ?? ''"
                         [style.border-color]="predictionStateColor(match)"
                         [style.color]="predictionStateColor(match)"

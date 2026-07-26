@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 
 import { SavePredictionRequest } from './matches.interfaces.js';
 import { getMatchesForUser, getPredictedMatchesForUser, submitPrediction } from './matches.service.js';
+import { resolveCompetitionIdForViewer } from '../competitions/competitions.service.js';
 
 export async function getMatchesController(
   req: Request,
@@ -9,7 +10,14 @@ export async function getMatchesController(
   next: NextFunction
 ): Promise<void> {
   try {
-    res.json(await getMatchesForUser(req.authUser!.id));
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    res.json(await getMatchesForUser(req.authUser!.id, competitionId));
   } catch (error) {
     next(error);
   }
@@ -21,7 +29,14 @@ export async function getPredictedMatchesController(
   next: NextFunction
 ): Promise<void> {
   try {
-    res.json(await getPredictedMatchesForUser(req.authUser!.id));
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    res.json(await getPredictedMatchesForUser(req.authUser!.id, competitionId));
   } catch (error) {
     next(error);
   }
@@ -33,7 +48,19 @@ export async function savePredictionController(
   next: NextFunction
 ): Promise<void> {
   try {
-    const result = await submitPrediction(req.authUser!.id, Number(req.params['matchId']), req.body);
+    if (req.authUser!.role === 'super_admin') {
+      res.status(403).json({ message: 'Super admin cannot submit predictions.' });
+      return;
+    }
+
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const result = await submitPrediction(req.authUser!.id, competitionId, Number(req.params['matchId']), req.body);
 
     if (result.status === 'invalid') {
       res.status(400).json({ message: 'Please enter valid scores.' });
@@ -50,8 +77,24 @@ export async function savePredictionController(
       return;
     }
 
+    if (result.status === 'missing_tiebreaker') {
+      res.status(409).json({ message: 'Choose your competition winner before saving first-round predictions.' });
+      return;
+    }
+
     res.json(result.prediction);
   } catch (error) {
     next(error);
   }
+}
+
+async function resolveRequestedCompetitionId(req: Request): Promise<number | null> {
+  const headerValue = req.header('x-competition-id');
+  const requestedCompetitionId = headerValue ? Number(headerValue) : null;
+
+  if (requestedCompetitionId !== null && (!Number.isInteger(requestedCompetitionId) || requestedCompetitionId < 1)) {
+    return null;
+  }
+
+  return resolveCompetitionIdForViewer(req.authUser!.id, req.authUser!.role, requestedCompetitionId);
 }

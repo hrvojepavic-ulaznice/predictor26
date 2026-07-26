@@ -5,7 +5,7 @@ self.addEventListener('push', (event) => {
         title: 'Prediction reminder',
         body: 'A prediction round is closing soon.',
         data: {
-          url: '/predictions'
+          url: '/'
         }
       };
 
@@ -17,7 +17,7 @@ self.addEventListener('push', (event) => {
     tag: payload.tag,
     renotify: payload.renotify === true,
     data: payload.data || {
-      url: '/predictions'
+      url: '/'
     }
   };
 
@@ -27,7 +27,7 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = new URL(event.notification.data?.url || '/predictions', self.location.origin).href;
+  const targetUrl = new URL(event.notification.data?.url || '/', self.location.origin).href;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {

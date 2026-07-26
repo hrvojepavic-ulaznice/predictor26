@@ -23,6 +23,11 @@ export class NotificationRemindersService {
 
   readonly remindersEnabled = this.remindersEnabledSignal.asReadonly();
 
+  clearCompetitionData(): void {
+    this.configLoaded = false;
+    this.remindersEnabledSignal.set(false);
+  }
+
   async ensureConfig(): Promise<boolean> {
     if (this.configLoaded) {
       return this.remindersEnabledSignal();

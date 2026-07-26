@@ -1,9 +1,9 @@
 import {
   fetchOddsPortalSportData,
   oddsPortalRows,
-  OddsPortalEventRow,
-  worldCupOddsPortalUrl
+  OddsPortalEventRow
 } from '../admin-matches/oddsportal-odds-importer.js';
+import { defaultOddsPortalSourceUrl } from '../../shared/constants/default-competition.constants.js';
 
 export type ProviderLiveScoreStatus = 'scheduled' | 'live' | 'finished' | 'unknown';
 
@@ -20,7 +20,7 @@ export interface ProviderLiveScore {
   readonly rawPayload: OddsPortalEventRow;
 }
 
-export async function fetchOddsPortalLiveScores(sourceUrl = worldCupOddsPortalUrl): Promise<ProviderLiveScore[]> {
+export async function fetchOddsPortalLiveScores(sourceUrl = defaultOddsPortalSourceUrl): Promise<ProviderLiveScore[]> {
   const sportData = await fetchOddsPortalSportData(sourceUrl);
 
   return oddsPortalRows(sportData).flatMap(toProviderLiveScore);

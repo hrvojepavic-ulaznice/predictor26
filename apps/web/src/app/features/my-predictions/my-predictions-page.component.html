@@ -7,7 +7,7 @@
     <app-match-sort-menu />
   </header>
 
-  <a class="post-predictions-card" routerLink="/predictions">
+  <a class="post-predictions-card" [routerLink]="['/competition', activeCompetition()?.slug, 'predictions']">
     <span class="action-icon action-icon-post" aria-hidden="true">
       <span></span>
       <span></span>

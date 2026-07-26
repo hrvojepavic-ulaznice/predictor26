@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 
-import { getUserById } from '../../database/queries/users.queries.js';
+import { getUserById, UserRole } from '../../database/queries/users.queries.js';
 import { verifyAuthToken } from '../../shared/utils/auth-token.js';
 import {
   getLeaderboard,
@@ -9,6 +9,7 @@ import {
   getLeaderboardStats,
   getLeaderboardUserRoundDetails
 } from './leaderboard.service.js';
+import { resolveCompetitionIdForViewer } from '../competitions/competitions.service.js';
 
 interface UserRoundParams extends Record<string, string> {
   readonly userId: string;
@@ -20,15 +21,36 @@ interface MatchParams extends Record<string, string> {
 }
 
 export async function getLeaderboardController(req: Request, res: Response): Promise<void> {
-  res.json(await getLeaderboard());
+  const competitionId = await resolveRequestedCompetitionId(req);
+
+  if (competitionId === null) {
+    res.status(403).json({ message: 'Competition access is required.' });
+    return;
+  }
+
+  res.json(await getLeaderboard(competitionId));
 }
 
-export async function getLeaderboardMatchDaysController(_req: Request, res: Response): Promise<void> {
-  res.json({ days: await getLeaderboardMatchDays() });
+export async function getLeaderboardMatchDaysController(req: Request, res: Response): Promise<void> {
+  const competitionId = await resolveRequestedCompetitionId(req);
+
+  if (competitionId === null) {
+    res.status(403).json({ message: 'Competition access is required.' });
+    return;
+  }
+
+  res.json({ days: await getLeaderboardMatchDays(competitionId) });
 }
 
-export async function getLeaderboardStatsController(_req: Request, res: Response): Promise<void> {
-  res.json(await getLeaderboardStats());
+export async function getLeaderboardStatsController(req: Request, res: Response): Promise<void> {
+  const competitionId = await resolveRequestedCompetitionId(req);
+
+  if (competitionId === null) {
+    res.status(403).json({ message: 'Competition access is required.' });
+    return;
+  }
+
+  res.json(await getLeaderboardStats(competitionId));
 }
 
 export async function getLeaderboardUserRoundController(req: Request<UserRoundParams>, res: Response): Promise<void> {
@@ -39,7 +61,14 @@ export async function getLeaderboardUserRoundController(req: Request<UserRoundPa
     return;
   }
 
-  const result = await getLeaderboardUserRoundDetails(Number(req.params.userId), req.params.roundLabel, viewerUserId);
+  const competitionId = await resolveRequestedCompetitionId(req);
+
+  if (competitionId === null) {
+    res.status(403).json({ message: 'Competition access is required.' });
+    return;
+  }
+
+  const result = await getLeaderboardUserRoundDetails(competitionId, Number(req.params.userId), req.params.roundLabel, viewerUserId);
 
   if (!result) {
     res.status(404).json({ message: 'Round tips could not be found.' });
@@ -57,7 +86,14 @@ export async function getLeaderboardMatchPredictionsController(req: Request<Matc
     return;
   }
 
-  const result = await getLeaderboardMatchPredictions(Number(req.params.matchId), viewerUserId);
+  const competitionId = await resolveRequestedCompetitionId(req);
+
+  if (competitionId === null) {
+    res.status(403).json({ message: 'Competition access is required.' });
+    return;
+  }
+
+  const result = await getLeaderboardMatchPredictions(competitionId, Number(req.params.matchId), viewerUserId);
 
   if (!result) {
     res.status(404).json({ message: 'Match tips could not be found.' });
@@ -67,7 +103,28 @@ export async function getLeaderboardMatchPredictionsController(req: Request<Matc
   res.json(result);
 }
 
+async function resolveRequestedCompetitionId(req: Request): Promise<number | null> {
+  const viewer = await getViewer(req);
+
+  if (viewer === null) {
+    return null;
+  }
+
+  const headerValue = req.header('x-competition-id');
+  const requestedCompetitionId = headerValue ? Number(headerValue) : null;
+
+  if (requestedCompetitionId !== null && (!Number.isInteger(requestedCompetitionId) || requestedCompetitionId < 1)) {
+    return null;
+  }
+
+  return resolveCompetitionIdForViewer(viewer.id, viewer.role, requestedCompetitionId);
+}
+
 async function getViewerUserId(req: Request): Promise<number | null> {
+  return (await getViewer(req))?.id ?? null;
+}
+
+async function getViewer(req: Request): Promise<{ readonly id: number; readonly role: UserRole } | null> {
   const authorization = req.header('authorization');
 
   if (!authorization) {
@@ -92,5 +149,8 @@ async function getViewerUserId(req: Request): Promise<number | null> {
     return null;
   }
 
-  return user.id;
+  return {
+    id: user.id,
+    role: user.role
+  };
 }

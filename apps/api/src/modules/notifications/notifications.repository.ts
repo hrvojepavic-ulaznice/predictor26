@@ -28,12 +28,12 @@ export function findUserNotificationSubscriptions(userId: number) {
   return listNotificationSubscriptionsForUser(userId);
 }
 
-export function findReminderCandidates() {
-  return listReminderCandidates();
+export function findReminderCandidates(competitionId: number) {
+  return listReminderCandidates(competitionId);
 }
 
-export function markReminderDelivered(userId: number, predictionRound: string, reminderHours: 1 | 9): void {
-  recordReminderDelivery(userId, predictionRound, reminderHours);
+export function markReminderDelivered(competitionId: number, userId: number, predictionRound: string, reminderHours: 1 | 9): void {
+  recordReminderDelivery(competitionId, userId, predictionRound, reminderHours);
 }
 
 export function markReminderAttempted(input: ReminderAttemptInput): void {

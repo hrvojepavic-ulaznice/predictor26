@@ -2,11 +2,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, ElementRef, ViewChild, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 
 import { AuthApiProvider } from '@services/providers/auth-api.provider';
 import { AppStateService } from '@core/state/app-state.service';
-import { SessionDataRefreshService } from '@services/session-data-refresh.service';
 import { FormFieldStateDirective } from '@shared/directives/form-field-state.directive';
 
 @Component({
@@ -19,9 +18,7 @@ export class LoginPageComponent {
   private readonly authApi = inject(AuthApiProvider);
   private readonly appState = inject(AppStateService);
   private readonly formBuilder = inject(FormBuilder);
-  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly sessionDataRefresh = inject(SessionDataRefreshService);
 
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
@@ -58,9 +55,7 @@ export class LoginPageComponent {
     this.authApi.login(this.loginForm.getRawValue()).subscribe({
       next: (session) => {
         this.appState.setSession(session);
-        this.sessionDataRefresh.refreshAfterSessionChange().subscribe(() => {
-          void this.router.navigateByUrl(this.route.snapshot.queryParamMap.get('returnUrl') ?? '/');
-        });
+        void this.router.navigateByUrl('/');
       },
       error: (error: unknown) => {
         this.errorMessage.set(

@@ -3,8 +3,11 @@ import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
 
+import { AppStateService } from '@core/state/app-state.service';
 import { MatchWithPrediction } from '@models/match.models';
+import { CompetitionsService } from '@services/competitions.service';
 import { MatchesService } from '@services/matches.service';
+import { WorldCupTeamsApiProvider } from '@services/providers/world-cup-teams-api.provider';
 import { MatchSortMode, MatchSortPreferenceService } from '@core/state/match-sort-preference.service';
 import { MatchSortMenuComponent } from '@shared/components/match-sort-menu/match-sort-menu.component';
 import { PredictionPointsComponent } from '@shared/components/prediction-points/prediction-points.component';
@@ -38,12 +41,19 @@ interface MatchSection {
   styleUrl: './predictions-page.component.scss'
 })
 export class PredictionsPageComponent {
+  private readonly appState = inject(AppStateService);
+  private readonly competitionsService = inject(CompetitionsService);
   private readonly matchesService = inject(MatchesService);
   private readonly sortPreference = inject(MatchSortPreferenceService);
+  private readonly worldCupTeamsApi = inject(WorldCupTeamsApiProvider);
   private readonly destroyRef = inject(DestroyRef);
 
+  protected readonly activeCompetition = this.appState.activeCompetition;
+  protected readonly canPostPredictions = computed(() => this.appState.currentUser()?.role !== 'super_admin');
   protected readonly matches = this.matchesService.matches;
   protected readonly drafts = signal<Record<number, ScoreDraft>>({});
+  protected readonly tiebreakerOptions = signal<string[]>([]);
+  protected readonly savingTiebreaker = signal(false);
   protected readonly loading = signal(true);
   protected readonly savingIds = signal<ReadonlySet<number>>(new Set<number>());
   protected readonly errorMessage = signal<string | null>(null);
@@ -84,9 +94,46 @@ export class PredictionsPageComponent {
       });
 
     this.loadMatches();
+    this.loadTiebreakerOptions();
+  }
+
+  protected isFirstPredictionRound(group: MatchGroup): boolean {
+    return group.sections.some((section) =>
+      section.matches.some((match) => match.predictionRound === firstPredictionRoundLabel)
+    );
+  }
+
+  protected updateTiebreaker(value: string): void {
+    if (!this.canPostPredictions()) {
+      return;
+    }
+
+    const tiebreakerName = value.trim();
+
+    if (!tiebreakerName || tiebreakerName === this.activeCompetition()?.tiebreakerName || this.savingTiebreaker()) {
+      return;
+    }
+
+    this.savingTiebreaker.set(true);
+    this.errorMessage.set(null);
+
+    this.competitionsService.updateTiebreaker(tiebreakerName).subscribe({
+      next: () => {
+        this.lastSavedMessage.set(`Saved winner pick: ${tiebreakerName}.`);
+        this.savingTiebreaker.set(false);
+      },
+      error: () => {
+        this.errorMessage.set('Winner pick could not be saved.');
+        this.savingTiebreaker.set(false);
+      }
+    });
   }
 
   protected updateDraft(matchId: number, side: keyof ScoreDraft, value: string): void {
+    if (!this.canPostPredictions()) {
+      return;
+    }
+
     const match = this.matches().find((currentMatch) => currentMatch.id === matchId);
 
     if (match) {
@@ -168,6 +215,17 @@ export class PredictionsPageComponent {
     });
   }
 
+  private loadTiebreakerOptions(): void {
+    this.worldCupTeamsApi.getWorldCupTeams().subscribe({
+      next: ({ teams }) => {
+        this.tiebreakerOptions.set(teams);
+      },
+      error: () => {
+        this.errorMessage.set('Winner options could not be loaded.');
+      }
+    });
+  }
+
   private setDraftsFromMatches(matches = this.matches()): void {
     this.drafts.set(
       Object.fromEntries(
@@ -201,6 +259,11 @@ export class PredictionsPageComponent {
     const draft = this.drafts()[matchId];
 
     if (!match || match.predictionLocked || !isValidScore(draft?.home) || !isValidScore(draft?.away)) {
+      return;
+    }
+
+    if (match.predictionRound === firstPredictionRoundLabel && !this.activeCompetition()?.tiebreakerName) {
+      this.errorMessage.set('Choose your competition winner before saving first-round predictions.');
       return;
     }
 
@@ -243,6 +306,8 @@ export class PredictionsPageComponent {
     });
   }
 }
+
+const firstPredictionRoundLabel = 'Group stage - Round 1';
 
 function groupMatches(matches: readonly MatchWithPrediction[], sortMode: MatchSortMode): MatchGroup[] {
   return sortMode === 'groups' ? groupMatchesByGroups(matches) : groupMatchesByRounds(matches);

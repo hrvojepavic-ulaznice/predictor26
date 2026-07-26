@@ -6,16 +6,16 @@ import {
 } from '../../database/queries/payment-settings.queries.js';
 import { getSuperAdminUser } from '../../database/queries/users.queries.js';
 
-export async function findPaymentSettingsForAdmin() {
-  return listPaymentSettings();
+export async function findPaymentSettingsForAdmin(competitionId: number) {
+  return listPaymentSettings(competitionId);
 }
 
-export async function findPaymentSettingsConfigForAdmin() {
-  return getPaymentSettingsConfig();
+export async function findPaymentSettingsConfigForAdmin(competitionId: number) {
+  return getPaymentSettingsConfig(competitionId);
 }
 
-export async function savePaymentSettingsForAdmin(input: UpdatePaymentSettingsInput) {
-  return updatePaymentSettings(input);
+export async function savePaymentSettingsForAdmin(competitionId: number, input: UpdatePaymentSettingsInput) {
+  return updatePaymentSettings(competitionId, input);
 }
 
 export async function findSuperAdminForPaymentSecretCode() {

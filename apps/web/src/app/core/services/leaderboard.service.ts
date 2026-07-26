@@ -1,5 +1,5 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { Observable, of, tap } from 'rxjs';
+import { finalize, Observable, of, shareReplay, tap } from 'rxjs';
 
 import {
   LeaderboardMatchDay,
@@ -27,6 +27,7 @@ export class LeaderboardService {
   private readonly matchDaysLoadedSignal = signal(false);
   private readonly statsSignal = signal<LeaderboardStatsResponse | null>(null);
   private readonly statsLoadedSignal = signal(false);
+  private leaderboardRequest: Observable<LeaderboardResponse> | null = null;
   private readonly roundDetailsCache = new Map<string, LeaderboardRoundDetails>();
   private readonly matchPredictionsCache = new Map<number, LeaderboardMatchPredictionsResponse>();
 
@@ -40,7 +41,18 @@ export class LeaderboardService {
       return null;
     }
 
-    return this.refreshLeaderboard();
+    if (this.leaderboardRequest) {
+      return this.leaderboardRequest;
+    }
+
+    this.leaderboardRequest = this.refreshLeaderboard().pipe(
+      finalize(() => {
+        this.leaderboardRequest = null;
+      }),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
+
+    return this.leaderboardRequest;
   }
 
   ensureMatchDays(options: EnsureLeaderboardOptions = {}): Observable<LeaderboardMatchDaysResponse> | null {
@@ -142,6 +154,18 @@ export class LeaderboardService {
     this.matchPredictionsCache.clear();
     this.statsLoadedSignal.set(false);
     this.statsSignal.set(null);
+  }
+
+  clearCompetitionData(): void {
+    this.leaderboardRequest = null;
+    this.leaderboardSignal.set(null);
+    this.matchDaysSignal.set(null);
+    this.loadedSignal.set(false);
+    this.matchDaysLoadedSignal.set(false);
+    this.statsSignal.set(null);
+    this.statsLoadedSignal.set(false);
+    this.roundDetailsCache.clear();
+    this.matchPredictionsCache.clear();
   }
 
   private getRoundDetailsCacheKey(userId: number, roundLabel: string): string {

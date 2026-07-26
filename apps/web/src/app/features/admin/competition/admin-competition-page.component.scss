@@ -3,7 +3,7 @@
 }
 
 .admin-competition-page {
-  width: min(860px, calc(100% - 32px));
+  width: min(1120px, calc(100% - 32px));
   margin: 32px auto 56px;
 }
 
@@ -82,61 +82,146 @@ p {
   color: #166534;
 }
 
-.settings-panel {
+.admin-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 14px;
+}
+
+.tool-card {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 14px;
+  min-height: 104px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #ffffff;
+  color: #111827;
   padding: 18px;
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
-.settings-copy {
+.tool-card:hover,
+.tool-card:focus-visible {
+  border-color: #9ca3af;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+  outline: 0;
+}
+
+.tool-icon {
+  position: relative;
   display: grid;
-  gap: 6px;
-}
-
-button {
+  width: 44px;
+  height: 44px;
   flex: 0 0 auto;
+  place-items: center;
   border-radius: 8px;
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 800;
-  padding: 11px 14px;
+  background: #eef2ff;
 }
 
-button:disabled {
-  cursor: default;
+.tool-icon::before,
+.tool-icon::after,
+.tool-icon span {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  background: #3730a3;
+}
+
+.tool-icon::before {
+  top: 11px;
+  left: 17px;
+  width: 10px;
+  height: 10px;
+}
+
+.tool-icon::after {
+  right: 9px;
+  bottom: 10px;
+  left: 9px;
+  height: 9px;
+}
+
+.tool-icon span:first-child {
+  top: 15px;
+  left: 8px;
+  width: 7px;
+  height: 7px;
   opacity: 0.72;
 }
 
-.toggle-button {
-  min-width: 108px;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  color: #374151;
+.tool-icon span:last-child {
+  top: 15px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  opacity: 0.72;
 }
 
-.toggle-button-on {
-  border: 1px solid #111827;
-  background: #111827;
-  color: #ffffff;
+.tool-icon-calendar::before,
+.tool-icon-settings::before {
+  top: 11px;
+  left: 9px;
+  width: 26px;
+  height: 22px;
+  border-radius: 4px;
+}
+
+.tool-icon-calendar::after,
+.tool-icon-settings::after {
+  top: 17px;
+  right: 13px;
+  left: 13px;
+  height: 3px;
+  background: #eef2ff;
+}
+
+.tool-icon-calendar span:first-child,
+.tool-icon-calendar span:last-child,
+.tool-icon-settings span:first-child,
+.tool-icon-settings span:last-child {
+  top: 8px;
+  width: 4px;
+  height: 8px;
+  border-radius: 3px;
+}
+
+.tool-icon-calendar span:first-child,
+.tool-icon-settings span:first-child {
+  left: 15px;
+}
+
+.tool-icon-calendar span:last-child,
+.tool-icon-settings span:last-child {
+  right: 15px;
+}
+
+.tool-content {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.tool-title {
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.tool-description {
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.35;
 }
 
 @media (max-width: 620px) {
   .admin-competition-page {
-    width: min(100% - 24px, 860px);
+    width: min(100% - 24px, 1120px);
     margin-top: 24px;
   }
 
-  .settings-panel {
-    display: grid;
-  }
-
-  button {
-    justify-self: start;
-  }
 }
