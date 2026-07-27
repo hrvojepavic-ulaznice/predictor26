@@ -9,6 +9,8 @@ export interface NotificationSubscriptionRow {
 }
 
 export interface ReminderCandidateRow {
+  readonly competition_id: number;
+  readonly competition_slug: string;
   readonly user_id: number;
   readonly username: string;
   readonly prediction_round: string;
@@ -23,6 +25,7 @@ export interface ReminderCandidateRow {
 }
 
 export interface ReminderDeliveryRow {
+  readonly competition_id: number;
   readonly user_id: number;
   readonly username: string;
   readonly prediction_round: string;
@@ -31,6 +34,7 @@ export interface ReminderDeliveryRow {
 }
 
 export interface ReminderAttemptRow {
+  readonly competition_id: number;
   readonly user_id: number;
   readonly username: string;
   readonly prediction_round: string;
@@ -50,6 +54,7 @@ export interface PushSubscriptionInput {
 }
 
 export interface ReminderAttemptInput {
+  readonly competitionId: number;
   readonly userId: number;
   readonly subscriptionId: number;
   readonly predictionRound: string;
@@ -137,7 +142,7 @@ export function listNotificationSubscriptionsForUser(userId: number): Notificati
   }
 }
 
-export function listRecentReminderDeliveries(limit: number): ReminderDeliveryRow[] {
+export function listRecentReminderDeliveries(competitionId: number, limit: number): ReminderDeliveryRow[] {
   const db = openDatabase();
 
   try {
@@ -145,6 +150,7 @@ export function listRecentReminderDeliveries(limit: number): ReminderDeliveryRow
       .prepare(
         `
           SELECT
+            notification_reminder_deliveries.competition_id,
             users.id AS user_id,
             users.username,
             notification_reminder_deliveries.prediction_round,
@@ -152,17 +158,18 @@ export function listRecentReminderDeliveries(limit: number): ReminderDeliveryRow
             notification_reminder_deliveries.created_at
           FROM notification_reminder_deliveries
           INNER JOIN users ON users.id = notification_reminder_deliveries.user_id
+          WHERE notification_reminder_deliveries.competition_id = ?
           ORDER BY notification_reminder_deliveries.created_at DESC
           LIMIT ?
         `
       )
-      .all(limit) as ReminderDeliveryRow[];
+      .all(competitionId, limit) as ReminderDeliveryRow[];
   } finally {
     db.close();
   }
 }
 
-export function listRecentReminderAttempts(limit: number): ReminderAttemptRow[] {
+export function listRecentReminderAttempts(competitionId: number, limit: number): ReminderAttemptRow[] {
   const db = openDatabase();
 
   try {
@@ -170,6 +177,7 @@ export function listRecentReminderAttempts(limit: number): ReminderAttemptRow[] 
       .prepare(
         `
           SELECT
+            notification_reminder_attempts.competition_id,
             users.id AS user_id,
             users.username,
             notification_reminder_attempts.prediction_round,
@@ -183,17 +191,18 @@ export function listRecentReminderAttempts(limit: number): ReminderAttemptRow[] 
           FROM notification_reminder_attempts
           INNER JOIN users ON users.id = notification_reminder_attempts.user_id
           LEFT JOIN notification_subscriptions ON notification_subscriptions.id = notification_reminder_attempts.subscription_id
+          WHERE notification_reminder_attempts.competition_id = ?
           ORDER BY notification_reminder_attempts.created_at DESC
           LIMIT ?
         `
       )
-      .all(limit) as ReminderAttemptRow[];
+      .all(competitionId, limit) as ReminderAttemptRow[];
   } finally {
     db.close();
   }
 }
 
-export function listReminderCandidates(): ReminderCandidateRow[] {
+export function listReminderCandidates(competitionId: number): ReminderCandidateRow[] {
   const db = openDatabase();
 
   try {
@@ -211,6 +220,7 @@ export function listReminderCandidates(): ReminderCandidateRow[] {
               END AS prediction_round,
               matches.kickoff_at
             FROM matches
+            WHERE matches.competition_id = ?
           ),
           round_summaries AS (
             SELECT
@@ -233,14 +243,21 @@ export function listReminderCandidates(): ReminderCandidateRow[] {
             round_summaries.expected_count,
             COUNT(predictions.id) AS submitted_count,
             reminder_windows.reminder_hours,
+            ? AS competition_id,
+            competitions.slug AS competition_slug,
             notification_subscriptions.id AS subscription_id,
             notification_subscriptions.endpoint,
             notification_subscriptions.subscription_json,
             notification_subscriptions.user_agent
           FROM users
+          INNER JOIN competitions ON competitions.id = ?
           INNER JOIN notification_subscriptions
             ON notification_subscriptions.user_id = users.id
             AND notification_subscriptions.is_enabled = 1
+          INNER JOIN competition_users
+            ON competition_users.user_id = users.id
+            AND competition_users.competition_id = ?
+            AND competition_users.is_verified = 1
           CROSS JOIN round_summaries
           CROSS JOIN reminder_windows
           LEFT JOIN match_rounds
@@ -250,19 +267,24 @@ export function listReminderCandidates(): ReminderCandidateRow[] {
             AND predictions.match_id = match_rounds.match_id
           LEFT JOIN notification_reminder_deliveries
             ON notification_reminder_deliveries.user_id = users.id
+            AND notification_reminder_deliveries.competition_id = ?
             AND notification_reminder_deliveries.prediction_round = round_summaries.prediction_round
             AND notification_reminder_deliveries.reminder_hours = reminder_windows.reminder_hours
           WHERE notification_reminder_deliveries.id IS NULL
             AND NOT EXISTS (
               SELECT 1
               FROM notification_reminder_deliveries processed_deliveries
-              WHERE processed_deliveries.prediction_round = round_summaries.prediction_round
+              WHERE processed_deliveries.competition_id = ?
+                AND processed_deliveries.user_id = users.id
+                AND processed_deliveries.prediction_round = round_summaries.prediction_round
                 AND processed_deliveries.reminder_hours = reminder_windows.reminder_hours
             )
             AND NOT EXISTS (
               SELECT 1
               FROM notification_reminder_attempts processed_attempts
-              WHERE processed_attempts.prediction_round = round_summaries.prediction_round
+              WHERE processed_attempts.competition_id = ?
+                AND processed_attempts.user_id = users.id
+                AND processed_attempts.prediction_round = round_summaries.prediction_round
                 AND processed_attempts.reminder_hours = reminder_windows.reminder_hours
             )
           GROUP BY
@@ -272,6 +294,7 @@ export function listReminderCandidates(): ReminderCandidateRow[] {
             round_summaries.deadline_at,
             round_summaries.expected_count,
             reminder_windows.reminder_hours,
+            competitions.slug,
             notification_subscriptions.id,
             notification_subscriptions.endpoint,
             notification_subscriptions.subscription_json,
@@ -279,23 +302,23 @@ export function listReminderCandidates(): ReminderCandidateRow[] {
           ORDER BY round_summaries.deadline_at ASC, reminder_windows.reminder_hours DESC
         `
       )
-      .all() as ReminderCandidateRow[];
+      .all(competitionId, competitionId, competitionId, competitionId, competitionId, competitionId, competitionId) as ReminderCandidateRow[];
   } finally {
     db.close();
   }
 }
 
-export function recordReminderDelivery(userId: number, predictionRound: string, reminderHours: 1 | 9): void {
+export function recordReminderDelivery(competitionId: number, userId: number, predictionRound: string, reminderHours: 1 | 9): void {
   const db = openDatabase();
 
   try {
     db.prepare(
       `
-        INSERT INTO notification_reminder_deliveries (user_id, prediction_round, reminder_hours)
-        VALUES (?, ?, ?)
-        ON CONFLICT(user_id, prediction_round, reminder_hours) DO NOTHING
+        INSERT INTO notification_reminder_deliveries (competition_id, user_id, prediction_round, reminder_hours)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(competition_id, user_id, prediction_round, reminder_hours) DO NOTHING
       `
-    ).run(userId, predictionRound, reminderHours);
+    ).run(competitionId, userId, predictionRound, reminderHours);
   } finally {
     db.close();
   }
@@ -309,6 +332,7 @@ export function recordReminderAttempt(input: ReminderAttemptInput): void {
       `
         INSERT INTO notification_reminder_attempts (
           user_id,
+          competition_id,
           subscription_id,
           prediction_round,
           reminder_hours,
@@ -316,10 +340,11 @@ export function recordReminderAttempt(input: ReminderAttemptInput): void {
           status_code,
           error_message
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `
     ).run(
       input.userId,
+      input.competitionId,
       input.subscriptionId,
       input.predictionRound,
       input.reminderHours,

@@ -6,6 +6,7 @@ import {
   SavePredictionResponse
 } from './matches.interfaces.js';
 import { findMatchesForUser, findPredictedMatchesForUser, savePrediction } from './matches.repository.js';
+import { findCompetitionForUser } from '../competitions/competitions.repository.js';
 
 export type SavePredictionResult =
   | {
@@ -20,14 +21,17 @@ export type SavePredictionResult =
     }
   | {
       readonly status: 'locked';
+    }
+  | {
+      readonly status: 'missing_tiebreaker';
     };
 
-export async function getMatchesForUser(userId: number): Promise<MatchesResponse> {
-  return toMatchesResponse(findMatchesForUser(userId));
+export async function getMatchesForUser(userId: number, competitionId: number): Promise<MatchesResponse> {
+  return toMatchesResponse(findMatchesForUser(userId, competitionId));
 }
 
-export async function getPredictedMatchesForUser(userId: number): Promise<MatchesResponse> {
-  return toMatchesResponse(findPredictedMatchesForUser(userId));
+export async function getPredictedMatchesForUser(userId: number, competitionId: number): Promise<MatchesResponse> {
+  return toMatchesResponse(findPredictedMatchesForUser(userId, competitionId));
 }
 
 function toMatchesResponse(matches: ReturnType<typeof findMatchesForUser>): MatchesResponse {
@@ -51,6 +55,7 @@ function toMatchesResponse(matches: ReturnType<typeof findMatchesForUser>): Matc
 
 export async function submitPrediction(
   userId: number,
+  competitionId: number,
   matchId: number,
   input: Partial<SavePredictionRequest> | undefined
 ): Promise<SavePredictionResult> {
@@ -58,7 +63,7 @@ export async function submitPrediction(
     return { status: 'invalid' };
   }
 
-  const match = withPredictionLockData(listMatches()).find((currentMatch) => currentMatch.id === matchId);
+  const match = withPredictionLockData(listMatches(competitionId)).find((currentMatch) => currentMatch.id === matchId);
 
   if (!match) {
     return { status: 'not_found' };
@@ -66,6 +71,10 @@ export async function submitPrediction(
 
   if (match.predictionLocked) {
     return { status: 'locked' };
+  }
+
+  if (getPredictionRound(match) === firstPredictionRoundLabel && !findCompetitionForUser(userId, competitionId)?.tiebreaker_name) {
+    return { status: 'missing_tiebreaker' };
   }
 
   const oddsSnapshot = getPredictionOddsSnapshot(match, input.homeScore, input.awayScore);
@@ -221,6 +230,8 @@ function getPredictionRound(match: MatchRow): string {
 
   return match.round_label;
 }
+
+const firstPredictionRoundLabel = 'Group stage - Round 1';
 
 interface PredictionLockData {
   readonly predictionRound: string;

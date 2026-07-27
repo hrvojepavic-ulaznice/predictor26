@@ -20,7 +20,7 @@ export async function updateCompetitionSettingsController(
     const result = await updateCompetitionSettings(req.body);
 
     if (result.status === 'invalid') {
-      res.status(400).json({ message: 'Please check the competition settings.' });
+      res.status(400).json({ message: 'Please check the registration settings.' });
       return;
     }
 

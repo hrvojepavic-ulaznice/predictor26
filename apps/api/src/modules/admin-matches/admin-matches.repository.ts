@@ -15,20 +15,20 @@ import {
 import { getAppMetadataValue, setAppMetadataValue } from '../../database/queries/app-metadata.queries.js';
 import { getSuperAdminUser } from '../../database/queries/users.queries.js';
 
-export function findAdminMatches() {
-  return listMatches();
+export function findAdminMatches(competitionId: number) {
+  return listMatches(competitionId);
 }
 
 export async function findSuperAdminForSecretCode() {
   return getSuperAdminUser();
 }
 
-export function importMatches(matches: readonly MatchImportInput[]) {
-  return upsertImportedMatches(matches);
+export function importMatches(matches: readonly MatchImportInput[], competitionId: number) {
+  return upsertImportedMatches(matches, competitionId);
 }
 
-export function pruneMatchesAfter(matchNumber: number) {
-  return deleteMatchesAfterMatchNumber(matchNumber);
+export function pruneMatchesAfter(matchNumber: number, competitionId: number) {
+  return deleteMatchesAfterMatchNumber(matchNumber, competitionId);
 }
 
 export async function getMetadataValue(key: string) {
@@ -39,30 +39,36 @@ export function setMetadataValue(key: string, value: string) {
   setAppMetadataValue(key, value);
 }
 
-export function clearPendingFinalScores(nowIso: string) {
-  return clearFinalScoresBeforeKickoff(nowIso);
+export function clearPendingFinalScores(competitionId: number, nowIso: string) {
+  return clearFinalScoresBeforeKickoff(competitionId, nowIso);
 }
 
-export function clearPendingPredictions(nowIso: string) {
-  return deletePredictionsBeforeKickoff(nowIso);
+export function clearPendingPredictions(competitionId: number, nowIso: string) {
+  return deletePredictionsBeforeKickoff(competitionId, nowIso);
 }
 
-export function setFinalScore(matchId: number, homeScore: number | null, awayScore: number | null) {
-  return updateFinalScore(matchId, homeScore, awayScore);
+export function setFinalScore(competitionId: number, matchId: number, homeScore: number | null, awayScore: number | null) {
+  return updateFinalScore(competitionId, matchId, homeScore, awayScore);
 }
 
-export function setKickoff(matchId: number, kickoffAt: string, city: string, venue: string) {
-  return updateMatchKickoff(matchId, kickoffAt, city, venue);
+export function setKickoff(competitionId: number, matchId: number, kickoffAt: string, city: string, venue: string) {
+  return updateMatchKickoff(competitionId, matchId, kickoffAt, city, venue);
 }
 
-export function setPlayoffTeamMapping(matchId: number, side: 'home' | 'away', teamName: string | null, teamFlag: string | null) {
-  return updatePlayoffTeamMapping(matchId, side, teamName, teamFlag);
+export function setPlayoffTeamMapping(
+  competitionId: number,
+  matchId: number,
+  side: 'home' | 'away',
+  teamName: string | null,
+  teamFlag: string | null
+) {
+  return updatePlayoffTeamMapping(competitionId, matchId, side, teamName, teamFlag);
 }
 
 export function setMatchOdds(odds: readonly MatchOddsInput[]) {
   return updateMatchOdds(odds);
 }
 
-export function backfillPredictionOdds() {
-  return backfillMissingPredictionOdds();
+export function backfillPredictionOdds(competitionId: number) {
+  return backfillMissingPredictionOdds(competitionId);
 }

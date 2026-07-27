@@ -20,7 +20,7 @@ import {
   LeaderboardUserResponse
 } from './leaderboard.interfaces.js';
 import { findLeaderboardMatches, findLeaderboardPredictions, findLeaderboardUsers } from './leaderboard.repository.js';
-import { findLatestLiveScoreSnapshots } from '../live-scores/live-scores.repository.js';
+import { findLatestLiveScoreSnapshotsForCompetition } from '../live-scores/live-scores.repository.js';
 
 interface RoundSummary {
   readonly label: string;
@@ -33,16 +33,18 @@ interface RoundSummary {
 const assumedMatchDurationMs = (2 * 60 + 15) * 60 * 1_000;
 const matchDayTimeZone = 'Europe/Zagreb';
 
-export async function getLeaderboard(): Promise<LeaderboardResponse> {
-  const matches = findLeaderboardMatches();
+export async function getLeaderboard(competitionId: number): Promise<LeaderboardResponse> {
+  const matches = findLeaderboardMatches(competitionId);
   const winnerTeamsByName = getWinnerTeamsByName(matches);
-  const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
+  const latestSnapshotsByMatchId = new Map(
+    findLatestLiveScoreSnapshotsForCompetition(competitionId).map((snapshot) => [snapshot.match_id, snapshot])
+  );
   const roundSummaries = getRoundSummaries(matches);
   const leaderboardRoundSummaries = orderLeaderboardRounds(roundSummaries);
   const liveMatches = getLiveMatches(matches, latestSnapshotsByMatchId);
   const comingUpMatches = getComingUpMatches(roundSummaries, liveMatches);
-  const users = findLeaderboardUsers();
-  const predictionsByUser = groupPredictionsByUser(findLeaderboardPredictions());
+  const users = findLeaderboardUsers(competitionId);
+  const predictionsByUser = groupPredictionsByUser(findLeaderboardPredictions(competitionId));
   const liveMatchIds = new Set(liveMatches.map((match) => match.id));
   const leaderboardUsers = users.map<LeaderboardUserResponse>((user) => {
     const userPredictions = predictionsByUser.get(user.id) ?? [];
@@ -106,10 +108,12 @@ export async function getLeaderboard(): Promise<LeaderboardResponse> {
   };
 }
 
-export async function getLeaderboardMatchDays(): Promise<LeaderboardMatchDayResponse[]> {
+export async function getLeaderboardMatchDays(competitionId: number): Promise<LeaderboardMatchDayResponse[]> {
   const days = new Map<string, MatchRow[]>();
-  const matches = findLeaderboardMatches();
-  const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
+  const matches = findLeaderboardMatches(competitionId);
+  const latestSnapshotsByMatchId = new Map(
+    findLatestLiveScoreSnapshotsForCompetition(competitionId).map((snapshot) => [snapshot.match_id, snapshot])
+  );
   const roundLockedByLabel = new Map(getRoundSummaries(matches).map((round) => [round.label, round.locked]));
 
   for (const match of matches.sort(sortMatchesByKickoff)) {
@@ -125,12 +129,14 @@ export async function getLeaderboardMatchDays(): Promise<LeaderboardMatchDayResp
   }));
 }
 
-export async function getLeaderboardStats(): Promise<LeaderboardStatsResponse> {
-  const matches = findLeaderboardMatches();
+export async function getLeaderboardStats(competitionId: number): Promise<LeaderboardStatsResponse> {
+  const matches = findLeaderboardMatches(competitionId);
   const matchesById = new Map(matches.map((match) => [match.id, match]));
-  const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
-  const usersById = new Map(findLeaderboardUsers().map((user) => [user.id, user]));
-  const predictions = findLeaderboardPredictions().filter(isPredictionSettled);
+  const latestSnapshotsByMatchId = new Map(
+    findLatestLiveScoreSnapshotsForCompetition(competitionId).map((snapshot) => [snapshot.match_id, snapshot])
+  );
+  const usersById = new Map(findLeaderboardUsers(competitionId).map((user) => [user.id, user]));
+  const predictions = findLeaderboardPredictions(competitionId).filter(isPredictionSettled);
   const groupStats = new Map<string, Map<number, LeaderboardStatsUserRankResponse>>();
   const exactScoresByUserId = new Map<number, LeaderboardStatsExactScoreLeaderResponse>();
   const outcomesByUserId = new Map<number, LeaderboardStatsOutcomeLeaderResponse>();
@@ -261,6 +267,7 @@ export async function getLeaderboardStats(): Promise<LeaderboardStatsResponse> {
 }
 
 export async function getLeaderboardMatchPredictions(
+  competitionId: number,
   matchId: number,
   viewerUserId: number | null
 ): Promise<LeaderboardMatchPredictionsResponse | null> {
@@ -268,8 +275,10 @@ export async function getLeaderboardMatchPredictions(
     return null;
   }
 
-  const matches = findLeaderboardMatches();
-  const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
+  const matches = findLeaderboardMatches(competitionId);
+  const latestSnapshotsByMatchId = new Map(
+    findLatestLiveScoreSnapshotsForCompetition(competitionId).map((snapshot) => [snapshot.match_id, snapshot])
+  );
   const match = matches.find((currentMatch) => currentMatch.id === matchId);
 
   if (!match) {
@@ -284,7 +293,7 @@ export async function getLeaderboardMatchPredictions(
 
   const locked = round.locked;
   const predictionsByUserId = new Map(
-    findLeaderboardPredictions()
+    findLeaderboardPredictions(competitionId)
       .filter((prediction) => prediction.match_id === match.id)
       .map((prediction) => [prediction.user_id, prediction])
   );
@@ -292,7 +301,7 @@ export async function getLeaderboardMatchPredictions(
   return {
     match: toDayMatchResponse(match, locked, latestSnapshotsByMatchId.get(match.id)),
     locked,
-    users: findLeaderboardUsers()
+    users: findLeaderboardUsers(competitionId)
       .map((user) => {
         const prediction = predictionsByUserId.get(user.id);
         const predictionHidden = !locked && user.id !== viewerUserId && prediction !== undefined;
@@ -503,6 +512,7 @@ function getUserComingUpPredictions(
 }
 
 export async function getLeaderboardUserRoundDetails(
+  competitionId: number,
   userId: number,
   roundLabel: string,
   viewerUserId: number | null
@@ -511,19 +521,19 @@ export async function getLeaderboardUserRoundDetails(
     return null;
   }
 
-  const round = getRoundSummaries(findLeaderboardMatches()).find((currentRound) => currentRound.label === roundLabel);
+  const round = getRoundSummaries(findLeaderboardMatches(competitionId)).find((currentRound) => currentRound.label === roundLabel);
 
   if (!round?.viewable || viewerUserId === null) {
     return null;
   }
 
-  const user = findLeaderboardUsers().find((currentUser) => currentUser.id === userId);
+  const user = findLeaderboardUsers(competitionId).find((currentUser) => currentUser.id === userId);
 
   if (!user) {
     return null;
   }
 
-  const predictions = findLeaderboardPredictions().filter((prediction) => prediction.user_id === userId);
+  const predictions = findLeaderboardPredictions(competitionId).filter((prediction) => prediction.user_id === userId);
   const roundPredictions = predictions.filter((prediction) => getPredictionRound(prediction) === round.label);
   const roundMatches = getLeaderboardRoundMatches(round, roundPredictions);
 

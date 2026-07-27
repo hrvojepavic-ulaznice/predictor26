@@ -1,6 +1,6 @@
 import {
   getNotificationReminderJobSnapshot,
-  sendDuePredictionReminders
+  sendDuePredictionRemindersForCompetition
 } from '../notifications/notifications.service.js';
 import { getLiveScoreJobSnapshot, runLiveScoreSyncNow, setLiveScoreSyncEnabled } from '../live-scores/live-scores.service.js';
 import { getSuperAdminUser } from '../../database/queries/users.queries.js';
@@ -46,9 +46,9 @@ export type UpdateAdminJobEnabledResult =
       readonly status: 'invalid_secret';
     };
 
-export async function getAdminJobs(): Promise<AdminJobsResponse> {
-  const notificationJob = await getNotificationReminderJobDetails();
-  const liveScoreJob = await getLiveScoreJobDetails();
+export async function getAdminJobs(competitionId: number): Promise<AdminJobsResponse> {
+  const notificationJob = await getNotificationReminderJobDetails(competitionId);
+  const liveScoreJob = await getLiveScoreJobDetails(competitionId);
 
   return {
     jobs: [
@@ -72,23 +72,27 @@ export async function getAdminJobs(): Promise<AdminJobsResponse> {
   };
 }
 
-export async function getAdminJob(jobId: string): Promise<AdminJobDetailsResponse | null> {
+export async function getAdminJob(competitionId: number, jobId: string): Promise<AdminJobDetailsResponse | null> {
   if (jobId === notificationReminderJobId) {
     return {
-      job: await getNotificationReminderJobDetails()
+      job: await getNotificationReminderJobDetails(competitionId)
     };
   }
 
   if (jobId === liveScoreSyncJobId) {
     return {
-      job: await getLiveScoreJobDetails()
+      job: await getLiveScoreJobDetails(competitionId)
     };
   }
 
   return null;
 }
 
-export async function runAdminJob(jobId: string, input: { readonly secretCode?: unknown } | undefined): Promise<RunAdminJobResult> {
+export async function runAdminJob(
+  competitionId: number,
+  jobId: string,
+  input: { readonly secretCode?: unknown } | undefined
+): Promise<RunAdminJobResult> {
   if (jobId !== notificationReminderJobId && jobId !== liveScoreSyncJobId) {
     return { status: 'not_found' };
   }
@@ -106,29 +110,30 @@ export async function runAdminJob(jobId: string, input: { readonly secretCode?: 
   }
 
   if (jobId === notificationReminderJobId) {
-    const run = await sendDuePredictionReminders();
+    const run = await sendDuePredictionRemindersForCompetition(competitionId);
 
     return {
       status: 'ran',
       response: {
         run,
-        job: await getNotificationReminderJobDetails()
+        job: await getNotificationReminderJobDetails(competitionId)
       }
     };
   }
 
-  const run = await runLiveScoreSyncNow();
+  const run = await runLiveScoreSyncNow(competitionId);
 
   return {
     status: 'ran',
     response: {
       run,
-      job: await getLiveScoreJobDetails()
+      job: await getLiveScoreJobDetails(competitionId)
     }
   };
 }
 
 export async function updateAdminJobEnabled(
+  competitionId: number,
   jobId: string,
   input: { readonly enabled?: unknown; readonly secretCode?: unknown } | undefined
 ): Promise<UpdateAdminJobEnabledResult> {
@@ -149,18 +154,18 @@ export async function updateAdminJobEnabled(
     return { status: 'invalid_secret' };
   }
 
-  setLiveScoreSyncEnabled(input.enabled);
+  setLiveScoreSyncEnabled(competitionId, input.enabled);
 
   return {
     status: 'updated',
     response: {
-      job: await getLiveScoreJobDetails()
+      job: await getLiveScoreJobDetails(competitionId)
     }
   };
 }
 
-async function getNotificationReminderJobDetails(): Promise<AdminNotificationReminderJobDetailsResponse> {
-  const snapshot = await getNotificationReminderJobSnapshot();
+async function getNotificationReminderJobDetails(competitionId: number): Promise<AdminNotificationReminderJobDetailsResponse> {
+  const snapshot = await getNotificationReminderJobSnapshot(competitionId);
 
   return {
     id: notificationReminderJobId,
@@ -176,8 +181,8 @@ async function getNotificationReminderJobDetails(): Promise<AdminNotificationRem
   };
 }
 
-async function getLiveScoreJobDetails() {
-  const snapshot = await getLiveScoreJobSnapshot();
+async function getLiveScoreJobDetails(competitionId: number) {
+  const snapshot = await getLiveScoreJobSnapshot(competitionId);
 
   return {
     id: liveScoreSyncJobId,

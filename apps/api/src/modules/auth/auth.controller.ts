@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 
 import { LoginRequest, RegisterRequest } from './auth.interfaces.js';
 import { getCurrentUser, login, register } from './auth.service.js';
+import { resolveCompetitionIdForViewer } from '../competitions/competitions.service.js';
 
 export async function loginController(
   req: Request<object, object, LoginRequest>,
@@ -41,7 +42,7 @@ export async function registerController(
     }
 
     if (result.status === 'registrations_disabled') {
-      res.status(403).json({ message: 'Competition started and registrations are not possible.' });
+      res.status(403).json({ message: 'Registrations are not possible.' });
       return;
     }
 
@@ -53,14 +54,16 @@ export async function registerController(
 
 export async function currentUserController(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const userId = _req.authUser?.id;
+    const authUser = _req.authUser;
+    const userId = authUser?.id;
 
     if (!userId) {
       res.status(401).json({ message: 'Authentication is required.' });
       return;
     }
 
-    const user = await getCurrentUser(userId);
+    const competitionId = await resolveRequestedCompetitionId(_req);
+    const user = await getCurrentUser(userId, authUser.role, competitionId);
 
     if (!user) {
       res.status(401).json({ message: 'Authentication is required.' });
@@ -71,4 +74,22 @@ export async function currentUserController(_req: Request, res: Response, next: 
   } catch (error) {
     next(error);
   }
+}
+
+async function resolveRequestedCompetitionId(req: Request): Promise<number | null> {
+  const userId = req.authUser?.id;
+  const role = req.authUser?.role;
+  const headerValue = req.header('x-competition-id');
+
+  if (!userId || !role || !headerValue) {
+    return null;
+  }
+
+  const requestedCompetitionId = Number(headerValue);
+
+  if (!Number.isInteger(requestedCompetitionId) || requestedCompetitionId < 1) {
+    return null;
+  }
+
+  return resolveCompetitionIdForViewer(userId, role, requestedCompetitionId);
 }

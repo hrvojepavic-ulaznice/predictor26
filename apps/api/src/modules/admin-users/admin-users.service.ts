@@ -10,8 +10,11 @@ import {
 import {
   findSuperAdminForSecretCode,
   findUserByUsernameForAdmin,
+  findUserForCompetitionAdmin,
   findUserForAdmin,
+  findUsersForCompetitionAdmin,
   findUsersForAdmin,
+  setUserCompetitionVerification,
   setUserVerification,
   setUsername,
   setUserRole
@@ -86,7 +89,16 @@ export async function getAdminUsers(): Promise<AdminUsersResponse> {
   };
 }
 
+export async function getAdminUsersForCompetition(competitionId: number): Promise<AdminUsersResponse> {
+  const users = await findUsersForCompetitionAdmin(competitionId);
+
+  return {
+    users: users.map(toAdminUserResponse)
+  };
+}
+
 export async function changeUserRole(
+  competitionId: number,
   userId: number,
   input: Partial<UpdateUserRoleRequest> | undefined
 ): Promise<UpdateUserRoleResult> {
@@ -105,23 +117,30 @@ export async function changeUserRole(
     return { status: 'invalid_secret' };
   }
 
+  const targetUser = await findUserForCompetitionAdmin(userId, competitionId);
+
+  if (!targetUser) {
+    return { status: 'not_found' };
+  }
+
+  if (targetUser.role === 'super_admin') {
+    return { status: 'protected_role' };
+  }
+
   const user = await setUserRole(userId, input.role);
 
   if (!user) {
     return { status: 'not_found' };
   }
 
-  if (user.role === 'super_admin') {
-    return { status: 'protected_role' };
-  }
-
   return {
     status: 'updated',
-    user: toAdminUserResponse(user)
+    user: toAdminUserResponse((await findUserForCompetitionAdmin(userId, competitionId)) ?? user)
   };
 }
 
 export async function changeUsername(
+  competitionId: number,
   userId: number,
   input: Partial<UpdateUsernameRequest> | undefined
 ): Promise<UpdateUsernameResult> {
@@ -146,7 +165,7 @@ export async function changeUsername(
     return { status: 'invalid_secret' };
   }
 
-  const targetUser = await findUserForAdmin(userId);
+  const targetUser = await findUserForCompetitionAdmin(userId, competitionId);
 
   if (!targetUser) {
     return { status: 'not_found' };
@@ -170,11 +189,12 @@ export async function changeUsername(
 
   return {
     status: 'updated',
-    user: toAdminUserResponse(user)
+    user: toAdminUserResponse((await findUserForCompetitionAdmin(userId, competitionId)) ?? user)
   };
 }
 
 export async function changeUserVerification(
+  competitionId: number,
   userId: number,
   input: Partial<UpdateUserVerificationRequest> | undefined
 ): Promise<UpdateUserVerificationResult> {
@@ -193,7 +213,7 @@ export async function changeUserVerification(
     return { status: 'invalid_secret' };
   }
 
-  const targetUser = await findUserForAdmin(userId);
+  const targetUser = await findUserForCompetitionAdmin(userId, competitionId);
 
   if (!targetUser) {
     return { status: 'not_found' };
@@ -203,7 +223,7 @@ export async function changeUserVerification(
     return { status: 'protected_role' };
   }
 
-  const user = await setUserVerification(userId, input.isVerified);
+  const user = await setUserCompetitionVerification(userId, competitionId, input.isVerified);
 
   if (!user) {
     return { status: 'not_found' };

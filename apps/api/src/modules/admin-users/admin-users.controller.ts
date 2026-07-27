@@ -5,15 +5,28 @@ import {
   UpdateUserRoleRequest,
   UpdateUserVerificationRequest
 } from './admin-users.interfaces.js';
-import { changeUsername, changeUserRole, changeUserVerification, getAdminUsers } from './admin-users.service.js';
+import {
+  changeUsername,
+  changeUserRole,
+  changeUserVerification,
+  getAdminUsersForCompetition
+} from './admin-users.service.js';
+import { resolveCompetitionIdForAdmin } from '../competitions/competitions.service.js';
 
 interface UserIdParams {
   readonly userId: string;
 }
 
-export async function getAdminUsersController(_req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getAdminUsersController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    res.json(await getAdminUsers());
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    res.json(await getAdminUsersForCompetition(competitionId));
   } catch (error) {
     next(error);
   }
@@ -25,7 +38,14 @@ export async function updateUserRoleController(
   next: NextFunction
 ): Promise<void> {
   try {
-    const result = await changeUserRole(Number(req.params.userId), req.body);
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const result = await changeUserRole(competitionId, Number(req.params.userId), req.body);
 
     if (result.status === 'invalid') {
       res.status(400).json({ message: 'Please choose a valid role.' });
@@ -59,7 +79,14 @@ export async function updateUsernameController(
   next: NextFunction
 ): Promise<void> {
   try {
-    const result = await changeUsername(Number(req.params.userId), req.body);
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const result = await changeUsername(competitionId, Number(req.params.userId), req.body);
 
     if (result.status === 'invalid') {
       res.status(400).json({ message: 'Please enter a valid username.' });
@@ -98,7 +125,14 @@ export async function updateUserVerificationController(
   next: NextFunction
 ): Promise<void> {
   try {
-    const result = await changeUserVerification(Number(req.params.userId), req.body);
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const result = await changeUserVerification(competitionId, Number(req.params.userId), req.body);
 
     if (result.status === 'invalid') {
       res.status(400).json({ message: 'Please choose a valid verification state.' });
@@ -124,4 +158,15 @@ export async function updateUserVerificationController(
   } catch (error) {
     next(error);
   }
+}
+
+async function resolveRequestedCompetitionId(req: Pick<Request, 'header' | 'authUser'>): Promise<number | null> {
+  const headerValue = req.header('x-competition-id');
+  const requestedCompetitionId = headerValue ? Number(headerValue) : null;
+
+  if (requestedCompetitionId !== null && (!Number.isInteger(requestedCompetitionId) || requestedCompetitionId < 1)) {
+    return null;
+  }
+
+  return resolveCompetitionIdForAdmin(req.authUser!.id, req.authUser!.role, requestedCompetitionId);
 }

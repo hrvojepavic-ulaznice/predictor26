@@ -1,61 +1,92 @@
 <section class="admin-competition-page" aria-labelledby="admin-competition-title">
   <header class="page-header">
     <div>
-      <p class="section-label">Admin</p>
-      <h1 id="admin-competition-title">Competition settings</h1>
-      <a class="back-link" routerLink="/admin">Back to admin tools</a>
+      <p class="section-label">Admin competition</p>
+      <h1 id="admin-competition-title">{{ activeCompetition()?.name || 'Competition' }}</h1>
+      <a class="back-link" routerLink="/admin">Back to admin panel</a>
     </div>
   </header>
 
-  @if (errorMessage(); as message) {
-    <p class="status-message status-error">{{ message }}</p>
-  }
-
-  @if (successMessage(); as message) {
-    <p class="status-message status-success">{{ message }}</p>
-  }
-
-  @if (loading()) {
-    <p class="status-message">Loading competition settings...</p>
+  @if (!activeCompetition()) {
+    <p class="status-message status-error">Choose a competition from Admin first.</p>
   } @else {
-    <section class="settings-panel" aria-labelledby="registrations-title">
-      <div class="settings-copy">
-        <h2 id="registrations-title">Registrations</h2>
-        <p>
-          Registrations are enabled by default. Disable them once the competition starts so new users cannot join.
-        </p>
-      </div>
+    <nav class="admin-tool-grid" aria-label="Competition admin tools">
+      <a class="tool-card" [routerLink]="['/admin/competition', activeCompetition()!.slug, 'setup']">
+        <span class="tool-icon tool-icon-settings" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </span>
+        <span class="tool-content">
+          <span class="tool-title">Competition setup</span>
+          <span class="tool-description">Configure fixture, odds, and live score source URLs.</span>
+        </span>
+      </a>
 
-      <button
-        class="toggle-button"
-        type="button"
-        [class.toggle-button-on]="registrationsDisabled()"
-        [disabled]="saving()"
-        (click)="toggleRegistrations()"
-      >
-        {{ saving() ? 'Saving...' : registrationsDisabled() ? 'Disabled' : 'Enabled' }}
-      </button>
-    </section>
-  }
+      <a class="tool-card" [routerLink]="['/admin/competition', activeCompetition()!.slug, 'matches']">
+        <span class="tool-icon tool-icon-calendar" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </span>
+        <span class="tool-content">
+          <span class="tool-title">Matches</span>
+          <span class="tool-description">Import fixtures and enter final scores.</span>
+        </span>
+      </a>
 
-  @if (pendingRegistrationsDisabled() !== null) {
-    <app-modal-shell
-      labelledBy="secret-code-title"
-      panelWidth="420px"
-      [closeOnBackdrop]="true"
-      animate.enter="modal-enter"
-      animate.leave="modal-leave"
-      (closeModal)="cancelSecretCode()"
-    >
-      <app-secret-code-modal
-        title="Confirm competition settings"
-        label="What is the secret code?"
-        [confirmLabel]="pendingRegistrationsDisabled() ? 'Disable registrations' : 'Enable registrations'"
-        [errorMessage]="secretCodeErrorMessage()"
-        [isSubmitting]="saving()"
-        (confirmSecretCode)="confirmSecretCode($event)"
-        (cancelModal)="cancelSecretCode()"
-      />
-    </app-modal-shell>
+      <a class="tool-card" [routerLink]="['/admin/competition', activeCompetition()!.slug, 'users']">
+        <span class="tool-icon" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </span>
+        <span class="tool-content">
+          <span class="tool-title">Users</span>
+          <span class="tool-description">Manage competition users, payment status, and app roles.</span>
+        </span>
+      </a>
+
+      <a class="tool-card" [routerLink]="['/admin/competition', activeCompetition()!.slug, 'playoffs']">
+        <span class="tool-icon tool-icon-calendar" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </span>
+        <span class="tool-content">
+          <span class="tool-title">Playoffs</span>
+          <span class="tool-description">Map knockout placeholders to qualified teams.</span>
+        </span>
+      </a>
+
+      <a class="tool-card" [routerLink]="['/admin/competition', activeCompetition()!.slug, 'payments']">
+        <span class="tool-icon tool-icon-payment" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </span>
+        <span class="tool-content">
+          <span class="tool-title">Payments</span>
+          <span class="tool-description">Manage IBAN, KEKS, Revolut, and cash payment options.</span>
+        </span>
+      </a>
+
+      <a class="tool-card" [routerLink]="['/admin/competition', activeCompetition()!.slug, 'notifications']">
+        <span class="tool-icon tool-icon-notification" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </span>
+        <span class="tool-content">
+          <span class="tool-title">Notifications</span>
+          <span class="tool-description">Enable reminders and send test push notifications.</span>
+        </span>
+      </a>
+
+      <a class="tool-card" [routerLink]="['/admin/competition', activeCompetition()!.slug, 'jobs']">
+        <span class="tool-icon tool-icon-calendar" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </span>
+        <span class="tool-content">
+          <span class="tool-title">Scheduled jobs</span>
+          <span class="tool-description">Monitor reminder runs, due work, and recent deliveries.</span>
+        </span>
+      </a>
+    </nav>
   }
 </section>

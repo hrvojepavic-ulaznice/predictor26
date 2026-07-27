@@ -1,4 +1,7 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router } from '@angular/router';
+import { filter } from 'rxjs';
 
 import { NotificationRemindersService } from '@services/notification-reminders.service';
 import { AppStateService } from '@core/state/app-state.service';
@@ -14,35 +17,62 @@ const notificationPromptStorageKeyPrefix = 'predictor26.notification-reminder-de
 })
 export class NotificationReminderDrawerComponent {
   private readonly appState = inject(AppStateService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly notificationRemindersService = inject(NotificationRemindersService);
+  private readonly router = inject(Router);
 
   protected readonly visible = signal(false);
   protected readonly requestingPermission = signal(false);
-  private loadedUserId: number | null = null;
+  private readonly currentUrl = signal(this.router.url);
+  private readonly routeCompetition = computed(() => {
+    const competition = this.appState.activeCompetition();
+
+    if (!competition) {
+      return null;
+    }
+
+    const path = this.currentUrl().split('?')[0].split('#')[0];
+    const competitionPath = `/competition/${competition.slug}`;
+
+    return path === competitionPath || path.startsWith(`${competitionPath}/`) ? competition : null;
+  });
+  private loadedPromptKey: string | null = null;
 
   constructor() {
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((event) => {
+        this.currentUrl.set(event.urlAfterRedirects);
+      });
+
     effect(() => {
       const userId = this.appState.currentUser()?.id ?? null;
+      const competition = this.routeCompetition();
 
-      if (!userId) {
+      if (!userId || !competition) {
         this.visible.set(false);
         return;
       }
 
-      if (this.loadedUserId === userId) {
-        this.visible.set(this.notificationRemindersService.remindersEnabled() && this.shouldShowPrompt(userId));
+      const promptKey = this.getStorageKey(userId, competition.id);
+
+      if (this.loadedPromptKey === promptKey) {
+        this.visible.set(this.notificationRemindersService.remindersEnabled() && this.shouldShowPrompt(promptKey));
         return;
       }
 
-      this.loadedUserId = userId;
+      this.loadedPromptKey = promptKey;
       this.visible.set(false);
 
       void this.notificationRemindersService.ensureConfig().then((remindersEnabled) => {
-        if (this.appState.currentUser()?.id !== userId) {
+        if (this.appState.currentUser()?.id !== userId || this.routeCompetition()?.id !== competition.id) {
           return;
         }
 
-        this.visible.set(remindersEnabled && this.shouldShowPrompt(userId));
+        this.visible.set(remindersEnabled && this.shouldShowPrompt(promptKey));
       });
     });
   }
@@ -66,18 +96,19 @@ export class NotificationReminderDrawerComponent {
     this.recordDecision('dismissed');
   }
 
-  private shouldShowPrompt(userId: number): boolean {
+  private shouldShowPrompt(promptKey: string): boolean {
     if (typeof window === 'undefined') {
       return false;
     }
 
-    return window.localStorage.getItem(this.getStorageKey(userId)) === null;
+    return window.localStorage.getItem(promptKey) === null;
   }
 
   private recordDecision(decision: NotificationPromptDecision, permission: NotificationPermission | null = null): void {
     const userId = this.appState.currentUser()?.id ?? null;
+    const competition = this.routeCompetition();
 
-    if (!userId) {
+    if (!userId || !competition) {
       this.visible.set(false);
       return;
     }
@@ -88,11 +119,11 @@ export class NotificationReminderDrawerComponent {
       decidedAt: new Date().toISOString()
     };
 
-    window.localStorage.setItem(this.getStorageKey(userId), JSON.stringify(value));
+    window.localStorage.setItem(this.getStorageKey(userId, competition.id), JSON.stringify(value));
     this.visible.set(false);
   }
 
-  private getStorageKey(userId: number): string {
-    return `${notificationPromptStorageKeyPrefix}.${userId}`;
+  private getStorageKey(userId: number, competitionId: number): string {
+    return `${notificationPromptStorageKeyPrefix}.${userId}.${competitionId}`;
   }
 }

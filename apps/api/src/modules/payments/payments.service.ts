@@ -2,8 +2,11 @@ import { PaymentSettingRow } from '../../database/queries/payment-settings.queri
 import { PaymentInfoMethodResponse, PaymentInfoResponse } from './payments.interfaces.js';
 import { findPaymentSettingsConfigForUser, findPaymentSettingsForUser, findPaymentUser } from './payments.repository.js';
 
-export async function getPaymentInfoForUser(userId: number): Promise<PaymentInfoResponse> {
-  const [user, config] = await Promise.all([findPaymentUser(userId), findPaymentSettingsConfigForUser()]);
+export async function getPaymentInfoForUser(userId: number, competitionId: number): Promise<PaymentInfoResponse> {
+  const [user, config] = await Promise.all([
+    findPaymentUser(userId, competitionId),
+    findPaymentSettingsConfigForUser(competitionId)
+  ]);
 
   if (!user || user.is_verified === 1 || config.show_payment_info !== 1) {
     return {
@@ -14,7 +17,7 @@ export async function getPaymentInfoForUser(userId: number): Promise<PaymentInfo
 
   return {
     visible: true,
-    methods: toPaymentMethods(await findPaymentSettingsForUser())
+    methods: toPaymentMethods(await findPaymentSettingsForUser(competitionId))
   };
 }
 

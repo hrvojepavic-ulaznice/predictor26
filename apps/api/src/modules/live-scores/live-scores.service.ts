@@ -1,22 +1,25 @@
 import { config } from '../../config/index.js';
 import { LatestLiveScoreSnapshotRow } from '../../database/queries/live-scores.queries.js';
 import { MatchRow } from '../../database/queries/matches.queries.js';
-import { getAppMetadataValue, setAppMetadataValue } from '../../database/queries/app-metadata.queries.js';
 import { fetchOddsPortalLiveScores, ProviderLiveScore } from './oddsportal-live-score-provider.js';
 import {
   addLiveScoreJobRun,
   addLiveScoreUpdate,
   applyLiveScoreToFinalScore,
-  findLastLiveScoreJobRun,
-  findLatestLiveScoreSnapshots,
-  findLiveScoreMatches,
-  findRecentLiveScoreJobRuns,
-  findRecentLiveScoreUpdates,
+  findLastLiveScoreJobRunForCompetition,
+  findLatestLiveScoreSnapshotsForCompetition,
+  findLiveScoreMatchesForCompetition,
+  findRecentLiveScoreJobRunsForCompetition,
+  findRecentLiveScoreUpdatesForCompetition,
   setLiveScoreSnapshot
 } from './live-scores.repository.js';
+import {
+  findCompetitionForAdmin,
+  findCompetitionsWithLiveScoreSyncEnabled,
+  setCompetitionJobSettings
+} from '../competitions/competitions.repository.js';
 
 const provider = 'oddsportal';
-const enabledMetadataKey = 'live_score_sync_enabled';
 const recentRunLimit = 10;
 const recentUpdateLimit = 20;
 const schedulerMinimumDelayMs = 5_000;
@@ -26,10 +29,11 @@ const liveScoreFetchRetryDelayMs = 2_000;
 
 let schedulerTimer: NodeJS.Timeout | null = null;
 let syncRunning = false;
-let scheduledNextRunAt: string | null = null;
+const scheduledNextRunAtByCompetitionId = new Map<number, string | null>();
 
 export interface LiveScoreRunReport {
   readonly runId: number | null;
+  readonly competitionId: number;
   readonly startedAt: string;
   readonly finishedAt: string;
   readonly enabled: boolean;
@@ -42,21 +46,26 @@ export interface LiveScoreRunReport {
   readonly errorMessage: string | null;
 }
 
-export async function getLiveScoreJobSnapshot() {
-  const enabled = await areLiveScoresEnabled();
-  const matches = findLiveScoreMatches();
+export async function getLiveScoreJobSnapshot(competitionId: number) {
+  const competition = findCompetitionForAdmin(competitionId);
+  const enabled = competition?.live_score_sync_enabled === 1;
+  const matches = findLiveScoreMatchesForCompetition(competitionId);
   const now = new Date();
-  const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
+  const latestSnapshotsByMatchId = new Map(
+    findLatestLiveScoreSnapshotsForCompetition(competitionId).map((snapshot) => [snapshot.match_id, snapshot])
+  );
   const activeMatches = getActiveMatches(matches, now, latestSnapshotsByMatchId);
   const nextRunAt = enabled ? calculateNextRunAt(matches, now, activeMatches.length > 0, latestSnapshotsByMatchId) : null;
 
-  scheduledNextRunAt = scheduledNextRunAt ?? nextRunAt;
+  if (!scheduledNextRunAtByCompetitionId.has(competitionId)) {
+    scheduledNextRunAtByCompetitionId.set(competitionId, nextRunAt);
+  }
 
   return {
     enabled,
     intervalMs: config.liveScorePollIntervalMs,
     status: getSchedulerStatus(enabled, activeMatches.length),
-    nextRunAt: scheduledNextRunAt,
+    nextRunAt: scheduledNextRunAtByCompetitionId.get(competitionId) ?? null,
     activeMatches: activeMatches.map((match) => {
       const snapshot = latestSnapshotsByMatchId.get(match.id);
 
@@ -77,9 +86,9 @@ export async function getLiveScoreJobSnapshot() {
         syncedAt: snapshot ? toUtcIsoString(snapshot.fetched_at) : null
       };
     }),
-    lastRun: toRunReport(findLastLiveScoreJobRun()),
-    recentRuns: findRecentLiveScoreJobRuns(recentRunLimit).map(toRunReportFromRow),
-    recentUpdates: findRecentLiveScoreUpdates(recentUpdateLimit).map((update) => ({
+    lastRun: toRunReport(findLastLiveScoreJobRunForCompetition(competitionId)),
+    recentRuns: findRecentLiveScoreJobRunsForCompetition(competitionId, recentRunLimit).map(toRunReportFromRow),
+    recentUpdates: findRecentLiveScoreUpdatesForCompetition(competitionId, recentUpdateLimit).map((update) => ({
       runId: update.run_id,
       matchId: update.match_id,
       matchNumber: update.match_number,
@@ -107,40 +116,41 @@ export function startLiveScoreScheduler(): void {
   scheduleNextLiveScoreSync(0);
 }
 
-export async function runLiveScoreSyncNow(): Promise<LiveScoreRunReport> {
-  return runLiveScoreSync({ force: true });
+export async function runLiveScoreSyncNow(competitionId: number): Promise<LiveScoreRunReport> {
+  return runLiveScoreSync(competitionId, { force: true });
 }
 
-export function setLiveScoreSyncEnabled(enabled: boolean): void {
-  setAppMetadataValue(enabledMetadataKey, enabled ? 'true' : 'false');
+export function setLiveScoreSyncEnabled(competitionId: number, enabled: boolean): void {
+  setCompetitionJobSettings(competitionId, { liveScoreSyncEnabled: enabled });
 
   if (enabled) {
     scheduleNextLiveScoreSync(0);
     return;
   }
 
-  if (schedulerTimer) {
+  if (findCompetitionsWithLiveScoreSyncEnabled().length === 0 && schedulerTimer) {
     clearTimeout(schedulerTimer);
     schedulerTimer = null;
   }
 
-  scheduledNextRunAt = null;
+  scheduledNextRunAtByCompetitionId.set(competitionId, null);
 }
 
-async function runLiveScoreSync(options: { readonly force: boolean }): Promise<LiveScoreRunReport> {
+async function runLiveScoreSync(competitionId: number, options: { readonly force: boolean }): Promise<LiveScoreRunReport> {
   if (syncRunning) {
     const now = new Date();
     const report = {
       runId: null,
+      competitionId,
       startedAt: now.toISOString(),
       finishedAt: now.toISOString(),
-      enabled: await areLiveScoresEnabled(),
+      enabled: findCompetitionForAdmin(competitionId)?.live_score_sync_enabled === 1,
       status: 'skipped' as const,
       checkedMatches: 0,
       updatedMatches: 0,
       liveMatches: 0,
       finishedMatches: 0,
-      nextRunAt: scheduledNextRunAt,
+      nextRunAt: scheduledNextRunAtByCompetitionId.get(competitionId) ?? null,
       errorMessage: 'Live score sync is already running.'
     };
     const runId = addLiveScoreJobRun(toRunInput(report));
@@ -153,7 +163,8 @@ async function runLiveScoreSync(options: { readonly force: boolean }): Promise<L
 
   syncRunning = true;
   const startedAt = new Date();
-  const enabled = await areLiveScoresEnabled();
+  const competition = findCompetitionForAdmin(competitionId);
+  const enabled = competition?.live_score_sync_enabled === 1;
   let checkedMatches = 0;
   let updatedMatches = 0;
   let liveMatches = 0;
@@ -170,14 +181,16 @@ async function runLiveScoreSync(options: { readonly force: boolean }): Promise<L
   }> = [];
 
   try {
-    const matches = findLiveScoreMatches();
-    const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
+    const matches = findLiveScoreMatchesForCompetition(competitionId);
+    const latestSnapshotsByMatchId = new Map(
+      findLatestLiveScoreSnapshotsForCompetition(competitionId).map((snapshot) => [snapshot.match_id, snapshot])
+    );
     const activeMatches = getActiveMatches(matches, startedAt, latestSnapshotsByMatchId);
 
     if (!enabled || (!options.force && activeMatches.length === 0)) {
       status = 'skipped';
     } else {
-      const providerScores = await fetchLiveScoresWithRetry();
+      const providerScores = await fetchLiveScoresWithRetry(competition?.odds_source_url ?? '');
       const matchesByProviderScore = mapProviderScoresToMatches(activeMatches, providerScores);
       const fetchedAt = new Date().toISOString();
 
@@ -208,7 +221,7 @@ async function runLiveScoreSync(options: { readonly force: boolean }): Promise<L
           continue;
         }
 
-        const applied = applyLiveScoreToFinalScore(match.id, providerScore.homeScore, providerScore.awayScore);
+        const applied = applyLiveScoreToFinalScore(competitionId, match.id, providerScore.homeScore, providerScore.awayScore);
 
         if (!applied) {
           continue;
@@ -233,12 +246,15 @@ async function runLiveScoreSync(options: { readonly force: boolean }): Promise<L
   }
 
   const finishedAt = new Date();
-  const matches = findLiveScoreMatches();
-  const latestSnapshotsByMatchId = new Map(findLatestLiveScoreSnapshots().map((snapshot) => [snapshot.match_id, snapshot]));
+  const matches = findLiveScoreMatchesForCompetition(competitionId);
+  const latestSnapshotsByMatchId = new Map(
+    findLatestLiveScoreSnapshotsForCompetition(competitionId).map((snapshot) => [snapshot.match_id, snapshot])
+  );
   const nextRunAt = enabled ? calculateNextRunAt(matches, finishedAt, liveMatches > 0, latestSnapshotsByMatchId) : null;
-  scheduledNextRunAt = nextRunAt;
+  scheduledNextRunAtByCompetitionId.set(competitionId, nextRunAt);
   const report: LiveScoreRunReport = {
     runId: null,
+    competitionId,
     startedAt: startedAt.toISOString(),
     finishedAt: finishedAt.toISOString(),
     enabled,
@@ -273,11 +289,28 @@ function scheduleNextLiveScoreSync(delayMs: number): void {
   }
 
   schedulerTimer = setTimeout(() => {
-    void runLiveScoreSync({ force: false }).then((report) => {
-      const nextRunAt = report.nextRunAt ? Date.parse(report.nextRunAt) : Date.now() + config.liveScorePollIntervalMs;
+    void runEnabledCompetitionLiveScoreSyncs().then((nextRunAt) => {
       scheduleNextLiveScoreSync(Math.max(nextRunAt - Date.now(), schedulerMinimumDelayMs));
     });
   }, Math.max(delayMs, schedulerMinimumDelayMs));
+}
+
+async function runEnabledCompetitionLiveScoreSyncs(): Promise<number> {
+  let nextRunAt: number | null = null;
+
+  for (const competition of findCompetitionsWithLiveScoreSyncEnabled()) {
+    const report = await runLiveScoreSync(competition.id, { force: false });
+
+    if (report.nextRunAt) {
+      const reportNextRunAt = Date.parse(report.nextRunAt);
+
+      if (Number.isFinite(reportNextRunAt) && (nextRunAt === null || reportNextRunAt < nextRunAt)) {
+        nextRunAt = reportNextRunAt;
+      }
+    }
+  }
+
+  return nextRunAt ?? Date.now() + config.liveScorePollIntervalMs;
 }
 
 function getActiveMatches(
@@ -360,16 +393,12 @@ function mapProviderScoresToMatches(matches: readonly MatchRow[], scores: readon
   return mapped;
 }
 
-async function areLiveScoresEnabled(): Promise<boolean> {
-  return (await getAppMetadataValue(enabledMetadataKey)) !== 'false';
-}
-
-async function fetchLiveScoresWithRetry(): Promise<ProviderLiveScore[]> {
+async function fetchLiveScoresWithRetry(sourceUrl: string): Promise<ProviderLiveScore[]> {
   let lastError: unknown = null;
 
   for (let attempt = 1; attempt <= liveScoreFetchAttempts; attempt += 1) {
     try {
-      return await withTimeout(fetchOddsPortalLiveScores(), liveScoreFetchTimeoutMs);
+      return await withTimeout(fetchOddsPortalLiveScores(sourceUrl), liveScoreFetchTimeoutMs);
     } catch (error) {
       lastError = error;
 
@@ -417,6 +446,7 @@ function getSchedulerStatus(enabled: boolean, activeMatchCount: number): 'disabl
 
 function toRunInput(report: LiveScoreRunReport) {
   return {
+    competitionId: report.competitionId,
     startedAt: report.startedAt,
     finishedAt: report.finishedAt,
     status: report.status,
@@ -429,13 +459,14 @@ function toRunInput(report: LiveScoreRunReport) {
   };
 }
 
-function toRunReport(row: ReturnType<typeof findLastLiveScoreJobRun>): LiveScoreRunReport | null {
+function toRunReport(row: ReturnType<typeof findLastLiveScoreJobRunForCompetition>): LiveScoreRunReport | null {
   return row ? toRunReportFromRow(row) : null;
 }
 
-function toRunReportFromRow(row: NonNullable<ReturnType<typeof findLastLiveScoreJobRun>>): LiveScoreRunReport {
+function toRunReportFromRow(row: NonNullable<ReturnType<typeof findLastLiveScoreJobRunForCompetition>>): LiveScoreRunReport {
   return {
     runId: row.id,
+    competitionId: row.competition_id,
     startedAt: row.started_at,
     finishedAt: row.finished_at,
     enabled: true,

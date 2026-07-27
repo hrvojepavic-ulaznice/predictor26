@@ -1,0 +1,23 @@
+<section class="competitions-page" aria-label="Choose a competition">
+  <p class="section-label">Choose a competition</p>
+
+  @if (errorMessage(); as error) {
+    <p class="state-message">{{ error }}</p>
+  } @else if (!loaded()) {
+    <p class="state-message">Loading competitions...</p>
+  } @else if (competitions().length === 0) {
+    <p class="state-message">You are not part of any competition yet.</p>
+  } @else {
+    <div class="competition-list">
+      @for (competition of competitions(); track competition.id) {
+        <button class="competition-button" type="button" (click)="enterCompetition(competition)">
+          <span class="competition-title">{{ competition.name }}</span>
+          @if (competition.isFinished) {
+            <span class="competition-status">Finished</span>
+          }
+          <span class="competition-action">See details</span>
+        </button>
+      }
+    </div>
+  }
+</section>

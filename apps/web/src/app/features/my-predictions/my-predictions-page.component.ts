@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { AppStateService } from '@core/state/app-state.service';
 import { MatchWithPrediction } from '@models/match.models';
 import { MatchesService } from '@services/matches.service';
 import { MatchSortMode, MatchSortPreferenceService } from '@core/state/match-sort-preference.service';
@@ -28,9 +29,11 @@ interface TipSection {
   styleUrl: './my-predictions-page.component.scss'
 })
 export class MyPredictionsPageComponent {
+  private readonly appState = inject(AppStateService);
   private readonly matchesService = inject(MatchesService);
   private readonly sortPreference = inject(MatchSortPreferenceService);
 
+  protected readonly activeCompetition = this.appState.activeCompetition;
   protected readonly matches = this.matchesService.matches;
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);

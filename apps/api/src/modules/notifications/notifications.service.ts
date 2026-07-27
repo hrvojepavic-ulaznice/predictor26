@@ -16,10 +16,14 @@ import {
   markReminderDelivered,
   saveUserNotificationSubscription
 } from './notifications.repository.js';
+import {
+  findCompetitionForAdmin,
+  findCompetitionsWithNotificationRemindersEnabled,
+  setCompetitionJobSettings
+} from '../competitions/competitions.repository.js';
 
 webPush.setVapidDetails(config.vapidSubject, config.vapidPublicKey, config.vapidPrivateKey);
 
-const notificationRemindersEnabledKey = 'notification_reminders_enabled';
 const notificationReminderLastRunKey = 'notification_reminder_last_run';
 const secretCodeMaxLength = 128;
 const recentReminderDeliveryLimit = 20;
@@ -30,6 +34,7 @@ const reminderCandidateWindowMs = 10 * 60 * 1000;
 let activeReminderRun: Promise<NotificationReminderRunReport> | null = null;
 
 export interface NotificationReminderRunReport {
+  readonly competitionId: number;
   readonly startedAt: string;
   readonly finishedAt: string;
   readonly enabled: boolean;
@@ -56,40 +61,40 @@ export type UpdateNotificationSettingsResult =
       readonly status: 'invalid_secret';
     };
 
-export async function getNotificationConfig() {
+export async function getNotificationConfig(competitionId: number) {
   return {
     vapidPublicKey: config.vapidPublicKey,
-    remindersEnabled: await areNotificationRemindersEnabled()
+    remindersEnabled: await areNotificationRemindersEnabled(competitionId)
   };
 }
 
-export async function getNotificationSettings() {
+export async function getNotificationSettings(competitionId: number) {
   return {
-    remindersEnabled: await areNotificationRemindersEnabled()
+    remindersEnabled: await areNotificationRemindersEnabled(competitionId)
   };
 }
 
-export async function getNotificationReminderJobSnapshot() {
+export async function getNotificationReminderJobSnapshot(competitionId: number) {
   const now = new Date();
   const windowEnd = new Date(now.getTime() - getReminderCandidateWindowMs());
-  const remindersEnabled = await areNotificationRemindersEnabled();
-  const dueCandidates = remindersEnabled ? getDueReminderCandidates(now, windowEnd) : [];
+  const remindersEnabled = await areNotificationRemindersEnabled(competitionId);
+  const dueCandidates = remindersEnabled ? getDueReminderCandidates(competitionId, now, windowEnd) : [];
   const dueUsers = getUniqueDueReminderUsers(dueCandidates);
 
   return {
     enabled: remindersEnabled,
     intervalMs: config.notificationReminderIntervalMs,
     usersToNotifyNowCount: dueUsers.length,
-    lastRun: await getLastNotificationReminderRun(),
+    lastRun: await getLastNotificationReminderRun(competitionId),
     dueUsers: dueUsers.slice(0, dueReminderCandidateLimit),
-    recentDeliveries: listRecentReminderDeliveries(recentReminderDeliveryLimit).map((delivery) => ({
+    recentDeliveries: listRecentReminderDeliveries(competitionId, recentReminderDeliveryLimit).map((delivery) => ({
       userId: delivery.user_id,
       username: delivery.username,
       predictionRound: delivery.prediction_round,
       reminderHours: delivery.reminder_hours,
       deliveredAt: toUtcIsoTimestamp(delivery.created_at)
     })),
-    recentAttempts: listRecentReminderAttempts(recentReminderAttemptLimit).map((attempt) => ({
+    recentAttempts: listRecentReminderAttempts(competitionId, recentReminderAttemptLimit).map((attempt) => ({
       userId: attempt.user_id,
       username: attempt.username,
       predictionRound: attempt.prediction_round,
@@ -135,6 +140,7 @@ function getUniqueDueReminderUsers(candidates: ReturnType<typeof findReminderCan
 }
 
 export async function updateNotificationSettings(
+  competitionId: number,
   input: Partial<UpdateNotificationSettingsRequest> | undefined
 ): Promise<UpdateNotificationSettingsResult> {
   if (
@@ -152,7 +158,7 @@ export async function updateNotificationSettings(
 
   const remindersEnabled = input.remindersEnabled === true;
 
-  setAppMetadataValue(notificationRemindersEnabledKey, remindersEnabled ? 'true' : 'false');
+  setCompetitionJobSettings(competitionId, { notificationRemindersEnabled: remindersEnabled });
 
   return {
     status: 'updated',
@@ -197,19 +203,58 @@ export async function sendDuePredictionReminders(): Promise<NotificationReminder
     return activeReminderRun;
   }
 
-  activeReminderRun = runDuePredictionReminders().finally(() => {
+  activeReminderRun = runDuePredictionRemindersForEnabledCompetitions().finally(() => {
     activeReminderRun = null;
   });
 
   return activeReminderRun;
 }
 
-async function runDuePredictionReminders(): Promise<NotificationReminderRunReport> {
+export async function sendDuePredictionRemindersForCompetition(competitionId: number): Promise<NotificationReminderRunReport> {
+  if (activeReminderRun) {
+    return activeReminderRun;
+  }
+
+  activeReminderRun = runDuePredictionReminders(competitionId).finally(() => {
+    activeReminderRun = null;
+  });
+
+  return activeReminderRun;
+}
+
+async function runDuePredictionRemindersForEnabledCompetitions(): Promise<NotificationReminderRunReport> {
+  let lastReport: NotificationReminderRunReport | null = null;
+
+  for (const competition of findCompetitionsWithNotificationRemindersEnabled()) {
+    lastReport = await runDuePredictionReminders(competition.id);
+  }
+
+  if (lastReport) {
+    return lastReport;
+  }
+
+  const now = new Date().toISOString();
+  return {
+    competitionId: 0,
+    startedAt: now,
+    finishedAt: now,
+    enabled: false,
+    candidateCount: 0,
+    attemptedSubscriptionCount: 0,
+    acceptedSubscriptionCount: 0,
+    sentCount: 0,
+    failedCount: 0,
+    disabledSubscriptionCount: 0,
+    errorMessage: null
+  };
+}
+
+async function runDuePredictionReminders(competitionId: number): Promise<NotificationReminderRunReport> {
   const startedAt = new Date();
-  const enabled = await areNotificationRemindersEnabled();
+  const enabled = await areNotificationRemindersEnabled(competitionId);
   const now = new Date();
   const windowEnd = new Date(now.getTime() - getReminderCandidateWindowMs());
-  const candidates = enabled ? getDueReminderCandidates(now, windowEnd) : [];
+  const candidates = enabled ? getDueReminderCandidates(competitionId, now, windowEnd) : [];
   const candidateGroups = groupReminderCandidatesByUser(candidates);
   let acceptedSubscriptionCount = 0;
   let sentCount = 0;
@@ -226,6 +271,7 @@ async function runDuePredictionReminders(): Promise<NotificationReminderRunRepor
         await webPush.sendNotification(JSON.parse(candidate.subscription_json) as PushSubscription, JSON.stringify(payload));
         markReminderAttempted({
           userId: candidate.user_id,
+          competitionId: candidate.competition_id,
           subscriptionId: candidate.subscription_id,
           predictionRound: candidate.prediction_round,
           reminderHours: candidate.reminder_hours,
@@ -242,6 +288,7 @@ async function runDuePredictionReminders(): Promise<NotificationReminderRunRepor
 
         markReminderAttempted({
           userId: candidate.user_id,
+          competitionId: candidate.competition_id,
           subscriptionId: candidate.subscription_id,
           predictionRound: candidate.prediction_round,
           reminderHours: candidate.reminder_hours,
@@ -266,7 +313,12 @@ async function runDuePredictionReminders(): Promise<NotificationReminderRunRepor
     }
 
     if (groupAcceptedCount > 0) {
-      markReminderDelivered(group.reminder.user_id, group.reminder.prediction_round, group.reminder.reminder_hours);
+      markReminderDelivered(
+        competitionId,
+        group.reminder.user_id,
+        group.reminder.prediction_round,
+        group.reminder.reminder_hours
+      );
       sentCount += 1;
     } else if (group.subscriptions.length > 0) {
       failedCount += 1;
@@ -274,6 +326,7 @@ async function runDuePredictionReminders(): Promise<NotificationReminderRunRepor
   }
 
   const report = {
+    competitionId,
     startedAt: startedAt.toISOString(),
     finishedAt: new Date().toISOString(),
     enabled,
@@ -286,15 +339,15 @@ async function runDuePredictionReminders(): Promise<NotificationReminderRunRepor
     errorMessage
   };
 
-  setAppMetadataValue(notificationReminderLastRunKey, JSON.stringify(report));
+  setAppMetadataValue(`${notificationReminderLastRunKey}:${competitionId}`, JSON.stringify(report));
 
   return report;
 }
 
 type ReminderCandidate = ReturnType<typeof findReminderCandidates>[number];
 
-function getDueReminderCandidates(now: Date, windowEnd: Date): ReminderCandidate[] {
-  return findReminderCandidates().filter((candidate) => isReminderCandidateDue(candidate, now, windowEnd));
+function getDueReminderCandidates(competitionId: number, now: Date, windowEnd: Date): ReminderCandidate[] {
+  return findReminderCandidates(competitionId).filter((candidate) => isReminderCandidateDue(candidate, now, windowEnd));
 }
 
 function isReminderCandidateDue(candidate: ReminderCandidate, now: Date, windowEnd: Date): boolean {
@@ -350,7 +403,7 @@ export async function sendTestNotification(userId: number): Promise<{ readonly s
           badge: '/icons/predictor26-icon.svg',
           tag: `prediction-reminder:test:${userId}`,
           data: {
-            url: '/predictions',
+            url: '/',
             test: true
           }
         })
@@ -385,12 +438,14 @@ export function resetUserNotificationSubscriptions(userId: number): { readonly r
   };
 }
 
-async function areNotificationRemindersEnabled(): Promise<boolean> {
-  return (await getAppMetadataValue(notificationRemindersEnabledKey)) === 'true';
+async function areNotificationRemindersEnabled(competitionId: number): Promise<boolean> {
+  return findCompetitionForAdmin(competitionId)?.notification_reminders_enabled === 1;
 }
 
-async function getLastNotificationReminderRun(): Promise<NotificationReminderRunReport | null> {
-  const value = await getAppMetadataValue(notificationReminderLastRunKey);
+async function getLastNotificationReminderRun(competitionId: number): Promise<NotificationReminderRunReport | null> {
+  const value =
+    (await getAppMetadataValue(`${notificationReminderLastRunKey}:${competitionId}`)) ??
+    (await getAppMetadataValue(notificationReminderLastRunKey));
 
   if (!value) {
     return null;
@@ -426,7 +481,7 @@ function buildReminderPayload(candidate: ReturnType<typeof findReminderCandidate
     tag: `prediction-reminder:${candidate.prediction_round}:${candidate.reminder_hours}`,
     renotify: true,
     data: {
-      url: '/predictions',
+      url: `/competition/${candidate.competition_slug}/predictions`,
       predictionRound: candidate.prediction_round,
       deadlineAt: candidate.deadline_at,
       reminderHours: candidate.reminder_hours,

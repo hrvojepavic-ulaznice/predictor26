@@ -34,7 +34,7 @@ export class App {
     this.refreshCurrentUser();
 
     effect(() => {
-      if (this.appState.currentUser()) {
+      if (this.appState.currentUser() && this.appState.activeCompetition()) {
         untracked(() => this.finalResults.ensureFinalResults());
       }
     });

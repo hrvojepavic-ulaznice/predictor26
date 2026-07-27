@@ -1,10 +1,10 @@
 import { MatchImportInput } from '../../database/queries/matches.queries.js';
+import { defaultScheduleSourceUrl } from '../../shared/constants/default-competition.constants.js';
 
-const scheduleUrl = 'https://worldcuphub.io/en/schedule';
 const sourceTimeZone = 'America/New_York';
 
-export async function importWorldCupSchedule(): Promise<MatchImportInput[]> {
-  const response = await fetch(scheduleUrl, {
+export async function importWorldCupSchedule(sourceUrl = defaultScheduleSourceUrl): Promise<MatchImportInput[]> {
+  const response = await fetch(sourceUrl, {
     headers: {
       'user-agent': 'Predictor26 schedule importer'
     }

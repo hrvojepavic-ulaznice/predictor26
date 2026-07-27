@@ -3,7 +3,15 @@ import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
 
 import { config } from '../config/index.js';
+import {
+  defaultCompetitionName,
+  defaultCompetitionSlug,
+  defaultScheduleSourceUrl,
+  defaultOddsPortalSourceUrl
+} from '../shared/constants/default-competition.constants.js';
 import { hashPassword } from '../shared/utils/password.js';
+
+let databaseInitialized = false;
 
 export function openDatabase() {
   mkdirSync(dirname(config.databasePath), { recursive: true });
@@ -13,6 +21,19 @@ export function openDatabase() {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
+  if (databaseInitialized) {
+    return db;
+  }
+
+  initializeDatabase(db);
+  databaseInitialized = true;
+
+  return db;
+}
+
+export type AppDatabase = ReturnType<typeof openDatabase>;
+
+function initializeDatabase(db: Database.Database) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS app_metadata (
       key TEXT PRIMARY KEY,
@@ -38,7 +59,7 @@ export function openDatabase() {
     );
 
     INSERT INTO app_metadata (key, value)
-    VALUES ('schema_version', '7')
+    VALUES ('schema_version', '8')
     ON CONFLICT(key) DO UPDATE SET
       value = excluded.value,
       updated_at = CURRENT_TIMESTAMP;
@@ -46,21 +67,24 @@ export function openDatabase() {
 
   ensureUsersTableSupportsTiebreaker(db);
   ensureUsersTableSupportsVerification(db);
+  ensureCompetitionSchema(db);
   ensureMatchesTableSupportsOdds(db);
   ensureMatchesTableSupportsPlayoffMappings(db);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS payment_settings (
-      type TEXT PRIMARY KEY CHECK(type IN ('iban', 'keks', 'revolut', 'cash')),
+      competition_id INTEGER NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
+      type TEXT NOT NULL CHECK(type IN ('iban', 'keks', 'revolut', 'cash')),
       value TEXT NOT NULL DEFAULT '' CHECK(length(value) <= 200),
       fast_pay_url TEXT NOT NULL DEFAULT '' CHECK(length(fast_pay_url) <= 500),
       is_enabled INTEGER NOT NULL DEFAULT 0 CHECK(is_enabled IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (competition_id, type)
     );
 
     CREATE TABLE IF NOT EXISTS payment_settings_config (
-      id INTEGER PRIMARY KEY CHECK(id = 1),
+      competition_id INTEGER PRIMARY KEY REFERENCES competitions(id) ON DELETE CASCADE,
       show_payment_info INTEGER NOT NULL DEFAULT 0 CHECK(show_payment_info IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -68,7 +92,8 @@ export function openDatabase() {
 
     CREATE TABLE IF NOT EXISTS matches (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      match_number INTEGER NOT NULL UNIQUE,
+      competition_id INTEGER NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
+      match_number INTEGER NOT NULL,
       stage TEXT NOT NULL,
       group_name TEXT,
       round_label TEXT NOT NULL,
@@ -121,15 +146,17 @@ export function openDatabase() {
 
     CREATE TABLE IF NOT EXISTS notification_reminder_deliveries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      competition_id INTEGER NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       prediction_round TEXT NOT NULL,
       reminder_hours INTEGER NOT NULL CHECK(reminder_hours IN (1, 9)),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(user_id, prediction_round, reminder_hours)
+      UNIQUE(competition_id, user_id, prediction_round, reminder_hours)
     );
 
     CREATE TABLE IF NOT EXISTS notification_reminder_attempts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      competition_id INTEGER NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       subscription_id INTEGER REFERENCES notification_subscriptions(id) ON DELETE SET NULL,
       prediction_round TEXT NOT NULL,
@@ -155,6 +182,7 @@ export function openDatabase() {
 
     CREATE TABLE IF NOT EXISTS live_score_job_runs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      competition_id INTEGER NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
       started_at TEXT NOT NULL,
       finished_at TEXT NOT NULL,
       status TEXT NOT NULL CHECK(status IN ('success', 'skipped', 'failed')),
@@ -180,20 +208,81 @@ export function openDatabase() {
     );
   `);
 
+  seedDefaultCompetition(db);
+  ensureCompetitionScopedIndexes(db);
+
   seedPaymentSettings(db);
   seedPaymentSettingsConfig(db);
+
+  // Older compatibility migrations. These are not specific to the competition layer.
   ensurePaymentSettingsSupportsFastPayUrl(db);
   ensurePredictionsTableSupportsOddsSnapshot(db);
   ensureNotificationReminderDeliveriesSupportsOneHour(db);
 
   seedSuperAdmin(db);
-
-  return db;
 }
 
-export type AppDatabase = ReturnType<typeof openDatabase>;
+function ensureCompetitionSchema(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS competitions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE CHECK(length(name) BETWEEN 1 AND 120),
+      slug TEXT NOT NULL UNIQUE CHECK(length(slug) BETWEEN 1 AND 140),
+      schedule_source_url TEXT NOT NULL DEFAULT '' CHECK(length(schedule_source_url) <= 500),
+      odds_source_url TEXT NOT NULL DEFAULT '' CHECK(length(odds_source_url) <= 500),
+      notification_reminders_enabled INTEGER NOT NULL DEFAULT 0 CHECK(notification_reminders_enabled IN (0, 1)),
+      live_score_sync_enabled INTEGER NOT NULL DEFAULT 0 CHECK(live_score_sync_enabled IN (0, 1)),
+      is_archived INTEGER NOT NULL DEFAULT 0 CHECK(is_archived IN (0, 1)),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS competition_users (
+      competition_id INTEGER NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      is_verified INTEGER NOT NULL DEFAULT 0 CHECK(is_verified IN (0, 1)),
+      tiebreaker_name TEXT CHECK(tiebreaker_name IS NULL OR length(tiebreaker_name) BETWEEN 1 AND 80),
+      joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (competition_id, user_id)
+    );
+  `);
+}
+
+function seedDefaultCompetition(db: Database.Database) {
+  db.prepare(
+    `
+      INSERT INTO competitions (name, slug, schedule_source_url, odds_source_url, live_score_sync_enabled)
+      VALUES (?, ?, ?, ?, 1)
+      ON CONFLICT(slug) DO UPDATE SET
+        name = excluded.name,
+        schedule_source_url = CASE
+          WHEN competitions.schedule_source_url = '' THEN excluded.schedule_source_url
+          ELSE competitions.schedule_source_url
+        END,
+        odds_source_url = CASE
+          WHEN competitions.odds_source_url = '' THEN excluded.odds_source_url
+          ELSE competitions.odds_source_url
+        END,
+        live_score_sync_enabled = competitions.live_score_sync_enabled,
+        updated_at = CURRENT_TIMESTAMP
+    `
+  ).run(defaultCompetitionName, defaultCompetitionSlug, defaultScheduleSourceUrl, defaultOddsPortalSourceUrl);
+}
+
+function getDefaultCompetitionId(db: Database.Database): number {
+  const competition = db
+    .prepare('SELECT id FROM competitions WHERE slug = ?')
+    .get(defaultCompetitionSlug) as { id: number } | undefined;
+
+  if (!competition) {
+    throw new Error(`${defaultCompetitionName} competition could not be loaded.`);
+  }
+
+  return competition.id;
+}
 
 function seedPaymentSettings(db: Database.Database) {
+  const defaultCompetitionId = getDefaultCompetitionId(db);
   const rows: Array<{ type: string; isEnabled: 0 | 1 }> = [
     { type: 'iban', isEnabled: 1 },
     { type: 'keks', isEnabled: 1 },
@@ -203,25 +292,27 @@ function seedPaymentSettings(db: Database.Database) {
 
   const statement = db.prepare(
     `
-      INSERT INTO payment_settings (type, is_enabled)
-      VALUES (?, ?)
-      ON CONFLICT(type) DO NOTHING
+      INSERT INTO payment_settings (competition_id, type, is_enabled)
+      VALUES (?, ?, ?)
+      ON CONFLICT(competition_id, type) DO NOTHING
     `
   );
 
   for (const row of rows) {
-    statement.run(row.type, row.isEnabled);
+    statement.run(defaultCompetitionId, row.type, row.isEnabled);
   }
 }
 
 function seedPaymentSettingsConfig(db: Database.Database) {
+  const defaultCompetitionId = getDefaultCompetitionId(db);
+
   db.prepare(
     `
-      INSERT INTO payment_settings_config (id, show_payment_info)
-      VALUES (1, 0)
-      ON CONFLICT(id) DO NOTHING
+      INSERT INTO payment_settings_config (competition_id, show_payment_info)
+      VALUES (?, 0)
+      ON CONFLICT(competition_id) DO NOTHING
     `
-  ).run();
+  ).run(defaultCompetitionId);
 }
 
 function seedSuperAdmin(db: Database.Database) {
@@ -456,4 +547,26 @@ function ensureNotificationReminderDeliveriesSupportsOneHour(db: Database.Databa
 
     PRAGMA foreign_keys = ON;
   `);
+}
+
+function ensureCompetitionScopedIndexes(db: Database.Database) {
+  const matchColumns = db.prepare('PRAGMA table_info(matches)').all() as Array<{ name: string }>;
+  const matchColumnNames = new Set(matchColumns.map((column) => column.name));
+  const liveScoreColumns = db.prepare('PRAGMA table_info(live_score_job_runs)').all() as Array<{ name: string }>;
+  const liveScoreColumnNames = new Set(liveScoreColumns.map((column) => column.name));
+  const reminderAttemptColumns = db.prepare('PRAGMA table_info(notification_reminder_attempts)').all() as Array<{ name: string }>;
+  const reminderAttemptColumnNames = new Set(reminderAttemptColumns.map((column) => column.name));
+
+  if (matchColumnNames.has('competition_id')) {
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS matches_competition_match_number_unique ON matches(competition_id, match_number)');
+    db.exec('CREATE INDEX IF NOT EXISTS matches_competition_id_index ON matches(competition_id)');
+  }
+
+  if (liveScoreColumnNames.has('competition_id')) {
+    db.exec('CREATE INDEX IF NOT EXISTS live_score_job_runs_competition_id_index ON live_score_job_runs(competition_id)');
+  }
+
+  if (reminderAttemptColumnNames.has('competition_id')) {
+    db.exec('CREATE INDEX IF NOT EXISTS notification_reminder_attempts_competition_id_index ON notification_reminder_attempts(competition_id)');
+  }
 }

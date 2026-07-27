@@ -21,26 +21,28 @@ export interface LeaderboardPredictionRow {
   readonly prediction_odds_value: number | null;
 }
 
-export function listLeaderboardUsers(): LeaderboardUserRow[] {
+export function listLeaderboardUsers(competitionId: number): LeaderboardUserRow[] {
   const db = openDatabase();
 
   try {
     return db
       .prepare(
         `
-          SELECT id, username, tiebreaker_name
+          SELECT users.id, users.username, competition_users.tiebreaker_name
           FROM users
+          INNER JOIN competition_users ON competition_users.user_id = users.id
           WHERE role != 'super_admin'
+            AND competition_users.competition_id = ?
           ORDER BY username COLLATE NOCASE ASC
         `
       )
-      .all() as LeaderboardUserRow[];
+      .all(competitionId) as LeaderboardUserRow[];
   } finally {
     db.close();
   }
 }
 
-export function listLeaderboardPredictions(): LeaderboardPredictionRow[] {
+export function listLeaderboardPredictions(competitionId: number): LeaderboardPredictionRow[] {
   const db = openDatabase();
 
   try {
@@ -62,11 +64,14 @@ export function listLeaderboardPredictions(): LeaderboardPredictionRow[] {
           FROM predictions
           INNER JOIN matches ON matches.id = predictions.match_id
           INNER JOIN users ON users.id = predictions.user_id
+          INNER JOIN competition_users ON competition_users.user_id = users.id
+            AND competition_users.competition_id = matches.competition_id
           WHERE users.role != 'super_admin'
+            AND matches.competition_id = ?
           ORDER BY matches.match_number ASC
         `
       )
-      .all() as LeaderboardPredictionRow[];
+      .all(competitionId) as LeaderboardPredictionRow[];
   } finally {
     db.close();
   }

@@ -16,6 +16,7 @@ export interface LiveScoreSnapshotInput {
 }
 
 export interface LiveScoreJobRunInput {
+  readonly competitionId: number;
   readonly startedAt: string;
   readonly finishedAt: string;
   readonly status: LiveScoreJobRunStatus;
@@ -29,6 +30,7 @@ export interface LiveScoreJobRunInput {
 
 export interface LiveScoreJobRunRow {
   readonly id: number;
+  readonly competition_id: number;
   readonly started_at: string;
   readonly finished_at: string;
   readonly status: LiveScoreJobRunStatus;
@@ -122,6 +124,7 @@ export function insertLiveScoreJobRun(input: LiveScoreJobRunInput): number {
       .prepare(
         `
           INSERT INTO live_score_job_runs (
+            competition_id,
             started_at,
             finished_at,
             status,
@@ -132,10 +135,11 @@ export function insertLiveScoreJobRun(input: LiveScoreJobRunInput): number {
             next_run_at,
             error_message
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `
       )
       .run(
+        input.competitionId,
         input.startedAt,
         input.finishedAt,
         input.status,
@@ -188,7 +192,7 @@ export function insertLiveScoreUpdate(input: LiveScoreUpdateInput): void {
   }
 }
 
-export function getLatestLiveScoreJobRun(): LiveScoreJobRunRow | null {
+export function getLatestLiveScoreJobRun(competitionId: number): LiveScoreJobRunRow | null {
   const db = openDatabase();
 
   try {
@@ -198,6 +202,7 @@ export function getLatestLiveScoreJobRun(): LiveScoreJobRunRow | null {
           `
             SELECT
               id,
+              competition_id,
               started_at,
               finished_at,
               status,
@@ -208,18 +213,19 @@ export function getLatestLiveScoreJobRun(): LiveScoreJobRunRow | null {
               next_run_at,
               error_message
             FROM live_score_job_runs
+            WHERE competition_id = ?
             ORDER BY started_at DESC
             LIMIT 1
           `
         )
-        .get() as LiveScoreJobRunRow | undefined) ?? null
+        .get(competitionId) as LiveScoreJobRunRow | undefined) ?? null
     );
   } finally {
     db.close();
   }
 }
 
-export function listRecentLiveScoreJobRuns(limit: number): LiveScoreJobRunRow[] {
+export function listRecentLiveScoreJobRuns(competitionId: number, limit: number): LiveScoreJobRunRow[] {
   const db = openDatabase();
 
   try {
@@ -228,6 +234,7 @@ export function listRecentLiveScoreJobRuns(limit: number): LiveScoreJobRunRow[] 
         `
           SELECT
             id,
+            competition_id,
             started_at,
             finished_at,
             status,
@@ -238,17 +245,18 @@ export function listRecentLiveScoreJobRuns(limit: number): LiveScoreJobRunRow[] 
             next_run_at,
             error_message
           FROM live_score_job_runs
+          WHERE competition_id = ?
           ORDER BY started_at DESC
           LIMIT ?
         `
       )
-      .all(limit) as LiveScoreJobRunRow[];
+      .all(competitionId, limit) as LiveScoreJobRunRow[];
   } finally {
     db.close();
   }
 }
 
-export function listRecentLiveScoreUpdates(limit: number): LiveScoreUpdateRow[] {
+export function listRecentLiveScoreUpdates(competitionId: number, limit: number): LiveScoreUpdateRow[] {
   const db = openDatabase();
 
   try {
@@ -271,17 +279,18 @@ export function listRecentLiveScoreUpdates(limit: number): LiveScoreUpdateRow[] 
             live_score_updates.created_at
           FROM live_score_updates
           INNER JOIN matches ON matches.id = live_score_updates.match_id
+          WHERE matches.competition_id = ?
           ORDER BY live_score_updates.created_at DESC
           LIMIT ?
         `
       )
-      .all(limit) as LiveScoreUpdateRow[];
+      .all(competitionId, limit) as LiveScoreUpdateRow[];
   } finally {
     db.close();
   }
 }
 
-export function listLatestLiveScoreSnapshots(): LatestLiveScoreSnapshotRow[] {
+export function listLatestLiveScoreSnapshots(competitionId: number): LatestLiveScoreSnapshotRow[] {
   const db = openDatabase();
 
   try {
@@ -298,6 +307,7 @@ export function listLatestLiveScoreSnapshots(): LatestLiveScoreSnapshotRow[] {
             snapshots.away_score,
             snapshots.fetched_at
           FROM live_score_snapshots snapshots
+          INNER JOIN matches ON matches.id = snapshots.match_id
           INNER JOIN (
             SELECT match_id, MAX(fetched_at) AS fetched_at
             FROM live_score_snapshots
@@ -305,10 +315,11 @@ export function listLatestLiveScoreSnapshots(): LatestLiveScoreSnapshotRow[] {
           ) latest
             ON latest.match_id = snapshots.match_id
             AND latest.fetched_at = snapshots.fetched_at
+          WHERE matches.competition_id = ?
           ORDER BY snapshots.fetched_at DESC
         `
       )
-      .all() as LatestLiveScoreSnapshotRow[];
+      .all(competitionId) as LatestLiveScoreSnapshotRow[];
   } finally {
     db.close();
   }

@@ -29,6 +29,7 @@ export class HomePageComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly matches = this.matchesService.matches;
+  protected readonly activeCompetition = this.appState.activeCompetition;
   protected readonly paymentInfo = this.paymentsService.paymentInfo;
   protected readonly paymentModalOpen = signal(false);
   protected readonly showPaymentNotice = computed(() => {
@@ -67,14 +68,16 @@ export class HomePageComponent {
         this.now.set(Date.now());
       });
 
-    if (this.appState.isLoggedIn()) {
-      this.loadMatches();
-    }
+    effect(() => {
+      if (this.appState.isLoggedIn() && this.appState.activeCompetition()) {
+        untracked(() => this.loadMatches());
+      }
+    });
 
     effect(() => {
       const user = this.appState.currentUser();
 
-      if (user !== null && !user.isVerified) {
+      if (user !== null && this.appState.activeCompetition() && !user.isVerified) {
         untracked(() => this.loadPaymentInfo());
       }
     });

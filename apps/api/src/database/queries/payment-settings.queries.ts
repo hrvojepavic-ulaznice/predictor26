@@ -23,7 +23,7 @@ export interface PaymentSettingsConfigRow {
   readonly show_payment_info: 0 | 1;
 }
 
-export async function listPaymentSettings(): Promise<PaymentSettingRow[]> {
+export async function listPaymentSettings(competitionId: number): Promise<PaymentSettingRow[]> {
   const db = openDatabase();
 
   try {
@@ -32,6 +32,7 @@ export async function listPaymentSettings(): Promise<PaymentSettingRow[]> {
         `
         SELECT type, value, fast_pay_url, is_enabled
         FROM payment_settings
+        WHERE competition_id = ?
         ORDER BY
           CASE type
             WHEN 'iban' THEN 1
@@ -41,13 +42,13 @@ export async function listPaymentSettings(): Promise<PaymentSettingRow[]> {
           END
       `
       )
-      .all() as PaymentSettingRow[];
+      .all(competitionId) as PaymentSettingRow[];
   } finally {
     db.close();
   }
 }
 
-export async function getPaymentSettingsConfig(): Promise<PaymentSettingsConfigRow> {
+export async function getPaymentSettingsConfig(competitionId: number): Promise<PaymentSettingsConfigRow> {
   const db = openDatabase();
 
   try {
@@ -56,16 +57,16 @@ export async function getPaymentSettingsConfig(): Promise<PaymentSettingsConfigR
         `
         SELECT show_payment_info
         FROM payment_settings_config
-        WHERE id = 1
+        WHERE competition_id = ?
       `
       )
-      .get() as PaymentSettingsConfigRow;
+      .get(competitionId) as PaymentSettingsConfigRow;
   } finally {
     db.close();
   }
 }
 
-export async function updatePaymentSettings(input: UpdatePaymentSettingsInput): Promise<PaymentSettingRow[]> {
+export async function updatePaymentSettings(competitionId: number, input: UpdatePaymentSettingsInput): Promise<PaymentSettingRow[]> {
   const db = openDatabase();
 
   try {
@@ -73,27 +74,28 @@ export async function updatePaymentSettings(input: UpdatePaymentSettingsInput): 
       `
         UPDATE payment_settings
         SET value = ?, fast_pay_url = ?, is_enabled = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE type = ?
+        WHERE competition_id = ? AND type = ?
       `
     );
 
     const transaction = db.transaction(() => {
-      updateStatement.run(input.iban, '', input.iban.length > 0 ? 1 : 0, 'iban');
-      updateStatement.run(input.keks, input.keksFastPayUrl, input.keks.length > 0 || input.keksFastPayUrl.length > 0 ? 1 : 0, 'keks');
+      updateStatement.run(input.iban, '', input.iban.length > 0 ? 1 : 0, competitionId, 'iban');
+      updateStatement.run(input.keks, input.keksFastPayUrl, input.keks.length > 0 || input.keksFastPayUrl.length > 0 ? 1 : 0, competitionId, 'keks');
       updateStatement.run(
         input.revolut,
         input.revolutFastPayUrl,
         input.revolut.length > 0 || input.revolutFastPayUrl.length > 0 ? 1 : 0,
+        competitionId,
         'revolut'
       );
-      updateStatement.run('', '', input.cashEnabled ? 1 : 0, 'cash');
+      updateStatement.run('', '', input.cashEnabled ? 1 : 0, competitionId, 'cash');
       db.prepare(
         `
           UPDATE payment_settings_config
           SET show_payment_info = ?, updated_at = CURRENT_TIMESTAMP
-          WHERE id = 1
+          WHERE competition_id = ?
         `
-      ).run(input.showPaymentInfo ? 1 : 0);
+      ).run(input.showPaymentInfo ? 1 : 0, competitionId);
     });
 
     transaction();
@@ -103,6 +105,7 @@ export async function updatePaymentSettings(input: UpdatePaymentSettingsInput): 
         `
         SELECT type, value, fast_pay_url, is_enabled
         FROM payment_settings
+        WHERE competition_id = ?
         ORDER BY
           CASE type
             WHEN 'iban' THEN 1
@@ -112,7 +115,7 @@ export async function updatePaymentSettings(input: UpdatePaymentSettingsInput): 
           END
       `
       )
-      .all() as PaymentSettingRow[];
+      .all(competitionId) as PaymentSettingRow[];
   } finally {
     db.close();
   }

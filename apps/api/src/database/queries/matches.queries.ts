@@ -1,7 +1,9 @@
 import { openDatabase } from '../index.js';
+import { defaultCompetitionSlug } from '../../shared/constants/default-competition.constants.js';
 
 export interface MatchRow {
   readonly id: number;
+  readonly competition_id: number;
   readonly match_number: number;
   readonly stage: string;
   readonly group_name: string | null;
@@ -61,15 +63,18 @@ export interface MatchOddsInput {
 
 export type MatchSide = 'home' | 'away';
 
-export function listMatches(): MatchRow[] {
+export function listMatches(competitionId?: number): MatchRow[] {
   const db = openDatabase();
 
   try {
+    const resolvedCompetitionId = competitionId ?? getDefaultCompetitionId(db);
+
     return db
       .prepare(
         `
           SELECT
             id,
+            competition_id,
             match_number,
             stage,
             group_name,
@@ -93,10 +98,11 @@ export function listMatches(): MatchRow[] {
             final_home_score,
             final_away_score
           FROM matches
+          WHERE competition_id = ?
           ORDER BY match_number ASC
         `
       )
-      .all() as MatchRow[];
+      .all(resolvedCompetitionId) as MatchRow[];
   } finally {
     db.close();
   }
@@ -162,7 +168,7 @@ export function listGroupTeams(): GroupTeamRow[] {
   }
 }
 
-export function listMatchesWithPredictions(userId: number): Array<MatchRow & PredictionRowNullable> {
+export function listMatchesWithPredictions(userId: number, competitionId: number): Array<MatchRow & PredictionRowNullable> {
   const db = openDatabase();
 
   try {
@@ -171,6 +177,7 @@ export function listMatchesWithPredictions(userId: number): Array<MatchRow & Pre
         `
           SELECT
             matches.id,
+            matches.competition_id,
             matches.match_number,
             matches.stage,
             matches.group_name,
@@ -202,16 +209,17 @@ export function listMatchesWithPredictions(userId: number): Array<MatchRow & Pre
           LEFT JOIN predictions
             ON predictions.match_id = matches.id
             AND predictions.user_id = ?
+          WHERE matches.competition_id = ?
           ORDER BY matches.match_number ASC
         `
       )
-      .all(userId) as Array<MatchRow & PredictionRowNullable>;
+      .all(userId, competitionId) as Array<MatchRow & PredictionRowNullable>;
   } finally {
     db.close();
   }
 }
 
-export function listPredictedMatchesWithPredictions(userId: number): Array<MatchRow & PredictionRowNullable> {
+export function listPredictedMatchesWithPredictions(userId: number, competitionId: number): Array<MatchRow & PredictionRowNullable> {
   const db = openDatabase();
 
   try {
@@ -220,6 +228,7 @@ export function listPredictedMatchesWithPredictions(userId: number): Array<Match
         `
           SELECT
             matches.id,
+            matches.competition_id,
             matches.match_number,
             matches.stage,
             matches.group_name,
@@ -251,23 +260,26 @@ export function listPredictedMatchesWithPredictions(userId: number): Array<Match
           INNER JOIN predictions
             ON predictions.match_id = matches.id
             AND predictions.user_id = ?
+          WHERE matches.competition_id = ?
           ORDER BY matches.match_number ASC
         `
       )
-      .all(userId) as Array<MatchRow & PredictionRowNullable>;
+      .all(userId, competitionId) as Array<MatchRow & PredictionRowNullable>;
   } finally {
     db.close();
   }
 }
 
-export function upsertImportedMatches(matches: readonly MatchImportInput[]): number {
+export function upsertImportedMatches(matches: readonly MatchImportInput[], competitionId?: number): number {
   const db = openDatabase();
 
   try {
+    const resolvedCompetitionId = competitionId ?? getDefaultCompetitionId(db);
     const upsert = db.prepare(
       `
         INSERT INTO matches (
           match_number,
+          competition_id,
           stage,
           group_name,
           round_label,
@@ -280,8 +292,8 @@ export function upsertImportedMatches(matches: readonly MatchImportInput[]): num
           venue,
           city
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(match_number) DO UPDATE SET
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(competition_id, match_number) DO UPDATE SET
           stage = excluded.stage,
           group_name = excluded.group_name,
           round_label = excluded.round_label,
@@ -302,6 +314,7 @@ export function upsertImportedMatches(matches: readonly MatchImportInput[]): num
       for (const match of items) {
         upsert.run(
           match.matchNumber,
+          resolvedCompetitionId,
           match.stage,
           match.groupName,
           match.roundLabel,
@@ -325,18 +338,20 @@ export function upsertImportedMatches(matches: readonly MatchImportInput[]): num
   }
 }
 
-export function deleteMatchesAfterMatchNumber(matchNumber: number): number {
+export function deleteMatchesAfterMatchNumber(matchNumber: number, competitionId?: number): number {
   const db = openDatabase();
 
   try {
+    const resolvedCompetitionId = competitionId ?? getDefaultCompetitionId(db);
     const result = db
       .prepare(
         `
           DELETE FROM matches
-          WHERE match_number > ?
+          WHERE competition_id = ?
+            AND match_number > ?
         `
       )
-      .run(matchNumber);
+      .run(resolvedCompetitionId, matchNumber);
 
     return result.changes;
   } finally {
@@ -345,6 +360,7 @@ export function deleteMatchesAfterMatchNumber(matchNumber: number): number {
 }
 
 export function updateFinalScore(
+  competitionId: number,
   matchId: number,
   finalHomeScore: number | null,
   finalAwayScore: number | null
@@ -356,9 +372,9 @@ export function updateFinalScore(
       `
         UPDATE matches
         SET final_home_score = ?, final_away_score = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = ? AND competition_id = ?
       `
-    ).run(finalHomeScore, finalAwayScore, matchId);
+    ).run(finalHomeScore, finalAwayScore, matchId, competitionId);
 
     return db
       .prepare(
@@ -388,16 +404,21 @@ export function updateFinalScore(
             final_home_score,
             final_away_score
           FROM matches
-          WHERE id = ?
+          WHERE id = ? AND competition_id = ?
         `
       )
-      .get(matchId) as MatchRow | undefined;
+      .get(matchId, competitionId) as MatchRow | undefined;
   } finally {
     db.close();
   }
 }
 
-export function updateFinalScoreIfChanged(matchId: number, finalHomeScore: number, finalAwayScore: number): boolean {
+export function updateFinalScoreIfChanged(
+  competitionId: number,
+  matchId: number,
+  finalHomeScore: number,
+  finalAwayScore: number
+): boolean {
   const db = openDatabase();
 
   try {
@@ -407,6 +428,7 @@ export function updateFinalScoreIfChanged(matchId: number, finalHomeScore: numbe
           UPDATE matches
           SET final_home_score = ?, final_away_score = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
+            AND competition_id = ?
             AND (
               final_home_score IS NULL
               OR final_away_score IS NULL
@@ -415,7 +437,7 @@ export function updateFinalScoreIfChanged(matchId: number, finalHomeScore: numbe
             )
         `
       )
-      .run(finalHomeScore, finalAwayScore, matchId, finalHomeScore, finalAwayScore);
+      .run(finalHomeScore, finalAwayScore, matchId, competitionId, finalHomeScore, finalAwayScore);
 
     return result.changes > 0;
   } finally {
@@ -423,7 +445,13 @@ export function updateFinalScoreIfChanged(matchId: number, finalHomeScore: numbe
   }
 }
 
-export function updateMatchKickoff(matchId: number, kickoffAt: string, city: string, venue: string): MatchRow | undefined {
+export function updateMatchKickoff(
+  competitionId: number,
+  matchId: number,
+  kickoffAt: string,
+  city: string,
+  venue: string
+): MatchRow | undefined {
   const db = openDatabase();
 
   try {
@@ -431,9 +459,9 @@ export function updateMatchKickoff(matchId: number, kickoffAt: string, city: str
       `
         UPDATE matches
         SET kickoff_at = ?, city = ?, venue = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = ? AND competition_id = ?
       `
-    ).run(kickoffAt, city, venue, matchId);
+    ).run(kickoffAt, city, venue, matchId, competitionId);
 
     return db
       .prepare(
@@ -463,16 +491,17 @@ export function updateMatchKickoff(matchId: number, kickoffAt: string, city: str
             final_home_score,
             final_away_score
           FROM matches
-          WHERE id = ?
+          WHERE id = ? AND competition_id = ?
         `
       )
-      .get(matchId) as MatchRow | undefined;
+      .get(matchId, competitionId) as MatchRow | undefined;
   } finally {
     db.close();
   }
 }
 
 export function updatePlayoffTeamMapping(
+  competitionId: number,
   matchId: number,
   side: MatchSide,
   teamName: string | null,
@@ -487,9 +516,9 @@ export function updatePlayoffTeamMapping(
       `
         UPDATE matches
         SET ${nameColumn} = ?, ${flagColumn} = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = ? AND competition_id = ?
       `
-    ).run(teamName, teamFlag, matchId);
+    ).run(teamName, teamFlag, matchId, competitionId);
 
     return db
       .prepare(
@@ -519,16 +548,16 @@ export function updatePlayoffTeamMapping(
             final_home_score,
             final_away_score
           FROM matches
-          WHERE id = ?
+          WHERE id = ? AND competition_id = ?
         `
       )
-      .get(matchId) as MatchRow | undefined;
+      .get(matchId, competitionId) as MatchRow | undefined;
   } finally {
     db.close();
   }
 }
 
-export function clearFinalScoresBeforeKickoff(nowIso: string): number {
+export function clearFinalScoresBeforeKickoff(competitionId: number, nowIso: string): number {
   const db = openDatabase();
 
   try {
@@ -540,11 +569,12 @@ export function clearFinalScoresBeforeKickoff(nowIso: string): number {
             final_home_score = NULL,
             final_away_score = NULL,
             updated_at = CURRENT_TIMESTAMP
-          WHERE kickoff_at > ?
+          WHERE competition_id = ?
+            AND kickoff_at > ?
             AND (final_home_score IS NOT NULL OR final_away_score IS NOT NULL)
         `
       )
-      .run(nowIso);
+      .run(competitionId, nowIso);
 
     return result.changes;
   } finally {
@@ -552,7 +582,7 @@ export function clearFinalScoresBeforeKickoff(nowIso: string): number {
   }
 }
 
-export function deletePredictionsBeforeKickoff(nowIso: string): number {
+export function deletePredictionsBeforeKickoff(competitionId: number, nowIso: string): number {
   const db = openDatabase();
 
   try {
@@ -564,11 +594,12 @@ export function deletePredictionsBeforeKickoff(nowIso: string): number {
             SELECT 1
             FROM matches
             WHERE matches.id = predictions.match_id
+              AND matches.competition_id = ?
               AND matches.kickoff_at > ?
           )
         `
       )
-      .run(nowIso);
+      .run(competitionId, nowIso);
 
     return result.changes;
   } finally {
@@ -614,7 +645,7 @@ export function updateMatchOdds(odds: readonly MatchOddsInput[]): number {
   }
 }
 
-export function backfillMissingPredictionOdds(): number {
+export function backfillMissingPredictionOdds(competitionId: number): number {
   const db = openDatabase();
 
   try {
@@ -658,13 +689,14 @@ export function backfillMissingPredictionOdds(): number {
               SELECT 1
               FROM matches
               WHERE matches.id = predictions.match_id
+                AND matches.competition_id = ?
                 AND matches.home_win_odds IS NOT NULL
                 AND matches.draw_odds IS NOT NULL
                 AND matches.away_win_odds IS NOT NULL
             )
         `
       )
-      .run();
+      .run(competitionId);
 
     return result.changes;
   } finally {
@@ -718,4 +750,16 @@ interface PredictionRowNullable {
   readonly prediction_odds_outcome: PredictionOddsOutcome | null;
   readonly prediction_odds_value: number | null;
   readonly prediction_odds_synced_at: string | null;
+}
+
+function getDefaultCompetitionId(db: ReturnType<typeof openDatabase>): number {
+  const competition = db
+    .prepare('SELECT id FROM competitions WHERE slug = ?')
+    .get(defaultCompetitionSlug) as { id: number } | undefined;
+
+  if (!competition) {
+    throw new Error('Default competition could not be loaded.');
+  }
+
+  return competition.id;
 }

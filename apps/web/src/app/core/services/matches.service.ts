@@ -81,6 +81,12 @@ export class MatchesService {
     );
   }
 
+  clearCompetitionData(): void {
+    this.matchesSignal.set([]);
+    this.fullMatchesLoadedSignal.set(false);
+    this.predictedMatchesLoadedSignal.set(false);
+  }
+
   private mergeMatches(incomingMatches: readonly MatchWithPrediction[]): void {
     this.matchesSignal.update((matches) => {
       const matchesById = new Map(matches.map((match) => [match.id, match]));

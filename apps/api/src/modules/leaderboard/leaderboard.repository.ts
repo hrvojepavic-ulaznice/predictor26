@@ -4,14 +4,14 @@ import {
   listLeaderboardUsers
 } from '../../database/queries/leaderboard.queries.js';
 
-export function findLeaderboardMatches() {
-  return listMatches();
+export function findLeaderboardMatches(competitionId: number) {
+  return listMatches(competitionId);
 }
 
-export function findLeaderboardPredictions() {
-  return listLeaderboardPredictions();
+export function findLeaderboardPredictions(competitionId: number) {
+  return listLeaderboardPredictions(competitionId);
 }
 
-export function findLeaderboardUsers() {
-  return listLeaderboardUsers();
+export function findLeaderboardUsers(competitionId: number) {
+  return listLeaderboardUsers(competitionId);
 }

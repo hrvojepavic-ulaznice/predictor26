@@ -27,13 +27,17 @@ export type UpdateAdminPaymentSettingsResult =
       readonly status: 'invalid_secret';
     };
 
-export async function getAdminPaymentSettings(): Promise<AdminPaymentSettingsResponse> {
-  const [settings, config] = await Promise.all([findPaymentSettingsForAdmin(), findPaymentSettingsConfigForAdmin()]);
+export async function getAdminPaymentSettings(competitionId: number): Promise<AdminPaymentSettingsResponse> {
+  const [settings, config] = await Promise.all([
+    findPaymentSettingsForAdmin(competitionId),
+    findPaymentSettingsConfigForAdmin(competitionId)
+  ]);
 
   return toPaymentSettingsResponse(settings, config.show_payment_info === 1);
 }
 
 export async function changeAdminPaymentSettings(
+  competitionId: number,
   input: Partial<UpdateAdminPaymentSettingsRequest> | undefined
 ): Promise<UpdateAdminPaymentSettingsResult> {
   if (
@@ -73,7 +77,7 @@ export async function changeAdminPaymentSettings(
     return { status: 'invalid_secret' };
   }
 
-  const rows = await savePaymentSettingsForAdmin({
+  const rows = await savePaymentSettingsForAdmin(competitionId, {
     iban,
     keks,
     keksFastPayUrl,
@@ -83,7 +87,7 @@ export async function changeAdminPaymentSettings(
     showPaymentInfo: input.showPaymentInfo
   });
 
-  const config = await findPaymentSettingsConfigForAdmin();
+  const config = await findPaymentSettingsConfigForAdmin(competitionId);
 
   return {
     status: 'updated',

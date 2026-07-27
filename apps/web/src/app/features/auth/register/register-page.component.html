@@ -29,16 +29,6 @@
       </label>
 
       <label class="field">
-        <span>Who will win WC 2026?</span>
-        <select appFormFieldState="invalid" formControlName="tiebreakerName">
-          <option value="" disabled selected>Choose team</option>
-          @for (team of tiebreakerOptions(); track team) {
-            <option [value]="team">{{ team }}</option>
-          }
-        </select>
-      </label>
-
-      <label class="field">
         <span>Password</span>
         <input appFormFieldState="invalid" type="password" formControlName="password" autocomplete="new-password" maxlength="128" />
         <small class="field-hint">* Password must be at least 8 characters.</small>
@@ -59,7 +49,7 @@
 
       <p class="form-error" [class.form-error-visible]="formMessage()">{{ formMessage() || '&nbsp;' }}</p>
 
-      <button class="submit-button" type="submit" [disabled]="isSubmitting() || tiebreakerOptionsLoading() || registrationsDisabled()">
+      <button class="submit-button" type="submit" [disabled]="isSubmitting() || registrationsDisabled()">
         {{ isSubmitting() ? 'Registering...' : 'Register' }}
       </button>
     </form>
