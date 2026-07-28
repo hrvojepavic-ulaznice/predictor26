@@ -12,6 +12,7 @@ import {
   getAdminRuleTemplates,
   getDefaultCompetitionRules,
   getCompetitionRulesForViewer,
+  getCompetitionRulesForVisibleCompetition,
   getCompetitionsForAdmin,
   getCompetitionsForUser,
   joinCompetition,
@@ -79,6 +80,29 @@ export async function getCompetitionRulesController(req: Request, res: Response,
     }
 
     const rules = await getCompetitionRulesForViewer(req.authUser!.id, req.authUser!.role, requestedCompetitionId);
+
+    if (!rules) {
+      res.status(404).json({ message: 'Competition rules could not be found.' });
+      return;
+    }
+
+    res.json(rules);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getCompetitionRulesByIdController(
+  req: Request<{ readonly competitionId: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const rules = await getCompetitionRulesForVisibleCompetition(
+      req.authUser!.id,
+      req.authUser!.role,
+      Number(req.params.competitionId)
+    );
 
     if (!rules) {
       res.status(404).json({ message: 'Competition rules could not be found.' });

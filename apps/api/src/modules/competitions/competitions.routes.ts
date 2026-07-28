@@ -6,6 +6,7 @@ import {
   getAdminCompetitionSettingsController,
   getAdminCompetitionsController,
   getAdminRuleTemplatesController,
+  getCompetitionRulesByIdController,
   getCompetitionRulesController,
   getCompetitionsController,
   getDefaultCompetitionRulesController,
@@ -19,6 +20,7 @@ export const competitionsRoutes = Router();
 competitionsRoutes.get('/competitions', requireAuth, getCompetitionsController);
 competitionsRoutes.get('/competitions/default/rules', getDefaultCompetitionRulesController);
 competitionsRoutes.get('/competitions/current/rules', requireAuth, getCompetitionRulesController);
+competitionsRoutes.get('/competitions/:competitionId/rules', requireAuth, getCompetitionRulesByIdController);
 competitionsRoutes.post('/competitions/:competitionId/join', requireAuth, joinCompetitionController);
 competitionsRoutes.put('/competitions/current/tiebreaker', requireAuth, updateCompetitionTiebreakerController);
 competitionsRoutes.get('/admin/competitions', requireRoles(['super_admin', 'admin']), getAdminCompetitionsController);

@@ -260,6 +260,30 @@ export async function getCompetitionRulesForViewer(
   };
 }
 
+export async function getCompetitionRulesForVisibleCompetition(
+  userId: number,
+  role: UserRole,
+  competitionId: number
+): Promise<CompetitionRulesResponse | null> {
+  if (!Number.isInteger(competitionId) || competitionId < 1) {
+    return null;
+  }
+
+  const competition =
+    role === 'super_admin' || role === 'admin'
+      ? findCompetitionForAdmin(competitionId)
+      : findCompetitionForUser(userId, competitionId) ?? findCompetitionForAdmin(competitionId);
+
+  if (!competition || (role === 'user' && !competition.is_joined && competition.is_finished === 1)) {
+    return null;
+  }
+
+  return {
+    competition: toCompetitionResponse(competition),
+    rules: findCompetitionRules(competitionId).map(renderRule)
+  };
+}
+
 export async function getDefaultCompetitionRules(): Promise<DefaultCompetitionRulesResponse> {
   const competition = findDefaultCompetition();
   const rules = competition

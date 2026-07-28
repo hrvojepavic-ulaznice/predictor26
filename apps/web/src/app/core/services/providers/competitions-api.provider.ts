@@ -42,6 +42,10 @@ export class CompetitionsApiProvider {
     return this.http.get<CompetitionRulesResponse>('/api/competitions/current/rules');
   }
 
+  getCompetitionRulesById(competitionId: number) {
+    return this.http.get<CompetitionRulesResponse>(`/api/competitions/${competitionId}/rules`);
+  }
+
   getDefaultCompetitionRules() {
     return this.http.get<DefaultCompetitionRulesResponse>('/api/competitions/default/rules');
   }
