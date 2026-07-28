@@ -24,7 +24,6 @@ export class CompetitionsPageComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly formBuilder = inject(FormBuilder);
   private readonly router = inject(Router);
-  private readonly shouldAutoEnterSingleCompetition = shouldAutoEnterSingleCompetition(this.router);
 
   protected readonly competitions = this.competitionsService.competitions;
   protected readonly loaded = this.competitionsService.loaded;
@@ -44,13 +43,6 @@ export class CompetitionsPageComponent {
       .refreshCompetitions()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ competitions }) => {
-          const activeCompetitions = competitions.filter((competition) => competition.isJoined && !competition.isFinished);
-
-          if (this.shouldAutoEnterSingleCompetition && activeCompetitions.length === 1) {
-            this.enterCompetition(activeCompetitions[0]);
-          }
-        },
         error: () => {
           this.errorMessage.set('Competitions could not be loaded.');
         }
@@ -137,10 +129,4 @@ export class CompetitionsPageComponent {
         }
       });
   }
-}
-
-function shouldAutoEnterSingleCompetition(router: Router): boolean {
-  const navigation = router.getCurrentNavigation();
-
-  return Boolean(navigation && navigation.previousNavigation === null && navigation.extras.state?.['showCompetitionList'] !== true);
 }
