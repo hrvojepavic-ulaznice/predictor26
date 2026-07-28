@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 
 import {
   AdminActionSecretRequest,
+  CreateManualMatchRequest,
   UpdateFinalScoreRequest,
   UpdateKickoffRequest,
   UpdatePlayoffMappingRequest
@@ -10,6 +11,7 @@ import {
   changeFinalScore,
   changeKickoff,
   changePlayoffMapping,
+  createManualMatch,
   getAdminMatches,
   importSchedule,
   syncOdds
@@ -30,6 +32,37 @@ export async function getAdminMatchesController(req: Request, res: Response, nex
     }
 
     res.json(await getAdminMatches(competitionId));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createManualMatchController(
+  req: Request<object, object, CreateManualMatchRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const result = await createManualMatch(competitionId, req.body);
+
+    if (result.status === 'invalid') {
+      res.status(400).json({ message: 'Please enter valid match details.' });
+      return;
+    }
+
+    if (result.status === 'invalid_secret') {
+      res.status(403).json({ message: 'Secret code is incorrect.' });
+      return;
+    }
+
+    res.status(201).json(result.response);
   } catch (error) {
     next(error);
   }

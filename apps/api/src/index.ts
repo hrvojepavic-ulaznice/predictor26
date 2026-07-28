@@ -22,7 +22,7 @@ import { paymentsRoutes } from './modules/payments/payments.routes.js';
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 app.use('/api/assets/team-logos', express.static(config.teamLogoAssetsPath));
 
 app.use('/api', authRoutes);

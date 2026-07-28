@@ -11,6 +11,7 @@ import { TeamNameComponent } from '@shared/components/team-name/team-name.compon
 import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
 import { isValidScore, ScoreDraft, updateScoreDraft } from '@shared/utils/score-draft.utils';
 import { AdminMatchKickoffModalComponent, KickoffChangeConfirmation } from './admin-match-kickoff-modal.component';
+import { AdminManualMatchModalComponent, ManualMatchConfirmation } from './admin-manual-match-modal.component';
 
 interface MatchGroup {
   readonly label: string;
@@ -22,7 +23,16 @@ type PendingSecretAction = 'schedule' | 'odds';
 
 @Component({
   selector: 'app-admin-matches-page',
-  imports: [AdminMatchKickoffModalComponent, DatePipe, ModalShellComponent, OddsFormatPipe, RouterLink, SecretCodeModalComponent, TeamNameComponent],
+  imports: [
+    AdminManualMatchModalComponent,
+    AdminMatchKickoffModalComponent,
+    DatePipe,
+    ModalShellComponent,
+    OddsFormatPipe,
+    RouterLink,
+    SecretCodeModalComponent,
+    TeamNameComponent
+  ],
   templateUrl: './admin-matches-page.component.html',
   styleUrl: './admin-matches-page.component.scss'
 })
@@ -34,6 +44,9 @@ export class AdminMatchesPageComponent {
   protected readonly loading = signal(true);
   protected readonly importing = signal(false);
   protected readonly syncingOdds = signal(false);
+  protected readonly addingMatch = signal(false);
+  protected readonly addMatchModalOpen = signal(false);
+  protected readonly addMatchErrorMessage = signal<string | null>(null);
   protected readonly kickoffErrorMessage = signal<string | null>(null);
   protected readonly editingKickoffMatch = signal<Match | null>(null);
   protected readonly savingIds = signal<ReadonlySet<number>>(new Set<number>());
@@ -45,6 +58,7 @@ export class AdminMatchesPageComponent {
   protected readonly requiredActionCount = computed(() => this.matches().filter((match) => isRequiredAction(match)).length);
   protected readonly filteredMatches = computed(() => filterMatches(this.matches(), this.selectedFilter()));
   protected readonly groupedMatches = computed(() => groupMatches(this.filteredMatches()));
+  protected readonly existingTeamNames = computed(() => getExistingTeamNames(this.matches()));
   protected readonly scheduleActionLabel = computed(() =>
     this.importing()
       ? this.matches().length > 0
@@ -81,6 +95,60 @@ export class AdminMatchesPageComponent {
     this.importMessage.set(null);
     this.secretCodeErrorMessage.set(null);
     this.pendingSecretAction.set('odds');
+  }
+
+  protected openAddMatchModal(): void {
+    if (this.addingMatch()) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.importMessage.set(null);
+    this.addMatchErrorMessage.set(null);
+    this.addMatchModalOpen.set(true);
+  }
+
+  protected cancelAddMatch(): void {
+    if (!this.addingMatch()) {
+      this.addMatchModalOpen.set(false);
+      this.addMatchErrorMessage.set(null);
+    }
+  }
+
+  protected confirmAddMatch(match: ManualMatchConfirmation): void {
+    if (this.addingMatch()) {
+      return;
+    }
+
+    this.addingMatch.set(true);
+    this.errorMessage.set(null);
+    this.importMessage.set(null);
+    this.addMatchErrorMessage.set(null);
+
+    this.adminMatchesApi.createMatch(match).subscribe({
+      next: ({ match: createdMatch, matches }) => {
+        this.setMatches(matches);
+        this.importMessage.set(`Match ${createdMatch.matchNumber} added.`);
+        this.addMatchModalOpen.set(false);
+        this.addingMatch.set(false);
+        this.ensureSelectedFilterHasResults();
+      },
+      error: (error: unknown) => {
+        const message =
+          error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+            ? error.error.message
+            : 'Match could not be added.';
+
+        if (error instanceof HttpErrorResponse && [400, 403].includes(error.status)) {
+          this.addMatchErrorMessage.set(message);
+        } else {
+          this.errorMessage.set(message);
+          this.addMatchModalOpen.set(false);
+        }
+
+        this.addingMatch.set(false);
+      }
+    });
   }
 
   protected editKickoff(match: Match): void {
@@ -376,6 +444,17 @@ function groupMatches(matches: readonly Match[]): MatchGroup[] {
     label,
     matches: groupedMatches
   }));
+}
+
+function getExistingTeamNames(matches: readonly Match[]): string[] {
+  const teamNames = new Set<string>();
+
+  for (const match of matches) {
+    teamNames.add(match.homeTeam.name);
+    teamNames.add(match.awayTeam.name);
+  }
+
+  return Array.from(teamNames).filter((teamName) => teamName.trim().length > 0);
 }
 
 function filterMatches(matches: readonly Match[], filter: MatchFilter): Match[] {

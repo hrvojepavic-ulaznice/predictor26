@@ -67,6 +67,22 @@ export interface MatchOddsInput {
   readonly awayWinOdds: number;
 }
 
+export interface ManualMatchInput {
+  readonly matchNumber: number;
+  readonly roundLabel: string;
+  readonly kickoffAt: string;
+  readonly sourceTimeZone: string;
+  readonly homeTeamName: string;
+  readonly homeTeamFlag: string | null;
+  readonly awayTeamName: string;
+  readonly awayTeamFlag: string | null;
+  readonly venue: string;
+  readonly city: string;
+  readonly homeWinOdds: number;
+  readonly drawOdds: number;
+  readonly awayWinOdds: number;
+}
+
 export type MatchSide = 'home' | 'away';
 
 export function listMatches(competitionId?: number): MatchRow[] {
@@ -382,6 +398,122 @@ export function upsertCompetitionTeams(competitionId: number, teams: readonly Te
     });
 
     transaction(teams);
+  } finally {
+    db.close();
+  }
+}
+
+export function insertManualMatch(competitionId: number, input: ManualMatchInput): MatchRow | undefined {
+  const db = openDatabase();
+
+  try {
+    const transaction = db.transaction(() => {
+      const teamLogoByName = new Map(
+        (
+          db
+            .prepare('SELECT normalized_name, logo_url FROM competition_teams WHERE competition_id = ? AND logo_url != ?')
+            .all(competitionId, '') as Array<{ normalized_name: string; logo_url: string }>
+        ).map((team) => [team.normalized_name, team.logo_url])
+      );
+
+      const upsertTeam = db.prepare(
+        `
+          INSERT INTO competition_teams (competition_id, normalized_name, display_name, logo_url, group_name)
+          VALUES (?, ?, ?, ?, NULL)
+          ON CONFLICT(competition_id, normalized_name) DO UPDATE SET
+            display_name = excluded.display_name,
+            logo_url = CASE
+              WHEN competition_teams.logo_url = '' THEN excluded.logo_url
+              ELSE competition_teams.logo_url
+            END,
+            updated_at = CURRENT_TIMESTAMP
+        `
+      );
+
+      upsertTeam.run(competitionId, normalizeTeamName(input.homeTeamName), input.homeTeamName, input.homeTeamFlag ?? '');
+      upsertTeam.run(competitionId, normalizeTeamName(input.awayTeamName), input.awayTeamName, input.awayTeamFlag ?? '');
+
+      const result = db
+        .prepare(
+          `
+            INSERT INTO matches (
+              match_number,
+              competition_id,
+              stage,
+              group_name,
+              round_label,
+              kickoff_at,
+              source_time_zone,
+              home_team_name,
+              away_team_name,
+              home_team_flag,
+              away_team_flag,
+              venue,
+              city,
+              home_win_odds,
+              draw_odds,
+              away_win_odds,
+              odds_synced_at
+            )
+            VALUES (?, ?, 'League', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          `
+        )
+        .run(
+          input.matchNumber,
+          competitionId,
+          input.roundLabel,
+          input.kickoffAt,
+          input.sourceTimeZone,
+          input.homeTeamName,
+          input.awayTeamName,
+          input.homeTeamFlag ?? teamLogoByName.get(normalizeTeamName(input.homeTeamName)) ?? null,
+          input.awayTeamFlag ?? teamLogoByName.get(normalizeTeamName(input.awayTeamName)) ?? null,
+          input.venue,
+          input.city,
+          input.homeWinOdds,
+          input.drawOdds,
+          input.awayWinOdds
+        );
+
+      return Number(result.lastInsertRowid);
+    });
+
+    const matchId = transaction();
+
+    return db
+      .prepare(
+        `
+          SELECT
+            id,
+            competition_id,
+            match_number,
+            stage,
+            group_name,
+            round_label,
+            kickoff_at,
+            source_time_zone,
+            home_team_name,
+            away_team_name,
+            home_team_flag,
+            away_team_flag,
+            home_mapped_team_name,
+            away_mapped_team_name,
+            home_mapped_team_flag,
+            away_mapped_team_flag,
+            venue,
+            city,
+            home_win_odds,
+            draw_odds,
+            away_win_odds,
+            odds_synced_at,
+            final_home_score,
+            final_away_score
+          FROM matches
+          WHERE id = ?
+            AND competition_id = ?
+        `
+      )
+      .get(matchId, competitionId) as MatchRow | undefined;
   } finally {
     db.close();
   }
