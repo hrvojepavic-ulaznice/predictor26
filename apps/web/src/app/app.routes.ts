@@ -5,6 +5,7 @@ import { adminGuard } from '@guards/admin.guard';
 import { authGuard } from '@guards/auth.guard';
 import { competitionSlugGuard } from '@guards/competition-slug.guard';
 import { guestGuard } from '@guards/guest.guard';
+import { homeRedirectGuard } from '@guards/home-redirect.guard';
 import { LoginPageComponent } from '@features/auth/login/login-page.component';
 import { RegisterPageComponent } from '@features/auth/register/register-page.component';
 import { RulesPageComponent } from '@features/rules/rules-page.component';
@@ -12,7 +13,7 @@ import { RulesPageComponent } from '@features/rules/rules-page.component';
 export const routes: Routes = [
   {
     path: '',
-    canActivate: [authGuard],
+    canActivate: [authGuard, homeRedirectGuard],
     loadComponent: () =>
       import('./features/competitions/competitions-page.component').then(
         (component) => component.CompetitionsPageComponent
