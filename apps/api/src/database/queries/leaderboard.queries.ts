@@ -31,7 +31,7 @@ export function listLeaderboardUsers(competitionId: number): LeaderboardUserRow[
           SELECT users.id, users.username, competition_users.tiebreaker_name
           FROM users
           INNER JOIN competition_users ON competition_users.user_id = users.id
-          WHERE role != 'super_admin'
+          WHERE users.role != 'super_admin'
             AND competition_users.competition_id = ?
           ORDER BY username COLLATE NOCASE ASC
         `
