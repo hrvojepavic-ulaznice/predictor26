@@ -20,9 +20,21 @@
 .competition-list {
   display: grid;
   gap: 12px;
+  animation: competition-list-enter 180ms ease-out;
+}
+
+.competition-skeleton {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: 124px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
 }
 
 .competition-button {
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr) auto;
   grid-template-areas:
@@ -86,6 +98,18 @@
   padding: 6px 8px;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+@keyframes competition-list-enter {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .competition-status-join {
