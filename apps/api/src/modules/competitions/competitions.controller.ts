@@ -13,6 +13,7 @@ import {
   getDefaultCompetitionRules,
   getCompetitionRulesForViewer,
   getCompetitionRulesForVisibleCompetition,
+  getCompetitionTeamsForViewer,
   getCompetitionsForAdmin,
   getCompetitionsForUser,
   joinCompetition,
@@ -87,6 +88,29 @@ export async function getCompetitionRulesController(req: Request, res: Response,
     }
 
     res.json(rules);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getCompetitionTeamsController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const headerValue = req.header('x-competition-id');
+    const requestedCompetitionId = headerValue ? Number(headerValue) : null;
+
+    if (requestedCompetitionId !== null && (!Number.isInteger(requestedCompetitionId) || requestedCompetitionId < 1)) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const teams = await getCompetitionTeamsForViewer(req.authUser!.id, req.authUser!.role, requestedCompetitionId);
+
+    if (!teams) {
+      res.status(404).json({ message: 'Competition teams could not be found.' });
+      return;
+    }
+
+    res.json(teams);
   } catch (error) {
     next(error);
   }
@@ -231,7 +255,7 @@ export async function updateAdminCompetitionSettingsController(
     const result = await updateAdminCompetitionSettings(competitionId, req.body);
 
     if (result.status === 'invalid') {
-      res.status(400).json({ message: 'Please enter valid HTTPS source URLs.' });
+      res.status(400).json({ message: 'Please enter a valid HTTPS source URL.' });
       return;
     }
 

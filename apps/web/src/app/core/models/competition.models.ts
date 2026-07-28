@@ -47,7 +47,7 @@ export interface UpdateAdminCompetitionSettingsRequest {
   readonly logoUrl: string;
   readonly passcode?: string;
   readonly isFinished: boolean;
-  readonly scheduleSourceUrl: string;
+  readonly scheduleSourceUrl?: string;
   readonly oddsSourceUrl: string;
   readonly secretCode: string;
   readonly rules: AdminCompetitionRuleRequest[];
@@ -58,7 +58,7 @@ export interface CreateAdminCompetitionRequest {
   readonly logoUrl: string;
   readonly passcode: string;
   readonly isFinished: boolean;
-  readonly scheduleSourceUrl: string;
+  readonly scheduleSourceUrl?: string;
   readonly oddsSourceUrl: string;
   readonly secretCode: string;
   readonly rules: AdminCompetitionRuleRequest[];
@@ -95,4 +95,15 @@ export interface CompetitionRulesResponse {
 
 export interface DefaultCompetitionRulesResponse {
   readonly rules: string[];
+}
+
+export interface CompetitionTeamsResponse {
+  readonly teams: string[];
+  readonly groupTeams: CompetitionGroupTeam[];
+}
+
+export interface CompetitionGroupTeam {
+  readonly name: string;
+  readonly flag: string | null;
+  readonly groupName: string;
 }

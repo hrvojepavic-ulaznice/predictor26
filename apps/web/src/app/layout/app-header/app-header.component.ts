@@ -32,6 +32,12 @@ export class AppHeaderComponent {
 
     return path === competitionPath || path.startsWith(`${competitionPath}/`) ? competition : null;
   });
+  protected readonly brandRouterLink = computed(() => {
+    const competition = this.routeCompetition();
+
+    return competition ? ['/competition', competition.slug] : ['/'];
+  });
+  protected readonly brandState = computed(() => (this.routeCompetition() ? undefined : { showCompetitionList: true }));
 
   constructor() {
     this.router.events

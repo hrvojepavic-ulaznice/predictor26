@@ -61,6 +61,8 @@ function initializeDatabase(db: Database.Database) {
 
   ensureUsersTableSupportsTiebreaker(db);
   ensureUsersTableSupportsVerification(db);
+  ensureUsersTableUsesLowercaseUsernames(db);
+  ensureUsersTableSupportsCaseInsensitiveUsername(db);
   ensureCompetitionSchema(db);
   ensureSuperAdminCompetitionMembershipBlocked(db);
   ensureMatchesTableSupportsOdds(db);
@@ -243,6 +245,17 @@ function ensureCompetitionSchema(db: Database.Database) {
       PRIMARY KEY (competition_id, user_id)
     );
 
+    CREATE TABLE IF NOT EXISTS competition_teams (
+      competition_id INTEGER NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
+      normalized_name TEXT NOT NULL CHECK(length(normalized_name) BETWEEN 1 AND 140),
+      display_name TEXT NOT NULL CHECK(length(display_name) BETWEEN 1 AND 140),
+      logo_url TEXT NOT NULL DEFAULT '' CHECK(length(logo_url) <= 500),
+      group_name TEXT CHECK(group_name IS NULL OR length(group_name) BETWEEN 1 AND 40),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (competition_id, normalized_name)
+    );
+
     CREATE TABLE IF NOT EXISTS rule_templates (
       key TEXT PRIMARY KEY CHECK(length(key) BETWEEN 1 AND 80),
       text_template TEXT NOT NULL CHECK(length(text_template) BETWEEN 1 AND 500),
@@ -265,6 +278,16 @@ function ensureCompetitionSchema(db: Database.Database) {
   `);
 
   ensureCompetitionTableSupportsManagementFields(db);
+  ensureCompetitionTeamsTableSupportsGroupName(db);
+}
+
+function ensureCompetitionTeamsTableSupportsGroupName(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(competition_teams)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columns.length > 0 && !columnNames.has('group_name')) {
+    db.exec('ALTER TABLE competition_teams ADD COLUMN group_name TEXT CHECK(group_name IS NULL OR length(group_name) BETWEEN 1 AND 40)');
+  }
 }
 
 function seedRuleTemplates(db: Database.Database) {
@@ -603,6 +626,59 @@ function ensureUsersTableSupportsVerification(db: Database.Database) {
   }
 
   db.exec('ALTER TABLE users ADD COLUMN is_verified INTEGER NOT NULL DEFAULT 0 CHECK(is_verified IN (0, 1))');
+}
+
+function ensureUsersTableUsesLowercaseUsernames(db: Database.Database) {
+  const users = db.prepare('SELECT id, username FROM users').all() as Array<{ id: number; username: string }>;
+  const seenUserIdsByUsername = new Map<string, number>();
+
+  for (const user of users) {
+    const normalizedUsername = normalizeUsername(user.username);
+    const existingUserId = seenUserIdsByUsername.get(normalizedUsername);
+
+    if (existingUserId !== undefined && existingUserId !== user.id) {
+      console.warn(
+        `Skipping lowercase username normalization because duplicate username casing exists for "${normalizedUsername}".`
+      );
+      return;
+    }
+
+    seenUserIdsByUsername.set(normalizedUsername, user.id);
+  }
+
+  const updateUsername = db.prepare('UPDATE users SET username = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND username != ?');
+
+  for (const user of users) {
+    const normalizedUsername = normalizeUsername(user.username);
+    updateUsername.run(normalizedUsername, user.id, normalizedUsername);
+  }
+}
+
+function ensureUsersTableSupportsCaseInsensitiveUsername(db: Database.Database) {
+  const duplicate = db
+    .prepare(
+      `
+        SELECT lower(username) AS normalized_username
+        FROM users
+        GROUP BY normalized_username
+        HAVING COUNT(*) > 1
+        LIMIT 1
+      `
+    )
+    .get() as { normalized_username: string } | undefined;
+
+  if (duplicate) {
+    console.warn(
+      `Skipping case-insensitive username index because duplicate username casing exists for "${duplicate.normalized_username}".`
+    );
+    return;
+  }
+
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_username_nocase_unique ON users(username COLLATE NOCASE)');
+}
+
+function normalizeUsername(username: string): string {
+  return username.trim().toLowerCase();
 }
 
 function ensureMatchesTableSupportsOdds(db: Database.Database) {

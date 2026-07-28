@@ -1,8 +1,9 @@
 <header class="modal-header">
   <div>
     <h2 id="match-predictions-title">
-      {{ match().homeTeam.flag }} {{ match().homeTeam.name }} - {{ match().awayTeam.flag }}
-      {{ match().awayTeam.name }}
+      <app-team-name [name]="match().homeTeam.name" [flag]="match().homeTeam.flag" />
+      -
+      <app-team-name [name]="match().awayTeam.name" [flag]="match().awayTeam.flag" />
     </h2>
     <p>{{ lockedLabel() }} · {{ submittedCount() }}/{{ userCount() }}</p>
   </div>

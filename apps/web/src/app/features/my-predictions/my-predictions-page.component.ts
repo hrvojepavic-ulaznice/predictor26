@@ -8,6 +8,7 @@ import { MatchesService } from '@services/matches.service';
 import { MatchSortMode, MatchSortPreferenceService } from '@core/state/match-sort-preference.service';
 import { MatchSortMenuComponent } from '@shared/components/match-sort-menu/match-sort-menu.component';
 import { PredictionPointsComponent } from '@shared/components/prediction-points/prediction-points.component';
+import { TeamNameComponent } from '@shared/components/team-name/team-name.component';
 import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
 import { sortMatchesByKickoff } from '@shared/utils/match-sorting.utils';
 import { calculatePredictionPoints, getPredictionPointsStateColor } from '@shared/utils/prediction-points.utils';
@@ -24,7 +25,7 @@ interface TipSection {
 
 @Component({
   selector: 'app-my-predictions-page',
-  imports: [DatePipe, MatchSortMenuComponent, OddsFormatPipe, PredictionPointsComponent, RouterLink],
+  imports: [DatePipe, MatchSortMenuComponent, OddsFormatPipe, PredictionPointsComponent, RouterLink, TeamNameComponent],
   templateUrl: './my-predictions-page.component.html',
   styleUrl: './my-predictions-page.component.scss'
 })

@@ -43,6 +43,12 @@ export interface MatchImportInput {
   readonly city: string;
 }
 
+export interface TeamImportInput {
+  readonly name: string;
+  readonly logoUrl: string | null;
+  readonly groupName?: string | null;
+}
+
 export interface PredictionRow {
   readonly match_id: number;
   readonly home_score: number;
@@ -275,6 +281,13 @@ export function upsertImportedMatches(matches: readonly MatchImportInput[], comp
 
   try {
     const resolvedCompetitionId = competitionId ?? getDefaultCompetitionId(db);
+    const teamLogoByName = new Map(
+      (
+        db
+          .prepare('SELECT normalized_name, logo_url FROM competition_teams WHERE competition_id = ? AND logo_url != ?')
+          .all(resolvedCompetitionId, '') as Array<{ normalized_name: string; logo_url: string }>
+      ).map((team) => [team.normalized_name, team.logo_url])
+    );
     const upsert = db.prepare(
       `
         INSERT INTO matches (
@@ -322,8 +335,8 @@ export function upsertImportedMatches(matches: readonly MatchImportInput[], comp
           match.sourceTimeZone,
           match.homeTeamName,
           match.awayTeamName,
-          match.homeTeamFlag,
-          match.awayTeamFlag,
+          match.homeTeamFlag ?? teamLogoByName.get(normalizeTeamName(match.homeTeamName)) ?? null,
+          match.awayTeamFlag ?? teamLogoByName.get(normalizeTeamName(match.awayTeamName)) ?? null,
           match.venue,
           match.city
         );
@@ -333,6 +346,83 @@ export function upsertImportedMatches(matches: readonly MatchImportInput[], comp
     transaction(matches);
 
     return matches.length;
+  } finally {
+    db.close();
+  }
+}
+
+export function upsertCompetitionTeams(competitionId: number, teams: readonly TeamImportInput[]): void {
+  const db = openDatabase();
+
+  try {
+    const statement = db.prepare(
+      `
+        INSERT INTO competition_teams (competition_id, normalized_name, display_name, logo_url, group_name)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(competition_id, normalized_name) DO UPDATE SET
+          display_name = excluded.display_name,
+          logo_url = CASE
+            WHEN competition_teams.logo_url = '' THEN excluded.logo_url
+            ELSE competition_teams.logo_url
+          END,
+          group_name = COALESCE(competition_teams.group_name, excluded.group_name),
+          updated_at = CURRENT_TIMESTAMP
+      `
+    );
+    const transaction = db.transaction((items: readonly TeamImportInput[]) => {
+      for (const team of items) {
+        const normalizedName = normalizeTeamName(team.name);
+
+        if (!normalizedName) {
+          continue;
+        }
+
+        statement.run(competitionId, normalizedName, team.name, team.logoUrl ?? '', team.groupName ?? null);
+      }
+    });
+
+    transaction(teams);
+  } finally {
+    db.close();
+  }
+}
+
+export function applyCompetitionTeamLogosToMatches(competitionId: number): void {
+  const db = openDatabase();
+
+  try {
+    db.prepare(
+      `
+        UPDATE matches
+        SET
+          home_team_flag = COALESCE(
+            NULLIF(home_team_flag, ''),
+            (
+              SELECT NULLIF(competition_teams.logo_url, '')
+              FROM competition_teams
+              WHERE competition_teams.competition_id = matches.competition_id
+                AND competition_teams.normalized_name = lower(trim(matches.home_team_name))
+            )
+          ),
+          away_team_flag = COALESCE(
+            NULLIF(away_team_flag, ''),
+            (
+              SELECT NULLIF(competition_teams.logo_url, '')
+              FROM competition_teams
+              WHERE competition_teams.competition_id = matches.competition_id
+                AND competition_teams.normalized_name = lower(trim(matches.away_team_name))
+            )
+          ),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE competition_id = ?
+          AND (
+            home_team_flag IS NULL
+            OR home_team_flag = ''
+            OR away_team_flag IS NULL
+            OR away_team_flag = ''
+          )
+      `
+    ).run(competitionId);
   } finally {
     db.close();
   }
@@ -762,4 +852,8 @@ function getDefaultCompetitionId(db: ReturnType<typeof openDatabase>): number {
   }
 
   return competition.id;
+}
+
+function normalizeTeamName(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
 }

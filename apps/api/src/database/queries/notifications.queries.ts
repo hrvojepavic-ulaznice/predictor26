@@ -213,6 +213,7 @@ export function listReminderCandidates(competitionId: number): ReminderCandidate
             SELECT
               matches.id AS match_id,
               CASE
+                WHEN matches.round_label LIKE 'Week %' THEN matches.round_label
                 WHEN matches.match_number <= 24 THEN 'Group stage - Round 1'
                 WHEN matches.match_number <= 48 THEN 'Group stage - Round 2'
                 WHEN matches.match_number <= 72 THEN 'Group stage - Round 3'

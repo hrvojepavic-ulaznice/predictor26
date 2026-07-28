@@ -1,0 +1,8 @@
+<span class="team-name-content">
+  @if (logoUrl(); as logo) {
+    <img class="team-logo" [src]="logo" alt="" width="18" height="18" />
+  } @else if (textFlag(); as flag) {
+    <span class="team-flag">{{ flag }}</span>
+  }
+  <span>{{ name() }}</span>
+</span>

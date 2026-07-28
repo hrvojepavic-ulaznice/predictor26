@@ -6,7 +6,6 @@ import {
   SavePredictionResponse
 } from './matches.interfaces.js';
 import { findMatchesForUser, findPredictedMatchesForUser, savePrediction } from './matches.repository.js';
-import { findCompetitionForUser } from '../competitions/competitions.repository.js';
 
 export type SavePredictionResult =
   | {
@@ -21,9 +20,6 @@ export type SavePredictionResult =
     }
   | {
       readonly status: 'locked';
-    }
-  | {
-      readonly status: 'missing_tiebreaker';
     };
 
 export async function getMatchesForUser(userId: number, competitionId: number): Promise<MatchesResponse> {
@@ -71,10 +67,6 @@ export async function submitPrediction(
 
   if (match.predictionLocked) {
     return { status: 'locked' };
-  }
-
-  if (getPredictionRound(match) === firstPredictionRoundLabel && !findCompetitionForUser(userId, competitionId)?.tiebreaker_name) {
-    return { status: 'missing_tiebreaker' };
   }
 
   const oddsSnapshot = getPredictionOddsSnapshot(match, input.homeScore, input.awayScore);
@@ -216,6 +208,10 @@ function withPredictionLockData<T extends MatchRow>(matches: readonly T[]): Arra
 }
 
 function getPredictionRound(match: MatchRow): string {
+  if (isWeekRoundLabel(match.round_label)) {
+    return match.round_label;
+  }
+
   if (match.match_number <= 24) {
     return 'Group stage - Round 1';
   }
@@ -231,7 +227,9 @@ function getPredictionRound(match: MatchRow): string {
   return match.round_label;
 }
 
-const firstPredictionRoundLabel = 'Group stage - Round 1';
+function isWeekRoundLabel(label: string): boolean {
+  return /^Week \d+$/.test(label);
+}
 
 interface PredictionLockData {
   readonly predictionRound: string;

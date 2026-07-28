@@ -18,12 +18,12 @@ import { notificationsRoutes } from './modules/notifications/notifications.route
 import { startNotificationReminderScheduler } from './modules/notifications/notifications.service.js';
 import { startLiveScoreScheduler } from './modules/live-scores/live-scores.service.js';
 import { paymentsRoutes } from './modules/payments/payments.routes.js';
-import { worldCupTeamsRoutes } from './modules/world-cup-teams/world-cup-teams.routes.js';
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/assets/team-logos', express.static(config.teamLogoAssetsPath));
 
 app.use('/api', authRoutes);
 app.use('/api', competitionsRoutes);
@@ -32,7 +32,6 @@ app.use('/api', matchesRoutes);
 app.use('/api', notificationsRoutes);
 app.use('/api', paymentsRoutes);
 app.use('/api', leaderboardRoutes);
-app.use('/api', worldCupTeamsRoutes);
 app.use('/api', adminJobsRoutes);
 app.use('/api', adminMatchesRoutes);
 app.use('/api', adminPaymentsRoutes);

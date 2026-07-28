@@ -7,6 +7,7 @@ import { Match } from '@models/match.models';
 import { AdminMatchesApiProvider } from '@services/providers/admin-matches-api.provider';
 import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
 import { SecretCodeModalComponent } from '@shared/components/secret-code-modal/secret-code-modal.component';
+import { TeamNameComponent } from '@shared/components/team-name/team-name.component';
 import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
 import { isValidScore, ScoreDraft, updateScoreDraft } from '@shared/utils/score-draft.utils';
 import { AdminMatchKickoffModalComponent, KickoffChangeConfirmation } from './admin-match-kickoff-modal.component';
@@ -21,7 +22,7 @@ type PendingSecretAction = 'schedule' | 'odds';
 
 @Component({
   selector: 'app-admin-matches-page',
-  imports: [AdminMatchKickoffModalComponent, DatePipe, ModalShellComponent, OddsFormatPipe, RouterLink, SecretCodeModalComponent],
+  imports: [AdminMatchKickoffModalComponent, DatePipe, ModalShellComponent, OddsFormatPipe, RouterLink, SecretCodeModalComponent, TeamNameComponent],
   templateUrl: './admin-matches-page.component.html',
   styleUrl: './admin-matches-page.component.scss'
 })
@@ -50,8 +51,8 @@ export class AdminMatchesPageComponent {
         ? 'Syncing...'
         : 'Importing...'
       : this.matches().length > 0
-        ? 'Sync World Cup schedule'
-        : 'Import World Cup schedule'
+        ? 'Sync fixtures'
+        : 'Import fixtures'
   );
   protected readonly oddsActionLabel = computed(() => (this.syncingOdds() ? 'Syncing odds...' : 'Sync odds'));
   private readonly saveTimers = new Map<number, ReturnType<typeof setTimeout>>();

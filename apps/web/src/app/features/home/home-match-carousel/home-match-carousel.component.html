@@ -65,7 +65,7 @@
             </span>
           }
           <span class="teams-row">
-            <span class="team-name">{{ match.homeTeam.flag }} {{ match.homeTeam.name }}</span>
+            <span class="team-name"><app-team-name [name]="match.homeTeam.name" [flag]="match.homeTeam.flag" /></span>
             <span class="score-box">
               @if (match.finalScore) {
                 {{ match.finalScore.home }}:{{ match.finalScore.away }}
@@ -73,7 +73,7 @@
                 -
               }
             </span>
-            <span class="team-name">{{ match.awayTeam.flag }} {{ match.awayTeam.name }}</span>
+            <span class="team-name"><app-team-name [name]="match.awayTeam.name" [flag]="match.awayTeam.flag" /></span>
           </span>
           @if (match.canOpenDetails) {
             <span class="details-indicator" aria-hidden="true">...</span>

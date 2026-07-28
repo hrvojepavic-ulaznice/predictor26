@@ -2,11 +2,12 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 
 import { LeaderboardDayMatch, LeaderboardMatchPredictionsResponse, LeaderboardMatchPredictionUser } from '@models/leaderboard.models';
+import { TeamNameComponent } from '@shared/components/team-name/team-name.component';
 import { getPredictionPointsStateColor } from '@shared/utils/prediction-points.utils';
 
 @Component({
   selector: 'app-match-predictions-modal',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, TeamNameComponent],
   templateUrl: './match-predictions-modal.component.html',
   styleUrl: './match-predictions-modal.component.scss'
 })

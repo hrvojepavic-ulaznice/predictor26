@@ -7,10 +7,11 @@ import { AppStateService } from '@core/state/app-state.service';
 import { MatchWithPrediction } from '@models/match.models';
 import { CompetitionsService } from '@services/competitions.service';
 import { MatchesService } from '@services/matches.service';
-import { WorldCupTeamsApiProvider } from '@services/providers/world-cup-teams-api.provider';
+import { CompetitionsApiProvider } from '@services/providers/competitions-api.provider';
 import { MatchSortMode, MatchSortPreferenceService } from '@core/state/match-sort-preference.service';
 import { MatchSortMenuComponent } from '@shared/components/match-sort-menu/match-sort-menu.component';
 import { PredictionPointsComponent } from '@shared/components/prediction-points/prediction-points.component';
+import { TeamNameComponent } from '@shared/components/team-name/team-name.component';
 import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
 import {
   calculatePredictionPoints,
@@ -36,7 +37,7 @@ interface MatchSection {
 
 @Component({
   selector: 'app-predictions-page',
-  imports: [DatePipe, MatchSortMenuComponent, OddsFormatPipe, PredictionPointsComponent],
+  imports: [DatePipe, MatchSortMenuComponent, OddsFormatPipe, PredictionPointsComponent, TeamNameComponent],
   templateUrl: './predictions-page.component.html',
   styleUrl: './predictions-page.component.scss'
 })
@@ -45,7 +46,7 @@ export class PredictionsPageComponent {
   private readonly competitionsService = inject(CompetitionsService);
   private readonly matchesService = inject(MatchesService);
   private readonly sortPreference = inject(MatchSortPreferenceService);
-  private readonly worldCupTeamsApi = inject(WorldCupTeamsApiProvider);
+  private readonly competitionsApi = inject(CompetitionsApiProvider);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly activeCompetition = this.appState.activeCompetition;
@@ -98,9 +99,7 @@ export class PredictionsPageComponent {
   }
 
   protected isFirstPredictionRound(group: MatchGroup): boolean {
-    return group.sections.some((section) =>
-      section.matches.some((match) => match.predictionRound === firstPredictionRoundLabel)
-    );
+    return group.sections.some((section) => section.matches.some((match) => isFirstPredictionRoundLabel(match.predictionRound)));
   }
 
   protected updateTiebreaker(value: string): void {
@@ -216,7 +215,7 @@ export class PredictionsPageComponent {
   }
 
   private loadTiebreakerOptions(): void {
-    this.worldCupTeamsApi.getWorldCupTeams().subscribe({
+    this.competitionsApi.getCompetitionTeams().subscribe({
       next: ({ teams }) => {
         this.tiebreakerOptions.set(teams);
       },
@@ -262,11 +261,6 @@ export class PredictionsPageComponent {
       return;
     }
 
-    if (match.predictionRound === firstPredictionRoundLabel && !this.activeCompetition()?.tiebreakerName) {
-      this.errorMessage.set('Choose your competition winner before saving first-round predictions.');
-      return;
-    }
-
     if (match.prediction?.home === draft.home && match.prediction.away === draft.away) {
       return;
     }
@@ -307,7 +301,9 @@ export class PredictionsPageComponent {
   }
 }
 
-const firstPredictionRoundLabel = 'Group stage - Round 1';
+function isFirstPredictionRoundLabel(label: string): boolean {
+  return label === 'Group stage - Round 1' || label === 'Week 1';
+}
 
 function groupMatches(matches: readonly MatchWithPrediction[], sortMode: MatchSortMode): MatchGroup[] {
   return sortMode === 'groups' ? groupMatchesByGroups(matches) : groupMatchesByRounds(matches);

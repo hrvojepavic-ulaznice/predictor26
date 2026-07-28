@@ -45,7 +45,7 @@
                 >
                   <option value="">Keep placeholder</option>
                   @for (team of context.options; track team.groupName + team.name) {
-                    <option [value]="team.name">{{ team.flag }} {{ team.name }}</option>
+                    <option [value]="team.name">{{ teamOptionLabel(team) }}</option>
                   }
                 </select>
 

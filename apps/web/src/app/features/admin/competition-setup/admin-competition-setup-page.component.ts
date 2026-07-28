@@ -35,8 +35,7 @@ export class AdminCompetitionSetupPageComponent {
     logoUrl: ['', [Validators.maxLength(200000)]],
     passcode: ['', [Validators.maxLength(120)]],
     isFinished: [false],
-    scheduleSourceUrl: ['', [Validators.maxLength(500)]],
-    oddsSourceUrl: ['', [Validators.maxLength(500)]],
+    oddsSourceUrl: ['', [Validators.required, Validators.maxLength(500)]],
     rules: this.formBuilder.array<ReturnType<AdminCompetitionSetupPageComponent['createRuleControl']>>([])
   });
 
@@ -54,7 +53,7 @@ export class AdminCompetitionSetupPageComponent {
     }
 
     if (this.sourceForm.invalid) {
-      this.errorMessage.set('Please enter valid source URLs.');
+      this.errorMessage.set('Please enter a valid source URL.');
       return;
     }
 
@@ -108,7 +107,6 @@ export class AdminCompetitionSetupPageComponent {
           logoUrl: settings.logoUrl ?? '',
           passcode: '',
           isFinished: settings.isFinished,
-          scheduleSourceUrl: settings.scheduleSourceUrl,
           oddsSourceUrl: settings.oddsSourceUrl,
           rules: this.sourceForm.controls.rules.getRawValue()
         });
@@ -157,7 +155,6 @@ export class AdminCompetitionSetupPageComponent {
           logoUrl: settings.logoUrl ?? '',
           passcode: '',
           isFinished: settings.isFinished,
-          scheduleSourceUrl: settings.scheduleSourceUrl,
           oddsSourceUrl: settings.oddsSourceUrl
         });
         this.logoPreview.set(settings.logoUrl);

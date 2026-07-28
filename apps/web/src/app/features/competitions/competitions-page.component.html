@@ -4,7 +4,11 @@
   @if (errorMessage(); as error) {
     <p class="state-message">{{ error }}</p>
   } @else if (!loaded()) {
-    <p class="state-message">Loading competitions...</p>
+    <div class="competition-list" role="status" aria-label="Loading competitions">
+      @for (item of [0, 1]; track item) {
+        <span class="competition-skeleton" aria-hidden="true"></span>
+      }
+    </div>
   } @else if (competitions().length === 0) {
     <p class="state-message">You are not part of any competition yet.</p>
   } @else {

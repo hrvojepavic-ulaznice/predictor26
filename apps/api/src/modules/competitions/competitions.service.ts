@@ -1,7 +1,7 @@
-import { getWorldCupTeamNames } from '../world-cup-teams/world-cup-teams.service.js';
 import {
   AdminCompetitionSettingsResponse,
   AdminRuleTemplatesResponse,
+  CompetitionTeamsResponse,
   CompetitionRulesResponse,
   DefaultCompetitionRulesResponse,
   CompetitionResponse,
@@ -22,6 +22,7 @@ import {
   findCompetitionForUser,
   findCompetitionForAdmin,
   findCompetitionRules,
+  findCompetitionTeams,
   findCompetitionsForUser,
   findCompetitionsForAdmin,
   findDefaultCompetition,
@@ -212,7 +213,7 @@ export async function updateTiebreakerForUser(
     resolvedCompetitionId === null ||
     tiebreakerName.length < 1 ||
     tiebreakerName.length > 80 ||
-    !getWorldCupTeamNames().includes(tiebreakerName)
+    !findCompetitionTeams(resolvedCompetitionId).some((team) => team.name === tiebreakerName)
   ) {
     return { status: 'invalid' };
   }
@@ -228,6 +229,31 @@ export async function updateTiebreakerForUser(
     response: {
       competition: toCompetitionResponse(competition)
     }
+  };
+}
+
+export async function getCompetitionTeamsForViewer(
+  userId: number,
+  role: UserRole,
+  competitionId: number | null
+): Promise<CompetitionTeamsResponse | null> {
+  const resolvedCompetitionId = await resolveCompetitionIdForViewer(userId, role, competitionId);
+
+  if (resolvedCompetitionId === null) {
+    return null;
+  }
+
+  const teams = findCompetitionTeams(resolvedCompetitionId);
+
+  return {
+    teams: teams.map((team) => team.name),
+    groupTeams: teams
+      .filter((team) => team.groupName)
+      .map((team) => ({
+        name: team.name,
+        flag: team.logoUrl,
+        groupName: team.groupName!
+      }))
   };
 }
 
@@ -488,7 +514,6 @@ async function parseAdminCompetitionInput(
   if (
     typeof input?.name !== 'string' ||
     typeof input.isFinished !== 'boolean' ||
-    typeof input.scheduleSourceUrl !== 'string' ||
     typeof input.oddsSourceUrl !== 'string' ||
     typeof input.secretCode !== 'string' ||
     input.secretCode.length < 1 ||
@@ -501,7 +526,7 @@ async function parseAdminCompetitionInput(
   const name = input.name.trim();
   const logoUrl = typeof input.logoUrl === 'string' ? input.logoUrl.trim() : '';
   const passcode = typeof input.passcode === 'string' ? input.passcode.trim() : null;
-  const scheduleSourceUrl = input.scheduleSourceUrl.trim();
+  const scheduleSourceUrl = typeof input.scheduleSourceUrl === 'string' ? input.scheduleSourceUrl.trim() : '';
   const oddsSourceUrl = input.oddsSourceUrl.trim();
 
   if (
@@ -511,6 +536,7 @@ async function parseAdminCompetitionInput(
     (requirePasscode && (!passcode || passcode.length < 4)) ||
     (passcode !== null && passcode.length > 120) ||
     !isValidSourceUrl(scheduleSourceUrl) ||
+    oddsSourceUrl.length < 1 ||
     !isValidSourceUrl(oddsSourceUrl)
   ) {
     return { status: 'invalid' };

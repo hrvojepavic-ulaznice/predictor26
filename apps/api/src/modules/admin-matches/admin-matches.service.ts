@@ -17,8 +17,9 @@ import {
   findAdminMatches,
   findSuperAdminForSecretCode,
   getMetadataValue,
+  applyTeamLogosToMatches,
   importMatches,
-  pruneMatchesAfter,
+  importTeams,
   setFinalScore,
   setKickoff,
   setPlayoffTeamMapping,
@@ -29,10 +30,9 @@ import {
   ImportedMatchOdds,
   importOddsPortalOdds
 } from './oddsportal-odds-importer.js';
-import { importWorldCupSchedule } from './world-cup-schedule-importer.js';
+import { importOddsPortalSchedule } from './oddsportal-schedule-importer.js';
 import { findCompetitionForAdmin } from '../competitions/competitions.repository.js';
 
-const scheduleSourceMetadataKeyPrefix = 'admin_matches_schedule_source';
 const worldCupPendingDataCleanupMetadataKey = 'admin_matches_world_cup_pending_data_cleanup';
 const worldCupPendingDataCleanupVersion = '1';
 
@@ -121,23 +121,19 @@ export async function importSchedule(
   }
 
   const competition = findCompetitionForAdmin(competitionId);
-  const scheduleSourceUrl = competition?.schedule_source_url.trim() ?? '';
+  const sourceUrl = competition?.odds_source_url.trim() ?? '';
 
-  if (!isValidSourceUrl(scheduleSourceUrl)) {
+  if (!isValidSourceUrl(sourceUrl)) {
     return { status: 'invalid' };
   }
 
-  const importedMatches = await importWorldCupSchedule(scheduleSourceUrl);
-  const scheduleSourceMetadataKey = `${scheduleSourceMetadataKeyPrefix}:${competitionId}`;
-  const previousScheduleSource = await getMetadataValue(scheduleSourceMetadataKey);
-
-  if (previousScheduleSource && previousScheduleSource !== scheduleSourceUrl) {
-    pruneMatchesAfter(0, competitionId);
-  }
-
-  const imported = importMatches(importedMatches, competitionId);
+  const existingMatches = findAdminMatches(competitionId);
+  const importedSchedule = await importOddsPortalSchedule(sourceUrl, existingMatches);
+  importTeams(importedSchedule.teams, competitionId);
+  applyTeamLogosToMatches(competitionId);
+  const imported = importMatches(importedSchedule.matches, competitionId);
+  applyTeamLogosToMatches(competitionId);
   await clearCompetitionPendingData(competitionId);
-  setMetadataValue(scheduleSourceMetadataKey, scheduleSourceUrl);
 
   return {
     status: 'imported',
@@ -491,6 +487,10 @@ const teamNameAliases: Record<string, string> = {
 };
 
 function getPredictionRound(match: MatchRow): string {
+  if (isWeekRoundLabel(match.round_label)) {
+    return match.round_label;
+  }
+
   if (match.match_number <= 24) {
     return 'Group stage - Round 1';
   }
@@ -504,4 +504,8 @@ function getPredictionRound(match: MatchRow): string {
   }
 
   return match.round_label;
+}
+
+function isWeekRoundLabel(label: string): boolean {
+  return /^Week \d+$/.test(label);
 }

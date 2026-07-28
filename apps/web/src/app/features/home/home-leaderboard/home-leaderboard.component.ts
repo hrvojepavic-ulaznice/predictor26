@@ -229,6 +229,10 @@ export class HomeLeaderboardComponent {
     return points === 0 ? '0' : points.toFixed(2);
   }
 
+  protected isImageTeamFlag(flag: string | null): boolean {
+    return typeof flag === 'string' && /^(?:https:\/\/|\/)/i.test(flag);
+  }
+
   private getMatchLabel(match: LeaderboardLiveMatch | LeaderboardComingUpMatch): string {
     return `${this.teamLabel(match.homeTeam)} - ${this.teamLabel(match.awayTeam)}`;
   }
@@ -241,7 +245,9 @@ export class HomeLeaderboardComponent {
       .slice(0, 3)
       .toUpperCase();
 
-    return `${team.flag ?? ''} ${shortName || team.name.slice(0, 3).toUpperCase()}`.trim();
+    const flag = team.flag && !/^(?:https:\/\/|\/)/i.test(team.flag) ? team.flag : '';
+
+    return `${flag} ${shortName || team.name.slice(0, 3).toUpperCase()}`.trim();
   }
 
   private getRoundKey(userId: number, roundLabel: string): string {

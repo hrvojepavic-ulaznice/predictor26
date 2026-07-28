@@ -4,6 +4,7 @@
 /apps/api/dist
 /apps/api/data/*.sqlite
 /apps/api/data/*.sqlite-*
+/apps/api/data/team-logos/
 
 /node_modules
 npm-debug.log*

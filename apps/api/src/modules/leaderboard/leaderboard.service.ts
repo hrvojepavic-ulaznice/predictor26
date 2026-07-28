@@ -974,6 +974,10 @@ function getScoreOutcome(homeScore: number, awayScore: number): '1' | 'X' | '2' 
 }
 
 function getPredictionRound(match: Pick<MatchRow, 'match_number' | 'round_label'>): string {
+  if (isWeekRoundLabel(match.round_label)) {
+    return match.round_label;
+  }
+
   if (match.match_number <= 24) {
     return 'Group stage - Round 1';
   }
@@ -987,6 +991,10 @@ function getPredictionRound(match: Pick<MatchRow, 'match_number' | 'round_label'
   }
 
   return match.round_label;
+}
+
+function isWeekRoundLabel(label: string): boolean {
+  return /^Week \d+$/.test(label);
 }
 
 function isRoundLocked(matches: readonly MatchRow[]): boolean {
