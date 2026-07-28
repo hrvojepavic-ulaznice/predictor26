@@ -141,7 +141,11 @@
               }
               <td class="winner-cell">
                 @if (user.winnerTeam; as winnerTeam) {
-                  <span class="winner-team"><app-team-name [name]="winnerTeam.name" [flag]="winnerTeam.flag" /></span>
+                  @if (isImageTeamFlag(winnerTeam.flag)) {
+                    <img class="winner-logo" [src]="winnerTeam.flag!" [alt]="winnerTeam.name" [title]="winnerTeam.name" width="22" height="22" />
+                  } @else {
+                    <span class="winner-team" [title]="winnerTeam.name">{{ winnerTeam.flag || winnerTeam.name }}</span>
+                  }
                 } @else {
                   <span class="winner-empty">-</span>
                 }

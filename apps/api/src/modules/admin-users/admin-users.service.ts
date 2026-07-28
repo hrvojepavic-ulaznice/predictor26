@@ -155,7 +155,7 @@ export async function changeUsername(
     return { status: 'invalid' };
   }
 
-  const username = input.username.trim();
+  const username = normalizeUsername(input.username);
 
   if (username.length < usernameMinLength || username.length > usernameMaxLength) {
     return { status: 'invalid' };
@@ -251,4 +251,8 @@ function toAdminUserResponse(user: UserRow): AdminUserResponse {
     role: user.role,
     isVerified: user.is_verified === 1
   };
+}
+
+function normalizeUsername(username: string): string {
+  return username.trim().toLowerCase();
 }

@@ -371,7 +371,7 @@ tbody tr:last-child td {
 
 .winner-heading,
 .winner-cell {
-  min-width: 96px;
+  min-width: 72px;
 }
 
 .winner-cell {
@@ -379,9 +379,17 @@ tbody tr:last-child td {
   font-weight: 850;
 }
 
+.winner-logo {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
 .winner-team {
   display: inline-block;
-  max-width: 98px;
+  max-width: 54px;
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: bottom;

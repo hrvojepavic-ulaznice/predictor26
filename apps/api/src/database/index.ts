@@ -3,7 +3,6 @@ import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
 
 import { config } from '../config/index.js';
-import { defaultCompetitionSlug } from '../shared/constants/default-competition.constants.js';
 import { hashPassword } from '../shared/utils/password.js';
 
 let databaseInitialized = false;
@@ -62,6 +61,8 @@ function initializeDatabase(db: Database.Database) {
 
   ensureUsersTableSupportsTiebreaker(db);
   ensureUsersTableSupportsVerification(db);
+  ensureUsersTableUsesLowercaseUsernames(db);
+  ensureUsersTableSupportsCaseInsensitiveUsername(db);
   ensureCompetitionSchema(db);
   ensureSuperAdminCompetitionMembershipBlocked(db);
   ensureMatchesTableSupportsOdds(db);
@@ -207,7 +208,6 @@ function initializeDatabase(db: Database.Database) {
   ensureSuperAdminPredictionsBlocked(db);
   seedRuleTemplates(db);
   seedMissingCompetitionRules(db);
-  seedWorldCupCompetitionTeamsUntilProductionBackfillIsComplete(db);
   ensureCompetitionScopedIndexes(db);
 
   // Older compatibility migrations. These are not specific to the competition layer.
@@ -289,81 +289,6 @@ function ensureCompetitionTeamsTableSupportsGroupName(db: Database.Database) {
     db.exec('ALTER TABLE competition_teams ADD COLUMN group_name TEXT CHECK(group_name IS NULL OR length(group_name) BETWEEN 1 AND 40)');
   }
 }
-
-function normalizeTeamName(value: string): string {
-  return value.trim().toLowerCase().replace(/\s+/g, ' ');
-}
-
-function flagForTeam(teamName: string): string | null {
-  const countryCode = teamCountryCodes[teamName];
-
-  if (!countryCode) {
-    return null;
-  }
-
-  return countryCode
-    .toUpperCase()
-    .split('')
-    .map((letter) => String.fromCodePoint(127397 + letter.charCodeAt(0)))
-    .join('');
-}
-
-function isWorldCupPlaceholderTeamName(teamName: string): boolean {
-  const normalizedName = teamName.trim().toUpperCase();
-
-  return /^[12][A-L]$/.test(normalizedName) || /^3[A-L]{4,5}$/.test(normalizedName) || /^[LW]\d+$/.test(normalizedName);
-}
-
-const teamCountryCodes: Record<string, string> = {
-  Algeria: 'DZ',
-  Argentina: 'AR',
-  Australia: 'AU',
-  Austria: 'AT',
-  Belgium: 'BE',
-  'Bosnia & Herzegovina': 'BA',
-  Brazil: 'BR',
-  Canada: 'CA',
-  'Cape Verde': 'CV',
-  Colombia: 'CO',
-  Croatia: 'HR',
-  'Curaçao': 'CW',
-  Czechia: 'CZ',
-  'DR Congo': 'CD',
-  Ecuador: 'EC',
-  Egypt: 'EG',
-  England: 'GB',
-  France: 'FR',
-  Germany: 'DE',
-  Ghana: 'GH',
-  Haiti: 'HT',
-  Iran: 'IR',
-  Iraq: 'IQ',
-  'Ivory Coast': 'CI',
-  Japan: 'JP',
-  Jordan: 'JO',
-  Mexico: 'MX',
-  Morocco: 'MA',
-  Netherlands: 'NL',
-  'New Zealand': 'NZ',
-  Norway: 'NO',
-  Panama: 'PA',
-  Paraguay: 'PY',
-  Portugal: 'PT',
-  Qatar: 'QA',
-  'Saudi Arabia': 'SA',
-  Scotland: 'GB',
-  Senegal: 'SN',
-  'South Africa': 'ZA',
-  'South Korea': 'KR',
-  Spain: 'ES',
-  Sweden: 'SE',
-  Switzerland: 'CH',
-  Tunisia: 'TN',
-  'Türkiye': 'TR',
-  'United States': 'US',
-  Uruguay: 'UY',
-  Uzbekistan: 'UZ'
-};
 
 function seedRuleTemplates(db: Database.Database) {
   const templates = [
@@ -468,68 +393,6 @@ function seedMissingCompetitionRules(db: Database.Database) {
         )
     `
   ).run();
-}
-
-function seedWorldCupCompetitionTeamsUntilProductionBackfillIsComplete(db: Database.Database) {
-  // TODO remove after production has competition_teams rows for the existing World Cup 2026 competition.
-  const competition = db.prepare('SELECT id FROM competitions WHERE slug = ?').get(defaultCompetitionSlug) as { id: number } | undefined;
-
-  if (!competition) {
-    return;
-  }
-
-  const existingTeams = db
-    .prepare('SELECT normalized_name, display_name FROM competition_teams WHERE competition_id = ?')
-    .all(competition.id) as Array<{ normalized_name: string; display_name: string }>;
-  const deleteTeam = db.prepare('DELETE FROM competition_teams WHERE competition_id = ? AND normalized_name = ?');
-
-  for (const team of existingTeams) {
-    if (isWorldCupPlaceholderTeamName(team.display_name) || isWorldCupPlaceholderTeamName(team.normalized_name)) {
-      deleteTeam.run(competition.id, team.normalized_name);
-    }
-  }
-
-  const rows = db
-    .prepare(
-      `
-        SELECT team_name, MIN(group_name) AS group_name
-        FROM (
-          SELECT home_team_name AS team_name, group_name
-          FROM matches
-          WHERE competition_id = ?
-          UNION ALL
-          SELECT away_team_name AS team_name, group_name
-          FROM matches
-          WHERE competition_id = ?
-        )
-        WHERE team_name IS NOT NULL
-          AND team_name != ''
-        GROUP BY team_name
-      `
-    )
-    .all(competition.id, competition.id) as Array<{ team_name: string; group_name: string | null }>;
-  const statement = db.prepare(
-    `
-      INSERT INTO competition_teams (competition_id, normalized_name, display_name, logo_url, group_name)
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(competition_id, normalized_name) DO UPDATE SET
-        display_name = excluded.display_name,
-        logo_url = CASE
-          WHEN competition_teams.logo_url = '' THEN excluded.logo_url
-          ELSE competition_teams.logo_url
-        END,
-        group_name = COALESCE(competition_teams.group_name, excluded.group_name),
-        updated_at = CURRENT_TIMESTAMP
-    `
-  );
-
-  for (const row of rows) {
-    if (isWorldCupPlaceholderTeamName(row.team_name)) {
-      continue;
-    }
-
-    statement.run(competition.id, normalizeTeamName(row.team_name), row.team_name, flagForTeam(row.team_name) ?? '', row.group_name);
-  }
 }
 
 function ensureCompetitionTableSupportsManagementFields(db: Database.Database) {
@@ -763,6 +626,59 @@ function ensureUsersTableSupportsVerification(db: Database.Database) {
   }
 
   db.exec('ALTER TABLE users ADD COLUMN is_verified INTEGER NOT NULL DEFAULT 0 CHECK(is_verified IN (0, 1))');
+}
+
+function ensureUsersTableUsesLowercaseUsernames(db: Database.Database) {
+  const users = db.prepare('SELECT id, username FROM users').all() as Array<{ id: number; username: string }>;
+  const seenUserIdsByUsername = new Map<string, number>();
+
+  for (const user of users) {
+    const normalizedUsername = normalizeUsername(user.username);
+    const existingUserId = seenUserIdsByUsername.get(normalizedUsername);
+
+    if (existingUserId !== undefined && existingUserId !== user.id) {
+      console.warn(
+        `Skipping lowercase username normalization because duplicate username casing exists for "${normalizedUsername}".`
+      );
+      return;
+    }
+
+    seenUserIdsByUsername.set(normalizedUsername, user.id);
+  }
+
+  const updateUsername = db.prepare('UPDATE users SET username = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND username != ?');
+
+  for (const user of users) {
+    const normalizedUsername = normalizeUsername(user.username);
+    updateUsername.run(normalizedUsername, user.id, normalizedUsername);
+  }
+}
+
+function ensureUsersTableSupportsCaseInsensitiveUsername(db: Database.Database) {
+  const duplicate = db
+    .prepare(
+      `
+        SELECT lower(username) AS normalized_username
+        FROM users
+        GROUP BY normalized_username
+        HAVING COUNT(*) > 1
+        LIMIT 1
+      `
+    )
+    .get() as { normalized_username: string } | undefined;
+
+  if (duplicate) {
+    console.warn(
+      `Skipping case-insensitive username index because duplicate username casing exists for "${duplicate.normalized_username}".`
+    );
+    return;
+  }
+
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_username_nocase_unique ON users(username COLLATE NOCASE)');
+}
+
+function normalizeUsername(username: string): string {
+  return username.trim().toLowerCase();
 }
 
 function ensureMatchesTableSupportsOdds(db: Database.Database) {

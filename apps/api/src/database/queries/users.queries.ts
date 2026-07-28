@@ -31,7 +31,7 @@ export async function getUserByUsername(username: string): Promise<UserRow | und
       `
         SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role, is_verified
         FROM users
-        WHERE username = ?
+        WHERE username = ? COLLATE NOCASE
       `
       )
       .get(username) as UserRow | undefined;

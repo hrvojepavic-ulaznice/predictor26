@@ -68,29 +68,31 @@
             }
           </div>
 
-          @if (canPostPredictions() && isFirstPredictionRound(group)) {
-            <label class="tiebreaker-field">
-              <span>Competition winner</span>
-              <select
-                [value]="activeCompetition()?.tiebreakerName ?? ''"
-                [disabled]="group.locked === true || savingTiebreaker() || tiebreakerOptions().length === 0"
-                (change)="updateTiebreaker($any($event.target).value)"
-              >
-                <option value="" disabled>Choose team</option>
-                @for (team of tiebreakerOptions(); track team) {
-                  <option [value]="team">{{ team }}</option>
-                }
-              </select>
-              <small>{{ savingTiebreaker() ? 'Saving winner pick...' : 'Required before first-round predictions are saved.' }}</small>
-            </label>
-          }
-
           <div class="match-list">
+            @if (canPostPredictions() && isFirstPredictionRound(group)) {
+              <label class="tiebreaker-field">
+                <span>Competition winner</span>
+                <select
+                  [value]="activeCompetition()?.tiebreakerName ?? ''"
+                  [disabled]="group.locked === true || savingTiebreaker() || tiebreakerOptions().length === 0"
+                  (change)="updateTiebreaker($any($event.target).value)"
+                >
+                  <option value="" disabled>Choose team</option>
+                  @for (team of tiebreakerOptions(); track team) {
+                    <option [value]="team">{{ team }}</option>
+                  }
+                </select>
+                <small>{{ savingTiebreaker() ? 'Saving tiebreaker...' : 'Tiebreaker in case of a tie' }}</small>
+              </label>
+            }
+
             @for (section of group.sections; track section.label) {
               <div class="match-section">
-                <div class="section-heading">
-                  <div class="section-badge">{{ section.label }}</div>
-                </div>
+                @if (section.label !== group.label) {
+                  <div class="section-heading">
+                    <div class="section-badge">{{ section.label }}</div>
+                  </div>
+                }
 
                 @for (match of section.matches; track match.id) {
                   <article class="match-row">

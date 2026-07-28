@@ -1,5 +1,5 @@
 <header class="site-header">
-  <a class="brand" routerLink="/" [state]="{ showCompetitionList: true }" aria-label="Predictor26 home">
+  <a class="brand" [routerLink]="brandRouterLink()" [state]="brandState()" aria-label="Predictor26 home">
     <img class="brand-icon" src="icons/predictor26-icon.svg" alt="" width="34" height="34" />
     <span class="brand-name">Predictor26</span>
   </a>

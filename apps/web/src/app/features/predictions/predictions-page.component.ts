@@ -99,9 +99,7 @@ export class PredictionsPageComponent {
   }
 
   protected isFirstPredictionRound(group: MatchGroup): boolean {
-    return group.sections.some((section) =>
-      section.matches.some((match) => match.predictionRound === firstPredictionRoundLabel)
-    );
+    return group.sections.some((section) => section.matches.some((match) => isFirstPredictionRoundLabel(match.predictionRound)));
   }
 
   protected updateTiebreaker(value: string): void {
@@ -263,11 +261,6 @@ export class PredictionsPageComponent {
       return;
     }
 
-    if (match.predictionRound === firstPredictionRoundLabel && !this.activeCompetition()?.tiebreakerName) {
-      this.errorMessage.set('Choose your competition winner before saving first-round predictions.');
-      return;
-    }
-
     if (match.prediction?.home === draft.home && match.prediction.away === draft.away) {
       return;
     }
@@ -308,7 +301,9 @@ export class PredictionsPageComponent {
   }
 }
 
-const firstPredictionRoundLabel = 'Group stage - Round 1';
+function isFirstPredictionRoundLabel(label: string): boolean {
+  return label === 'Group stage - Round 1' || label === 'Week 1';
+}
 
 function groupMatches(matches: readonly MatchWithPrediction[], sortMode: MatchSortMode): MatchGroup[] {
   return sortMode === 'groups' ? groupMatchesByGroups(matches) : groupMatchesByRounds(matches);

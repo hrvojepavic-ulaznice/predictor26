@@ -12,7 +12,6 @@ import {
 import { AppStateService } from '@core/state/app-state.service';
 import { LeaderboardService } from '@services/leaderboard.service';
 import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
-import { TeamNameComponent } from '@shared/components/team-name/team-name.component';
 import { LeaderboardRoundModalComponent } from './leaderboard-round-modal.component';
 
 interface LeaderboardLivePredictionView extends LeaderboardLivePrediction {
@@ -59,7 +58,7 @@ interface SelectedLeaderboardRound {
 
 @Component({
   selector: 'app-home-leaderboard',
-  imports: [LeaderboardRoundModalComponent, ModalShellComponent, TeamNameComponent],
+  imports: [LeaderboardRoundModalComponent, ModalShellComponent],
   templateUrl: './home-leaderboard.component.html',
   styleUrl: './home-leaderboard.component.scss'
 })
@@ -228,6 +227,10 @@ export class HomeLeaderboardComponent {
 
   protected formatPoints(points: number): string {
     return points === 0 ? '0' : points.toFixed(2);
+  }
+
+  protected isImageTeamFlag(flag: string | null): boolean {
+    return typeof flag === 'string' && /^(?:https:\/\/|\/)/i.test(flag);
   }
 
   private getMatchLabel(match: LeaderboardLiveMatch | LeaderboardComingUpMatch): string {

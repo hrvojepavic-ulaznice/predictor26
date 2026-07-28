@@ -77,11 +77,6 @@ export async function savePredictionController(
       return;
     }
 
-    if (result.status === 'missing_tiebreaker') {
-      res.status(409).json({ message: 'Choose your competition winner before saving first-round predictions.' });
-      return;
-    }
-
     res.json(result.prediction);
   } catch (error) {
     next(error);

@@ -487,6 +487,10 @@ const teamNameAliases: Record<string, string> = {
 };
 
 function getPredictionRound(match: MatchRow): string {
+  if (isWeekRoundLabel(match.round_label)) {
+    return match.round_label;
+  }
+
   if (match.match_number <= 24) {
     return 'Group stage - Round 1';
   }
@@ -500,4 +504,8 @@ function getPredictionRound(match: MatchRow): string {
   }
 
   return match.round_label;
+}
+
+function isWeekRoundLabel(label: string): boolean {
+  return /^Week \d+$/.test(label);
 }

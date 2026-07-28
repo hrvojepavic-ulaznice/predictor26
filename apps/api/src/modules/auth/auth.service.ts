@@ -32,7 +32,7 @@ export async function login(credentials: Partial<LoginRequest> | undefined): Pro
     return null;
   }
 
-  const username = credentials.username.trim();
+  const username = normalizeUsername(credentials.username);
   const password = credentials.password;
 
   if (
@@ -85,7 +85,7 @@ export async function register(input: Partial<RegisterRequest> | undefined): Pro
     return { status: 'invalid' };
   }
 
-  const username = input.username.trim();
+  const username = normalizeUsername(input.username);
   const name = input.name.trim();
   const lastname = input.lastname.trim();
   const password = input.password;
@@ -141,4 +141,8 @@ function toAuthUserResponse(user: UserRow): AuthUserResponse {
     role: user.role,
     isVerified: user.is_verified === 1
   };
+}
+
+function normalizeUsername(username: string): string {
+  return username.trim().toLowerCase();
 }
