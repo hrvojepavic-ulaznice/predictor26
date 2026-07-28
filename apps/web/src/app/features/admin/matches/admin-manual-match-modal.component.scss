@@ -1,0 +1,213 @@
+.manual-match-form {
+  display: grid;
+}
+
+.modal-header,
+.modal-footer {
+  display: flex;
+  align-items: center;
+  padding: 18px 20px;
+}
+
+.modal-header {
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #111827;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.modal-content {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px 8px;
+}
+
+.form-grid,
+.team-grid,
+.odds-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.form-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.75fr);
+}
+
+.form-grid .field:last-child {
+  grid-column: 1 / -1;
+}
+
+.team-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.odds-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+fieldset {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+legend {
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0 4px;
+}
+
+.segmented-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.segmented-options label,
+.toggle-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.segmented-options label {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span {
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  padding: 11px 12px;
+}
+
+.field input[type='file'] {
+  padding: 9px 10px;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: #111827;
+  outline: 2px solid #d1d5db;
+  outline-offset: 1px;
+}
+
+.field input.form-field-invalid,
+.field select.form-field-invalid {
+  border-color: #dc2626;
+}
+
+.field input.form-field-invalid:focus,
+.field select.form-field-invalid:focus {
+  border-color: #dc2626;
+  outline-color: #fecaca;
+}
+
+.form-error {
+  min-height: 1.2em;
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  opacity: 0;
+}
+
+.form-error-visible {
+  opacity: 1;
+}
+
+.file-name {
+  margin: -2px 0 0;
+  color: #4b5563;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-footer {
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.secondary-button,
+.confirm-button {
+  min-width: 104px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 14px;
+}
+
+.secondary-button {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.confirm-button {
+  background: #111827;
+  color: #ffffff;
+}
+
+button:disabled,
+input[readonly],
+input:disabled,
+select:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+@media (max-width: 640px) {
+  .form-grid,
+  .team-grid,
+  .odds-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -4,6 +4,8 @@ import { inject, Injectable } from '@angular/core';
 import {
   AdminActionSecretRequest,
   AdminMatchesResponse,
+  CreateManualMatchRequest,
+  CreateManualMatchResponse,
   ImportMatchesResponse,
   SyncMatchOddsResponse,
   UpdateFinalScoreRequest,
@@ -22,6 +24,10 @@ export class AdminMatchesApiProvider {
 
   getMatches() {
     return this.http.get<AdminMatchesResponse>('/api/admin/matches');
+  }
+
+  createMatch(request: CreateManualMatchRequest) {
+    return this.http.post<CreateManualMatchResponse>('/api/admin/matches', request);
   }
 
   importMatches(request: AdminActionSecretRequest) {

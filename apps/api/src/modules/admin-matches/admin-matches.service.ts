@@ -1,8 +1,15 @@
+import { createHash } from 'node:crypto';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { MatchOddsInput, MatchRow } from '../../database/queries/matches.queries.js';
+import { config } from '../../config/index.js';
 import { verifyPassword } from '../../shared/utils/password.js';
 import { MatchResponse } from '../matches/matches.interfaces.js';
 import {
   AdminActionSecretRequest,
+  CreateManualMatchRequest,
+  CreateManualMatchResponse,
   AdminMatchesResponse,
   ImportMatchesResponse,
   SyncMatchOddsResponse,
@@ -17,6 +24,7 @@ import {
   findAdminMatches,
   findSuperAdminForSecretCode,
   getMetadataValue,
+  addManualMatch,
   applyTeamLogosToMatches,
   importMatches,
   importTeams,
@@ -58,6 +66,13 @@ export type SyncOddsResult =
   | {
       readonly status: 'synced';
       readonly response: SyncMatchOddsResponse;
+    }
+  | Exclude<SecretCodeResult, { readonly status: 'valid' }>;
+
+export type CreateManualMatchResult =
+  | {
+      readonly status: 'created';
+      readonly response: CreateManualMatchResponse;
     }
   | Exclude<SecretCodeResult, { readonly status: 'valid' }>;
 
@@ -107,6 +122,74 @@ export type UpdatePlayoffMappingResult =
 export async function getAdminMatches(competitionId: number): Promise<AdminMatchesResponse> {
   return {
     matches: findAdminMatches(competitionId).map(toMatchResponse)
+  };
+}
+
+export async function createManualMatch(
+  competitionId: number,
+  input: Partial<CreateManualMatchRequest> | undefined
+): Promise<CreateManualMatchResult> {
+  if (
+    (input?.weekMode !== 'current' && input?.weekMode !== 'next') ||
+    typeof input.kickoffAt !== 'string' ||
+    !isValidIsoDate(input.kickoffAt) ||
+    !isValidVenuePart(input.city, 80) ||
+    !isValidVenuePart(input.venue, 120) ||
+    !isValidTeamName(input.homeTeamName) ||
+    !isValidTeamName(input.awayTeamName) ||
+    normalizeTeamName(input.homeTeamName) === normalizeTeamName(input.awayTeamName) ||
+    !isValidNullableLogoDataUrl(input.homeTeamLogoDataUrl) ||
+    !isValidNullableLogoDataUrl(input.awayTeamLogoDataUrl) ||
+    !isValidOddsValue(input.homeWinOdds) ||
+    !isValidOddsValue(input.drawOdds) ||
+    !isValidOddsValue(input.awayWinOdds)
+  ) {
+    return { status: 'invalid' };
+  }
+
+  const secretCodeResult = await validateSecretCode(input);
+
+  if (secretCodeResult.status !== 'valid') {
+    return secretCodeResult;
+  }
+
+  const homeTeamFlag = saveManualTeamLogo(input.homeTeamName, input.homeTeamLogoDataUrl);
+  const awayTeamFlag = saveManualTeamLogo(input.awayTeamName, input.awayTeamLogoDataUrl);
+
+  if (homeTeamFlag === false || awayTeamFlag === false) {
+    return { status: 'invalid' };
+  }
+
+  const matches = findAdminMatches(competitionId);
+  const nextMatchNumber = Math.max(0, ...matches.map((match) => match.match_number)) + 1;
+  const currentWeekNumber = Math.max(1, ...matches.map((match) => weekNumber(match.round_label)).filter((week) => week > 0));
+  const weekNumberForMatch = input.weekMode === 'next' ? currentWeekNumber + 1 : currentWeekNumber;
+  const match = addManualMatch(competitionId, {
+    matchNumber: nextMatchNumber,
+    roundLabel: `Week ${weekNumberForMatch}`,
+    kickoffAt: input.kickoffAt,
+    sourceTimeZone: 'Europe/Zagreb',
+    homeTeamName: input.homeTeamName.trim(),
+    homeTeamFlag,
+    awayTeamName: input.awayTeamName.trim(),
+    awayTeamFlag,
+    venue: input.venue.trim(),
+    city: input.city.trim(),
+    homeWinOdds: input.homeWinOdds,
+    drawOdds: input.drawOdds,
+    awayWinOdds: input.awayWinOdds
+  });
+
+  if (!match) {
+    return { status: 'invalid' };
+  }
+
+  return {
+    status: 'created',
+    response: {
+      match: toMatchResponse(match),
+      matches: findAdminMatches(competitionId).map(toMatchResponse)
+    }
   };
 }
 
@@ -204,6 +287,65 @@ function isValidSourceUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+function isValidTeamName(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length >= 1 && value.trim().length <= 80;
+}
+
+function isValidNullableLogoDataUrl(value: unknown): value is string | null | undefined {
+  if (value === null || value === undefined || value === '') {
+    return true;
+  }
+
+  if (typeof value !== 'string' || value.length > 450_000) {
+    return false;
+  }
+
+  return /^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/]+=*$/i.test(value);
+}
+
+function saveManualTeamLogo(teamName: string, logoDataUrl: string | null | undefined): string | null | false {
+  if (!logoDataUrl) {
+    return null;
+  }
+
+  const match = /^data:image\/(png|jpeg|webp);base64,([a-z0-9+/]+=*)$/i.exec(logoDataUrl);
+
+  if (!match) {
+    return false;
+  }
+
+  const extension = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
+  const buffer = Buffer.from(match[2], 'base64');
+
+  if (buffer.length < 1 || buffer.length > 300_000) {
+    return false;
+  }
+
+  const slug = slugifyTeamName(teamName);
+  const hash = createHash('sha256').update(buffer).digest('hex').slice(0, 16);
+  const fileName = `${slug}-${hash}.${extension}`;
+
+  mkdirSync(config.teamLogoAssetsPath, { recursive: true });
+  writeFileSync(join(config.teamLogoAssetsPath, fileName), buffer);
+
+  return `/api/assets/team-logos/${fileName}`;
+}
+
+function slugifyTeamName(teamName: string): string {
+  const slug = teamName
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return slug || 'team';
+}
+
+function isValidOddsValue(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 1 && value <= 1000;
 }
 
 async function validateSecretCode(input: Partial<AdminActionSecretRequest> | undefined): Promise<SecretCodeResult> {
@@ -372,6 +514,12 @@ function isValidIsoDate(value: string): boolean {
 
 function isValidVenuePart(value: unknown, maxLength: number): value is string {
   return typeof value === 'string' && value.trim().length >= 1 && value.trim().length <= maxLength;
+}
+
+function weekNumber(roundLabel: string): number {
+  const match = /^Week (\d+)$/.exec(roundLabel);
+
+  return match ? Number(match[1]) : 0;
 }
 
 function isValidNullableTeamName(value: unknown): value is string | null {

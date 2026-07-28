@@ -7,6 +7,9 @@
     </div>
 
     <div class="header-actions">
+      <button class="import-button" type="button" [disabled]="addingMatch()" (click)="openAddMatchModal()">
+        {{ addingMatch() ? 'Adding...' : 'Add match' }}
+      </button>
       <button class="import-button" type="button" [disabled]="importing()" (click)="requestImportMatches()">
         {{ scheduleActionLabel() }}
       </button>
@@ -154,6 +157,25 @@
         [isSubmitting]="isPendingSecretActionSubmitting()"
         (confirmSecretCode)="confirmSecretAction($event)"
         (cancelModal)="cancelSecretAction()"
+      />
+    </app-modal-shell>
+  }
+
+  @if (addMatchModalOpen()) {
+    <app-modal-shell
+      labelledBy="manual-match-modal-title"
+      panelWidth="720px"
+      [closeOnBackdrop]="false"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelAddMatch()"
+    >
+      <app-admin-manual-match-modal
+        [existingTeamNames]="existingTeamNames()"
+        [errorMessage]="addMatchErrorMessage()"
+        [isSubmitting]="addingMatch()"
+        (confirmManualMatch)="confirmAddMatch($event)"
+        (cancelModal)="cancelAddMatch()"
       />
     </app-modal-shell>
   }

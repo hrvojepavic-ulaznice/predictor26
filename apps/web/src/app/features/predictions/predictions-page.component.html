@@ -73,13 +73,13 @@
               <label class="tiebreaker-field">
                 <span>Competition winner</span>
                 <select
-                  [value]="activeCompetition()?.tiebreakerName ?? ''"
+                  [value]="selectedTiebreakerName()"
                   [disabled]="group.locked === true || savingTiebreaker() || tiebreakerOptions().length === 0"
                   (change)="updateTiebreaker($any($event.target).value)"
                 >
-                  <option value="" disabled>Choose team</option>
+                  <option value="" disabled [selected]="selectedTiebreakerName() === ''">Choose team</option>
                   @for (team of tiebreakerOptions(); track team) {
-                    <option [value]="team">{{ team }}</option>
+                    <option [value]="team" [selected]="team === selectedTiebreakerName()">{{ team }}</option>
                   }
                 </select>
                 <small>{{ savingTiebreaker() ? 'Saving tiebreaker...' : 'Tiebreaker in case of a tie' }}</small>

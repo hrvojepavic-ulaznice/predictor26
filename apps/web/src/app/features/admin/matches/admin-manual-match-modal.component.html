@@ -1,0 +1,146 @@
+<form class="manual-match-form" [formGroup]="matchForm" (ngSubmit)="confirm()">
+  <header class="modal-header">
+    <h2 id="manual-match-modal-title">Add match</h2>
+    <button class="icon-button" type="button" aria-label="Close" [disabled]="isSubmitting()" (click)="cancel()">×</button>
+  </header>
+
+  <div class="modal-content">
+    <fieldset>
+      <legend>Week</legend>
+      <div class="segmented-options">
+        <label>
+          <input type="radio" value="current" formControlName="weekMode" />
+          <span>Current week</span>
+        </label>
+        <label>
+          <input type="radio" value="next" formControlName="weekMode" />
+          <span>Next week</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="form-grid">
+      <label class="field">
+        <span>Match date and time</span>
+        <input type="datetime-local" appFormFieldState="invalid" formControlName="kickoffAt" [readonly]="isSubmitting()" />
+      </label>
+
+      <label class="field">
+        <span>City</span>
+        <input type="text" maxlength="80" appFormFieldState="invalid" formControlName="city" [readonly]="isSubmitting()" />
+      </label>
+
+      <label class="field">
+        <span>Venue</span>
+        <input type="text" maxlength="120" appFormFieldState="invalid" formControlName="venue" [readonly]="isSubmitting()" />
+      </label>
+    </div>
+
+    <div class="team-grid">
+      <fieldset>
+        <legend>Home team</legend>
+        <label class="toggle-row">
+          <input type="checkbox" formControlName="homeUseNewTeam" />
+          <span>Add new team</span>
+        </label>
+
+        @if (matchForm.controls.homeUseNewTeam.value) {
+          <label class="field">
+            <span>Team name</span>
+            <input type="text" maxlength="80" appFormFieldState="invalid" formControlName="homeNewTeam" [readonly]="isSubmitting()" />
+          </label>
+          <label class="field">
+            <span>Logo</span>
+            <input type="file" accept="image/png,image/jpeg,image/webp" [disabled]="isSubmitting()" (change)="onLogoSelected('home', $event)" />
+          </label>
+          @if (homeLogoFileName()) {
+            <p class="file-name">{{ homeLogoFileName() }}</p>
+          }
+        } @else {
+          <label class="field">
+            <span>Team</span>
+            <select appFormFieldState="invalid" formControlName="homeExistingTeam" [disabled]="isSubmitting()">
+              <option value="">Choose team</option>
+              @for (teamName of sortedTeamNames(); track teamName) {
+                <option [value]="teamName">{{ teamName }}</option>
+              }
+            </select>
+          </label>
+        }
+      </fieldset>
+
+      <fieldset>
+        <legend>Away team</legend>
+        <label class="toggle-row">
+          <input type="checkbox" formControlName="awayUseNewTeam" />
+          <span>Add new team</span>
+        </label>
+
+        @if (matchForm.controls.awayUseNewTeam.value) {
+          <label class="field">
+            <span>Team name</span>
+            <input type="text" maxlength="80" appFormFieldState="invalid" formControlName="awayNewTeam" [readonly]="isSubmitting()" />
+          </label>
+          <label class="field">
+            <span>Logo</span>
+            <input type="file" accept="image/png,image/jpeg,image/webp" [disabled]="isSubmitting()" (change)="onLogoSelected('away', $event)" />
+          </label>
+          @if (awayLogoFileName()) {
+            <p class="file-name">{{ awayLogoFileName() }}</p>
+          }
+        } @else {
+          <label class="field">
+            <span>Team</span>
+            <select appFormFieldState="invalid" formControlName="awayExistingTeam" [disabled]="isSubmitting()">
+              <option value="">Choose team</option>
+              @for (teamName of sortedTeamNames(); track teamName) {
+                <option [value]="teamName">{{ teamName }}</option>
+              }
+            </select>
+          </label>
+        }
+      </fieldset>
+    </div>
+
+    <fieldset>
+      <legend>Odds</legend>
+      <div class="odds-grid">
+        <label class="field">
+          <span>1</span>
+          <input type="text" inputmode="decimal" appFormFieldState="invalid" formControlName="homeWinOdds" [readonly]="isSubmitting()" />
+        </label>
+        <label class="field">
+          <span>X</span>
+          <input type="text" inputmode="decimal" appFormFieldState="invalid" formControlName="drawOdds" [readonly]="isSubmitting()" />
+        </label>
+        <label class="field">
+          <span>2</span>
+          <input type="text" inputmode="decimal" appFormFieldState="invalid" formControlName="awayWinOdds" [readonly]="isSubmitting()" />
+        </label>
+      </div>
+    </fieldset>
+
+    <label class="field">
+      <span>What is the secret code?</span>
+      <input
+        type="password"
+        autocomplete="current-password"
+        maxlength="128"
+        appFormFieldState="required"
+        formControlName="secretCode"
+        [readonly]="isSubmitting()"
+      />
+    </label>
+
+    <p class="form-error" [class.form-error-visible]="logoErrorMessage() || errorMessage()">
+      {{ logoErrorMessage() || errorMessage() || '&nbsp;' }}
+    </p>
+  </div>
+
+  <footer class="modal-footer">
+    <button class="secondary-button" type="button" [disabled]="isSubmitting()" (click)="cancel()">Cancel</button>
+    <button class="confirm-button" type="submit" [disabled]="isSubmitting() || matchForm.invalid">
+      {{ isSubmitting() ? 'Saving...' : 'Add match' }}
+    </button>
+  </footer>
+</form>

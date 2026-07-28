@@ -8,6 +8,27 @@ export interface AdminActionSecretRequest {
   readonly secretCode: string;
 }
 
+export type ManualMatchWeekMode = 'current' | 'next';
+
+export interface CreateManualMatchRequest extends AdminActionSecretRequest {
+  readonly weekMode: ManualMatchWeekMode;
+  readonly kickoffAt: string;
+  readonly city: string;
+  readonly venue: string;
+  readonly homeTeamName: string;
+  readonly homeTeamLogoDataUrl?: string | null;
+  readonly awayTeamName: string;
+  readonly awayTeamLogoDataUrl?: string | null;
+  readonly homeWinOdds: number;
+  readonly drawOdds: number;
+  readonly awayWinOdds: number;
+}
+
+export interface CreateManualMatchResponse {
+  readonly match: MatchResponse;
+  readonly matches: MatchResponse[];
+}
+
 export interface ImportMatchesResponse {
   readonly imported: number;
   readonly matches: MatchResponse[];

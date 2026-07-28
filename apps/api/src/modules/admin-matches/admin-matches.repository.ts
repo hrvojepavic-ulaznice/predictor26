@@ -4,6 +4,8 @@ import {
   deleteMatchesAfterMatchNumber,
   deletePredictionsBeforeKickoff,
   listMatches,
+  insertManualMatch,
+  ManualMatchInput,
   MatchOddsInput,
   MatchImportInput,
   TeamImportInput,
@@ -32,6 +34,10 @@ export function importMatches(matches: readonly MatchImportInput[], competitionI
 
 export function importTeams(teams: readonly TeamImportInput[], competitionId: number) {
   upsertCompetitionTeams(competitionId, teams);
+}
+
+export function addManualMatch(competitionId: number, match: ManualMatchInput) {
+  return insertManualMatch(competitionId, match);
 }
 
 export function applyTeamLogosToMatches(competitionId: number) {

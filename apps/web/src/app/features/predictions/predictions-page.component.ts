@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
 
@@ -54,6 +54,7 @@ export class PredictionsPageComponent {
   protected readonly matches = this.matchesService.matches;
   protected readonly drafts = signal<Record<number, ScoreDraft>>({});
   protected readonly tiebreakerOptions = signal<string[]>([]);
+  protected readonly selectedTiebreakerName = signal('');
   protected readonly savingTiebreaker = signal(false);
   protected readonly loading = signal(true);
   protected readonly savingIds = signal<ReadonlySet<number>>(new Set<number>());
@@ -88,6 +89,10 @@ export class PredictionsPageComponent {
   private readonly saveTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
   constructor() {
+    effect(() => {
+      this.selectedTiebreakerName.set(this.activeCompetition()?.tiebreakerName ?? '');
+    });
+
     interval(60_000)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
@@ -118,6 +123,7 @@ export class PredictionsPageComponent {
 
     this.competitionsService.updateTiebreaker(tiebreakerName).subscribe({
       next: () => {
+        this.selectedTiebreakerName.set(tiebreakerName);
         this.lastSavedMessage.set(`Saved winner pick: ${tiebreakerName}.`);
         this.savingTiebreaker.set(false);
       },
