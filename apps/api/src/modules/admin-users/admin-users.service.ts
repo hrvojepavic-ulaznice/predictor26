@@ -127,7 +127,7 @@ export async function changeUserRole(
     return { status: 'protected_role' };
   }
 
-  const user = await setUserRole(userId, input.role);
+  const user = await setUserRole(userId, competitionId, input.role);
 
   if (!user) {
     return { status: 'not_found' };

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { requireRoles } from '../../shared/middleware/require-auth.middleware.js';
+import { requireAuth } from '../../shared/middleware/require-auth.middleware.js';
 import {
   getAdminUsersController,
   updateUsernameController,
@@ -10,7 +10,7 @@ import {
 
 export const adminUsersRoutes = Router();
 
-adminUsersRoutes.use('/admin/users', requireRoles(['super_admin', 'admin']));
+adminUsersRoutes.use('/admin/users', requireAuth);
 adminUsersRoutes.get('/admin/users', getAdminUsersController);
 adminUsersRoutes.patch('/admin/users/:userId/role', updateUserRoleController);
 adminUsersRoutes.patch('/admin/users/:userId/username', updateUsernameController);

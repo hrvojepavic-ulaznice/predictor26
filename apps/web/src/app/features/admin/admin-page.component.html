@@ -4,18 +4,20 @@
     <h1 id="admin-title">Admin tools</h1>
   </header>
 
-  <nav class="admin-tool-grid" aria-label="Admin tools">
-    <a class="tool-card" routerLink="/admin/settings">
-      <span class="tool-icon tool-icon-calendar" aria-hidden="true">
-        <span></span>
-        <span></span>
-      </span>
-      <span class="tool-content">
-        <span class="tool-title">Settings</span>
-        <span class="tool-description">Manage global app settings.</span>
-      </span>
-    </a>
-  </nav>
+  @if (isSuperAdmin()) {
+    <nav class="admin-tool-grid" aria-label="Admin tools">
+      <a class="tool-card" routerLink="/admin/settings">
+        <span class="tool-icon tool-icon-calendar" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </span>
+        <span class="tool-content">
+          <span class="tool-title">Settings</span>
+          <span class="tool-description">Manage global app settings.</span>
+        </span>
+      </a>
+    </nav>
+  }
 
   <section class="competition-picker" aria-labelledby="admin-competition-picker-title">
     <div class="picker-heading">
@@ -23,15 +25,17 @@
         <h2 id="admin-competition-picker-title">Competitions</h2>
         <p>Choose a competition to manage its users, matches, payments, jobs, notifications, and source settings.</p>
       </div>
-      <button
-        class="add-competition-button"
-        type="button"
-        aria-label="Create competition"
-        [disabled]="loadingRuleTemplates()"
-        (click)="openCreateCompetitionModal()"
-      >
-        +
-      </button>
+      @if (isSuperAdmin()) {
+        <button
+          class="add-competition-button"
+          type="button"
+          aria-label="Create competition"
+          [disabled]="loadingRuleTemplates()"
+          (click)="openCreateCompetitionModal()"
+        >
+          +
+        </button>
+      }
     </div>
 
     @if (createSuccessMessage(); as message) {

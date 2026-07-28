@@ -21,10 +21,12 @@ import {
   findCompetitionBySlug,
   findCompetitionForUser,
   findCompetitionForAdmin,
+  findCompetitionForAdminUser,
   findCompetitionRules,
   findCompetitionTeams,
   findCompetitionsForUser,
   findCompetitionsForAdmin,
+  findCompetitionsForAdminUser,
   findDefaultCompetition,
   findDefaultCompetitionForUser,
   joinCompetitionForUser,
@@ -103,7 +105,13 @@ export async function getCompetitionsForUser(userId: number, role: UserRole): Pr
   };
 }
 
-export async function getCompetitionsForAdmin(): Promise<CompetitionsResponse> {
+export async function getCompetitionsForAdmin(userId?: number, role: UserRole = 'super_admin'): Promise<CompetitionsResponse> {
+  if (role !== 'super_admin' && userId !== undefined) {
+    return {
+      competitions: findCompetitionsForAdminUser(userId).map(toCompetitionResponse)
+    };
+  }
+
   return {
     competitions: findCompetitionsForAdmin().map(toCompetitionResponse)
   };
@@ -194,7 +202,11 @@ export async function resolveCompetitionIdForAdmin(
     return findCompetitionsForAdmin()[0]?.id ?? null;
   }
 
-  return resolveCompetitionIdForViewer(userId, role, competitionId);
+  if (competitionId !== null) {
+    return findCompetitionForAdminUser(userId, competitionId)?.id ?? null;
+  }
+
+  return findCompetitionsForAdminUser(userId)[0]?.id ?? null;
 }
 
 export async function updateTiebreakerForUser(

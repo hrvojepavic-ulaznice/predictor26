@@ -109,6 +109,80 @@ export function listCompetitions(): CompetitionRow[] {
   }
 }
 
+export function listCompetitionsForAdminUser(userId: number): CompetitionRow[] {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+          SELECT
+            competitions.id,
+            competitions.name,
+            competitions.slug,
+            competitions.passcode_hash,
+            competitions.logo_url,
+            competitions.schedule_source_url,
+            competitions.odds_source_url,
+            competitions.notification_reminders_enabled,
+            competitions.live_score_sync_enabled,
+            competitions.is_archived,
+            competitions.is_finished,
+            1 AS is_joined,
+            competition_users.tiebreaker_name
+          FROM competitions
+          INNER JOIN competition_users ON competition_users.competition_id = competitions.id
+          INNER JOIN users ON users.id = competition_users.user_id
+          WHERE competition_users.user_id = ?
+            AND competition_users.role = 'admin'
+            AND users.role != 'super_admin'
+            AND competitions.is_archived = 0
+          ORDER BY competitions.name COLLATE NOCASE ASC
+        `
+      )
+      .all(userId) as CompetitionRow[];
+  } finally {
+    db.close();
+  }
+}
+
+export function getCompetitionForAdminUser(userId: number, competitionId: number): CompetitionRow | undefined {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+          SELECT
+            competitions.id,
+            competitions.name,
+            competitions.slug,
+            competitions.passcode_hash,
+            competitions.logo_url,
+            competitions.schedule_source_url,
+            competitions.odds_source_url,
+            competitions.notification_reminders_enabled,
+            competitions.live_score_sync_enabled,
+            competitions.is_archived,
+            competitions.is_finished,
+            1 AS is_joined,
+            competition_users.tiebreaker_name
+          FROM competitions
+          INNER JOIN competition_users ON competition_users.competition_id = competitions.id
+          INNER JOIN users ON users.id = competition_users.user_id
+          WHERE competition_users.user_id = ?
+            AND competitions.id = ?
+            AND competition_users.role = 'admin'
+            AND users.role != 'super_admin'
+            AND competitions.is_archived = 0
+        `
+      )
+      .get(userId, competitionId) as CompetitionRow | undefined;
+  } finally {
+    db.close();
+  }
+}
+
 export function getCompetitionById(competitionId: number): CompetitionRow | undefined {
   const db = openDatabase();
 

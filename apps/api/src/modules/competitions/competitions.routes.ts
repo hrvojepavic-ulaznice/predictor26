@@ -25,16 +25,16 @@ competitionsRoutes.get('/competitions/current/teams', requireAuth, getCompetitio
 competitionsRoutes.get('/competitions/:competitionId/rules', requireAuth, getCompetitionRulesByIdController);
 competitionsRoutes.post('/competitions/:competitionId/join', requireAuth, joinCompetitionController);
 competitionsRoutes.put('/competitions/current/tiebreaker', requireAuth, updateCompetitionTiebreakerController);
-competitionsRoutes.get('/admin/competitions', requireRoles(['super_admin', 'admin']), getAdminCompetitionsController);
-competitionsRoutes.post('/admin/competitions', requireRoles(['super_admin', 'admin']), createAdminCompetitionController);
-competitionsRoutes.get('/admin/rule-templates', requireRoles(['super_admin', 'admin']), getAdminRuleTemplatesController);
+competitionsRoutes.get('/admin/competitions', requireAuth, getAdminCompetitionsController);
+competitionsRoutes.post('/admin/competitions', requireRoles(['super_admin']), createAdminCompetitionController);
+competitionsRoutes.get('/admin/rule-templates', requireAuth, getAdminRuleTemplatesController);
 competitionsRoutes.get(
   '/admin/competitions/current/settings',
-  requireRoles(['super_admin', 'admin']),
+  requireAuth,
   getAdminCompetitionSettingsController
 );
 competitionsRoutes.patch(
   '/admin/competitions/current/settings',
-  requireRoles(['super_admin', 'admin']),
+  requireAuth,
   updateAdminCompetitionSettingsController
 );

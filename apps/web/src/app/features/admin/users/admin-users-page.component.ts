@@ -100,7 +100,7 @@ export class AdminUsersPageComponent {
         this.users.update((users) =>
           users.map((currentUser) => (currentUser.id === updatedUser.id ? updatedUser : currentUser))
         );
-        this.appState.updateCurrentUser(updatedUser);
+        this.updateCurrentUserIfNeeded(updatedUser);
         this.pendingRoleChange.set(null);
         this.setUpdating(user.id, false);
 
@@ -156,7 +156,7 @@ export class AdminUsersPageComponent {
         this.users.update((users) =>
           users.map((currentUser) => (currentUser.id === updatedUser.id ? updatedUser : currentUser))
         );
-        this.appState.updateCurrentUser(updatedUser);
+        this.updateCurrentUserIfNeeded(updatedUser);
         this.pendingVerificationChange.set(null);
         this.setUpdating(user.id, false);
       },
@@ -207,7 +207,7 @@ export class AdminUsersPageComponent {
         this.users.update((users) =>
           users.map((currentUser) => (currentUser.id === updatedUser.id ? updatedUser : currentUser))
         );
-        this.appState.updateCurrentUser(updatedUser);
+        this.updateCurrentUserIfNeeded(updatedUser);
         this.pendingUsernameChange.set(null);
         this.setUpdating(user.id, false);
       },
@@ -263,5 +263,11 @@ export class AdminUsersPageComponent {
 
       return nextUserIds;
     });
+  }
+
+  private updateCurrentUserIfNeeded(user: AdminUser): void {
+    if (this.appState.currentUser()?.id === user.id) {
+      this.appState.updateCurrentUser(user);
+    }
   }
 }

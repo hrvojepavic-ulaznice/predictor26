@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { requireRoles } from '../../shared/middleware/require-auth.middleware.js';
+import { requireAuth } from '../../shared/middleware/require-auth.middleware.js';
 import {
   getAdminPaymentSettingsController,
   updateAdminPaymentSettingsController
@@ -8,6 +8,6 @@ import {
 
 export const adminPaymentsRoutes = Router();
 
-adminPaymentsRoutes.use('/admin/payments', requireRoles(['super_admin', 'admin']));
+adminPaymentsRoutes.use('/admin/payments', requireAuth);
 adminPaymentsRoutes.get('/admin/payments', getAdminPaymentSettingsController);
 adminPaymentsRoutes.put('/admin/payments', updateAdminPaymentSettingsController);

@@ -30,9 +30,9 @@ export async function getCompetitionsController(req: Request, res: Response, nex
   }
 }
 
-export async function getAdminCompetitionsController(_req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getAdminCompetitionsController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    res.json(await getCompetitionsForAdmin());
+    res.json(await getCompetitionsForAdmin(req.authUser!.id, req.authUser!.role));
   } catch (error) {
     next(error);
   }

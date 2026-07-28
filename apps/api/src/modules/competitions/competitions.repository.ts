@@ -6,6 +6,8 @@ import {
   getDefaultCompetition,
   getDefaultCompetitionForUser,
   insertCompetitionUser,
+  getCompetitionForAdminUser,
+  listCompetitionsForAdminUser,
   listCompetitionTeams,
   listCompetitionRules,
   listCompetitionsWithLiveScoreSyncEnabled,
@@ -24,6 +26,14 @@ export function findCompetitionsForUser(userId: number) {
 
 export function findCompetitionsForAdmin() {
   return listCompetitions();
+}
+
+export function findCompetitionsForAdminUser(userId: number) {
+  return listCompetitionsForAdminUser(userId);
+}
+
+export function findCompetitionForAdminUser(userId: number, competitionId: number) {
+  return getCompetitionForAdminUser(userId, competitionId);
 }
 
 export function findCompetitionsWithLiveScoreSyncEnabled() {
