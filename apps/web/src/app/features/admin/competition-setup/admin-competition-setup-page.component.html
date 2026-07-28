@@ -18,7 +18,7 @@
   <section class="settings-panel settings-panel-form" aria-labelledby="competition-sources-title">
     <div class="settings-copy">
       <h2 id="competition-sources-title">Competition settings</h2>
-      <p>Configure title, status, passcode, rules, and source URLs for this competition.</p>
+      <p>Configure title, status, passcode, rules, and the OddsPortal source URL for this competition.</p>
     </div>
 
     @if (loadingSourceSettings()) {
@@ -59,17 +59,10 @@
           <span>Competition has ended</span>
         </label>
 
-        <div class="form-grid">
         <label>
-          <span>Schedule source URL</span>
-          <input type="url" formControlName="scheduleSourceUrl" autocomplete="off" />
-        </label>
-
-        <label>
-          <span>Odds and live score source URL</span>
+          <span>OddsPortal source URL</span>
           <input type="url" formControlName="oddsSourceUrl" autocomplete="off" />
         </label>
-        </div>
 
         <fieldset formArrayName="rules">
           <legend>Rules</legend>

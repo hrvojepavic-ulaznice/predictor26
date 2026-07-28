@@ -6,6 +6,9 @@ import {
   listMatches,
   MatchOddsInput,
   MatchImportInput,
+  TeamImportInput,
+  applyCompetitionTeamLogosToMatches,
+  upsertCompetitionTeams,
   updateFinalScore,
   updateMatchKickoff,
   updateMatchOdds,
@@ -25,6 +28,14 @@ export async function findSuperAdminForSecretCode() {
 
 export function importMatches(matches: readonly MatchImportInput[], competitionId: number) {
   return upsertImportedMatches(matches, competitionId);
+}
+
+export function importTeams(teams: readonly TeamImportInput[], competitionId: number) {
+  upsertCompetitionTeams(competitionId, teams);
+}
+
+export function applyTeamLogosToMatches(competitionId: number) {
+  applyCompetitionTeamLogosToMatches(competitionId);
 }
 
 export function pruneMatchesAfter(matchNumber: number, competitionId: number) {

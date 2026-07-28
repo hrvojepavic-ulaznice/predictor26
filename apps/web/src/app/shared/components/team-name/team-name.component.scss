@@ -1,0 +1,17 @@
+.team-name-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.team-logo {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.team-flag {
+  flex: 0 0 auto;
+}

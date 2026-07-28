@@ -141,7 +141,7 @@
               }
               <td class="winner-cell">
                 @if (user.winnerTeam; as winnerTeam) {
-                  <span class="winner-team">{{ winnerTeam.flag }} {{ winnerTeam.name }}</span>
+                  <span class="winner-team"><app-team-name [name]="winnerTeam.name" [flag]="winnerTeam.flag" /></span>
                 } @else {
                   <span class="winner-empty">-</span>
                 }

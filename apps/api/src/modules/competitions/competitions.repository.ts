@@ -6,6 +6,7 @@ import {
   getDefaultCompetition,
   getDefaultCompetitionForUser,
   insertCompetitionUser,
+  listCompetitionTeams,
   listCompetitionRules,
   listCompetitionsWithLiveScoreSyncEnabled,
   listCompetitionsWithNotificationRemindersEnabled,
@@ -79,6 +80,10 @@ export function findRuleTemplates() {
 
 export function findCompetitionRules(competitionId: number) {
   return listCompetitionRules(competitionId);
+}
+
+export function findCompetitionTeams(competitionId: number) {
+  return listCompetitionTeams(competitionId);
 }
 
 export function addCompetition(input: Parameters<typeof createCompetition>[0]) {

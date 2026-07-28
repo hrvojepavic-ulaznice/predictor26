@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
 
 import { config } from '../config/index.js';
+import { defaultCompetitionSlug } from '../shared/constants/default-competition.constants.js';
 import { hashPassword } from '../shared/utils/password.js';
 
 let databaseInitialized = false;
@@ -206,6 +207,7 @@ function initializeDatabase(db: Database.Database) {
   ensureSuperAdminPredictionsBlocked(db);
   seedRuleTemplates(db);
   seedMissingCompetitionRules(db);
+  seedWorldCupCompetitionTeamsUntilProductionBackfillIsComplete(db);
   ensureCompetitionScopedIndexes(db);
 
   // Older compatibility migrations. These are not specific to the competition layer.
@@ -243,6 +245,17 @@ function ensureCompetitionSchema(db: Database.Database) {
       PRIMARY KEY (competition_id, user_id)
     );
 
+    CREATE TABLE IF NOT EXISTS competition_teams (
+      competition_id INTEGER NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
+      normalized_name TEXT NOT NULL CHECK(length(normalized_name) BETWEEN 1 AND 140),
+      display_name TEXT NOT NULL CHECK(length(display_name) BETWEEN 1 AND 140),
+      logo_url TEXT NOT NULL DEFAULT '' CHECK(length(logo_url) <= 500),
+      group_name TEXT CHECK(group_name IS NULL OR length(group_name) BETWEEN 1 AND 40),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (competition_id, normalized_name)
+    );
+
     CREATE TABLE IF NOT EXISTS rule_templates (
       key TEXT PRIMARY KEY CHECK(length(key) BETWEEN 1 AND 80),
       text_template TEXT NOT NULL CHECK(length(text_template) BETWEEN 1 AND 500),
@@ -265,7 +278,92 @@ function ensureCompetitionSchema(db: Database.Database) {
   `);
 
   ensureCompetitionTableSupportsManagementFields(db);
+  ensureCompetitionTeamsTableSupportsGroupName(db);
 }
+
+function ensureCompetitionTeamsTableSupportsGroupName(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(competition_teams)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columns.length > 0 && !columnNames.has('group_name')) {
+    db.exec('ALTER TABLE competition_teams ADD COLUMN group_name TEXT CHECK(group_name IS NULL OR length(group_name) BETWEEN 1 AND 40)');
+  }
+}
+
+function normalizeTeamName(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function flagForTeam(teamName: string): string | null {
+  const countryCode = teamCountryCodes[teamName];
+
+  if (!countryCode) {
+    return null;
+  }
+
+  return countryCode
+    .toUpperCase()
+    .split('')
+    .map((letter) => String.fromCodePoint(127397 + letter.charCodeAt(0)))
+    .join('');
+}
+
+function isWorldCupPlaceholderTeamName(teamName: string): boolean {
+  const normalizedName = teamName.trim().toUpperCase();
+
+  return /^[12][A-L]$/.test(normalizedName) || /^3[A-L]{4,5}$/.test(normalizedName) || /^[LW]\d+$/.test(normalizedName);
+}
+
+const teamCountryCodes: Record<string, string> = {
+  Algeria: 'DZ',
+  Argentina: 'AR',
+  Australia: 'AU',
+  Austria: 'AT',
+  Belgium: 'BE',
+  'Bosnia & Herzegovina': 'BA',
+  Brazil: 'BR',
+  Canada: 'CA',
+  'Cape Verde': 'CV',
+  Colombia: 'CO',
+  Croatia: 'HR',
+  'Curaçao': 'CW',
+  Czechia: 'CZ',
+  'DR Congo': 'CD',
+  Ecuador: 'EC',
+  Egypt: 'EG',
+  England: 'GB',
+  France: 'FR',
+  Germany: 'DE',
+  Ghana: 'GH',
+  Haiti: 'HT',
+  Iran: 'IR',
+  Iraq: 'IQ',
+  'Ivory Coast': 'CI',
+  Japan: 'JP',
+  Jordan: 'JO',
+  Mexico: 'MX',
+  Morocco: 'MA',
+  Netherlands: 'NL',
+  'New Zealand': 'NZ',
+  Norway: 'NO',
+  Panama: 'PA',
+  Paraguay: 'PY',
+  Portugal: 'PT',
+  Qatar: 'QA',
+  'Saudi Arabia': 'SA',
+  Scotland: 'GB',
+  Senegal: 'SN',
+  'South Africa': 'ZA',
+  'South Korea': 'KR',
+  Spain: 'ES',
+  Sweden: 'SE',
+  Switzerland: 'CH',
+  Tunisia: 'TN',
+  'Türkiye': 'TR',
+  'United States': 'US',
+  Uruguay: 'UY',
+  Uzbekistan: 'UZ'
+};
 
 function seedRuleTemplates(db: Database.Database) {
   const templates = [
@@ -370,6 +468,68 @@ function seedMissingCompetitionRules(db: Database.Database) {
         )
     `
   ).run();
+}
+
+function seedWorldCupCompetitionTeamsUntilProductionBackfillIsComplete(db: Database.Database) {
+  // TODO remove after production has competition_teams rows for the existing World Cup 2026 competition.
+  const competition = db.prepare('SELECT id FROM competitions WHERE slug = ?').get(defaultCompetitionSlug) as { id: number } | undefined;
+
+  if (!competition) {
+    return;
+  }
+
+  const existingTeams = db
+    .prepare('SELECT normalized_name, display_name FROM competition_teams WHERE competition_id = ?')
+    .all(competition.id) as Array<{ normalized_name: string; display_name: string }>;
+  const deleteTeam = db.prepare('DELETE FROM competition_teams WHERE competition_id = ? AND normalized_name = ?');
+
+  for (const team of existingTeams) {
+    if (isWorldCupPlaceholderTeamName(team.display_name) || isWorldCupPlaceholderTeamName(team.normalized_name)) {
+      deleteTeam.run(competition.id, team.normalized_name);
+    }
+  }
+
+  const rows = db
+    .prepare(
+      `
+        SELECT team_name, MIN(group_name) AS group_name
+        FROM (
+          SELECT home_team_name AS team_name, group_name
+          FROM matches
+          WHERE competition_id = ?
+          UNION ALL
+          SELECT away_team_name AS team_name, group_name
+          FROM matches
+          WHERE competition_id = ?
+        )
+        WHERE team_name IS NOT NULL
+          AND team_name != ''
+        GROUP BY team_name
+      `
+    )
+    .all(competition.id, competition.id) as Array<{ team_name: string; group_name: string | null }>;
+  const statement = db.prepare(
+    `
+      INSERT INTO competition_teams (competition_id, normalized_name, display_name, logo_url, group_name)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(competition_id, normalized_name) DO UPDATE SET
+        display_name = excluded.display_name,
+        logo_url = CASE
+          WHEN competition_teams.logo_url = '' THEN excluded.logo_url
+          ELSE competition_teams.logo_url
+        END,
+        group_name = COALESCE(competition_teams.group_name, excluded.group_name),
+        updated_at = CURRENT_TIMESTAMP
+    `
+  );
+
+  for (const row of rows) {
+    if (isWorldCupPlaceholderTeamName(row.team_name)) {
+      continue;
+    }
+
+    statement.run(competition.id, normalizeTeamName(row.team_name), row.team_name, flagForTeam(row.team_name) ?? '', row.group_name);
+  }
 }
 
 function ensureCompetitionTableSupportsManagementFields(db: Database.Database) {

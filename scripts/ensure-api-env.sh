@@ -6,8 +6,10 @@ CURRENT_DIR="${PREDICTOR26_CURRENT:-$APP_ROOT/current}"
 SHARED_DIR="${PREDICTOR26_SHARED:-$APP_ROOT/shared}"
 SHARED_ENV="$SHARED_DIR/api.env"
 API_ENV="$CURRENT_DIR/apps/api/.env"
+DATA_DIR="$SHARED_DIR/data"
+TEAM_LOGOS_DIR="$DATA_DIR/team-logos"
 
-mkdir -p "$SHARED_DIR"
+mkdir -p "$SHARED_DIR" "$DATA_DIR" "$TEAM_LOGOS_DIR"
 touch "$SHARED_ENV"
 chmod 600 "$SHARED_ENV"
 
@@ -33,6 +35,14 @@ if [[ -z "$(get_env_value VAPID_SUBJECT)" ]]; then
 fi
 
 set_env_value "NOTIFICATION_REMINDER_INTERVAL_MS" "300000"
+
+if [[ -z "$(get_env_value DATABASE_PATH)" ]]; then
+  set_env_value "DATABASE_PATH" "$DATA_DIR/predictor26.sqlite"
+fi
+
+if [[ -z "$(get_env_value TEAM_LOGO_ASSETS_PATH)" ]]; then
+  set_env_value "TEAM_LOGO_ASSETS_PATH" "$TEAM_LOGOS_DIR"
+fi
 
 if [[ -z "$(get_env_value AUTH_TOKEN_SECRET)" ]]; then
   auth_token_secret="$(

@@ -20,18 +20,17 @@
               @switch (oddsWin.outcome) {
                 @case ('1') {
                   <strong>{{ oddsWin.username }}</strong>
-                  backed {{ oddsWin.homeTeam.flag }} {{ oddsWin.homeTeam.name }} to win against
-                  {{ oddsWin.awayTeam.flag }} {{ oddsWin.awayTeam.name }}.
+                  backed {{ teamLabel(oddsWin.homeTeam) }} to win against
+                  {{ teamLabel(oddsWin.awayTeam) }}.
                 }
                 @case ('X') {
                   <strong>{{ oddsWin.username }}</strong>
-                  backed {{ oddsWin.homeTeam.flag }} {{ oddsWin.homeTeam.name }} and {{ oddsWin.awayTeam.flag }}
-                  {{ oddsWin.awayTeam.name }} to draw.
+                  backed {{ teamLabel(oddsWin.homeTeam) }} and {{ teamLabel(oddsWin.awayTeam) }} to draw.
                 }
                 @case ('2') {
                   <strong>{{ oddsWin.username }}</strong>
-                  backed {{ oddsWin.awayTeam.flag }} {{ oddsWin.awayTeam.name }} to win against
-                  {{ oddsWin.homeTeam.flag }} {{ oddsWin.homeTeam.name }}.
+                  backed {{ teamLabel(oddsWin.awayTeam) }} to win against
+                  {{ teamLabel(oddsWin.homeTeam) }}.
                 }
               }
             </p>
@@ -73,8 +72,7 @@
                     @for (match of leader.matches; track match.matchNumber) {
                       <div class="exact-score-row">
                         <span class="exact-score-teams">
-                          {{ match.homeTeam.flag }} {{ match.homeTeam.name }} - {{ match.awayTeam.flag }}
-                          {{ match.awayTeam.name }}
+                          {{ teamLabel(match.homeTeam) }} - {{ teamLabel(match.awayTeam) }}
                         </span>
                         <span class="exact-score-value">{{ match.finalScore.home }}:{{ match.finalScore.away }}</span>
                       </div>
@@ -121,8 +119,7 @@
                     @for (match of leader.matches; track match.matchNumber) {
                       <div class="exact-score-row">
                         <span class="exact-score-teams">
-                          {{ match.homeTeam.flag }} {{ match.homeTeam.name }} - {{ match.awayTeam.flag }}
-                          {{ match.awayTeam.name }}
+                          {{ teamLabel(match.homeTeam) }} - {{ teamLabel(match.awayTeam) }}
                         </span>
                         <span class="exact-score-value">{{ match.outcome }}</span>
                       </div>

@@ -3,9 +3,9 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { Match, PlayoffMappingSide } from '@models/match.models';
-import { WorldCupGroupTeam } from '@models/world-cup-team.models';
+import { CompetitionGroupTeam } from '@models/competition.models';
 import { AdminMatchesApiProvider } from '@services/providers/admin-matches-api.provider';
-import { WorldCupTeamsApiProvider } from '@services/providers/world-cup-teams-api.provider';
+import { CompetitionsApiProvider } from '@services/providers/competitions-api.provider';
 
 interface TeamSlotContext {
   readonly match: Match;
@@ -13,7 +13,7 @@ interface TeamSlotContext {
   readonly placeholder: string;
   readonly selectedTeamName: string;
   readonly sourceLabel: string | null;
-  readonly options: WorldCupGroupTeam[];
+  readonly options: CompetitionGroupTeam[];
 }
 
 @Component({
@@ -24,10 +24,10 @@ interface TeamSlotContext {
 })
 export class AdminPlayoffsPageComponent {
   private readonly adminMatchesApi = inject(AdminMatchesApiProvider);
-  private readonly worldCupTeamsApi = inject(WorldCupTeamsApiProvider);
+  private readonly competitionsApi = inject(CompetitionsApiProvider);
 
   protected readonly matches = signal<Match[]>([]);
-  protected readonly groupTeams = signal<WorldCupGroupTeam[]>([]);
+  protected readonly groupTeams = signal<CompetitionGroupTeam[]>([]);
   protected readonly loading = signal(true);
   protected readonly savingKeys = signal<ReadonlySet<string>>(new Set<string>());
   protected readonly errorMessage = signal<string | null>(null);
@@ -81,6 +81,12 @@ export class AdminPlayoffsPageComponent {
     return this.savingKeys().has(slotKey(context.match.id, context.side));
   }
 
+  protected teamOptionLabel(team: CompetitionGroupTeam): string {
+    const flag = team.flag && !/^(?:https:\/\/|\/)/i.test(team.flag) ? `${team.flag} ` : '';
+
+    return `${flag}${team.name}`;
+  }
+
   private loadData(): void {
     this.loading.set(true);
     this.errorMessage.set(null);
@@ -88,7 +94,7 @@ export class AdminPlayoffsPageComponent {
     this.adminMatchesApi.getMatches().subscribe({
       next: ({ matches }) => {
         this.matches.set(matches);
-        this.worldCupTeamsApi.getWorldCupTeams().subscribe({
+        this.competitionsApi.getCompetitionTeams().subscribe({
           next: ({ groupTeams }) => {
             this.groupTeams.set(groupTeams);
             this.loading.set(false);

@@ -24,6 +24,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/assets/team-logos', express.static(config.teamLogoAssetsPath));
 
 app.use('/api', authRoutes);
 app.use('/api', competitionsRoutes);

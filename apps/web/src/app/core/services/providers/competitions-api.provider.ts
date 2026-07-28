@@ -5,6 +5,7 @@ import {
   AdminCompetitionSettings,
   AdminRuleTemplatesResponse,
   CompetitionRulesResponse,
+  CompetitionTeamsResponse,
   CompetitionsResponse,
   CreateAdminCompetitionRequest,
   CreateAdminCompetitionResponse,
@@ -40,6 +41,10 @@ export class CompetitionsApiProvider {
 
   getCompetitionRules() {
     return this.http.get<CompetitionRulesResponse>('/api/competitions/current/rules');
+  }
+
+  getCompetitionTeams() {
+    return this.http.get<CompetitionTeamsResponse>('/api/competitions/current/teams');
   }
 
   getCompetitionRulesById(competitionId: number) {

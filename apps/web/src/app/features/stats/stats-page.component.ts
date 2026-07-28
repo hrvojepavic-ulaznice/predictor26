@@ -45,6 +45,12 @@ export class StatsPageComponent {
     this.expandedOutcomeUserId.update((expandedUserId) => (expandedUserId === userId ? null : userId));
   }
 
+  protected teamLabel(team: { readonly name: string; readonly flag: string | null }): string {
+    const flag = team.flag && !/^(?:https:\/\/|\/)/i.test(team.flag) ? `${team.flag} ` : '';
+
+    return `${flag}${team.name}`;
+  }
+
   private loadStats(): void {
     this.loading.set(true);
     this.errorMessage.set(null);

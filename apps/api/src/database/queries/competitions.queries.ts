@@ -29,6 +29,12 @@ export interface CompetitionRuleRow extends RuleTemplateRow {
   readonly value: string | null;
 }
 
+export interface CompetitionTeamRow {
+  readonly name: string;
+  readonly logoUrl: string | null;
+  readonly groupName: string | null;
+}
+
 export function listCompetitionsForUser(userId: number): CompetitionRow[] {
   const db = openDatabase();
 
@@ -491,6 +497,25 @@ export function listCompetitionRules(competitionId: number): CompetitionRuleRow[
         `
       )
       .all(competitionId) as CompetitionRuleRow[];
+  } finally {
+    db.close();
+  }
+}
+
+export function listCompetitionTeams(competitionId: number): CompetitionTeamRow[] {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+          SELECT display_name AS name, NULLIF(logo_url, '') AS logoUrl, group_name AS groupName
+          FROM competition_teams
+          WHERE competition_id = ?
+          ORDER BY display_name COLLATE NOCASE ASC
+        `
+      )
+      .all(competitionId) as CompetitionTeamRow[];
   } finally {
     db.close();
   }

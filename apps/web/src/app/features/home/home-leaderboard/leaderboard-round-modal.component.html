@@ -9,13 +9,13 @@
 <div class="modal-content">
   @for (match of round().matches; track match.matchId) {
     <article class="tip-row">
-      <span class="team-name">{{ match.homeTeam.flag }} {{ match.homeTeam.name }}</span>
+      <span class="team-name"><app-team-name [name]="match.homeTeam.name" [flag]="match.homeTeam.flag" /></span>
       @if (match.prediction; as prediction) {
         <span class="prediction-score">{{ prediction.home }}:{{ prediction.away }}</span>
       } @else {
         <span class="prediction-score" [class.hidden-score]="match.predictionHidden">X:X</span>
       }
-      <span class="team-name">{{ match.awayTeam.flag }} {{ match.awayTeam.name }}</span>
+      <span class="team-name"><app-team-name [name]="match.awayTeam.name" [flag]="match.awayTeam.flag" /></span>
 
       <span class="points-value" [style.color]="pointsColor(match)">
         @if (match.points.earned === null) {

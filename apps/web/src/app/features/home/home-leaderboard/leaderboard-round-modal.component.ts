@@ -2,11 +2,12 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 
 import { LeaderboardRoundDetails, LeaderboardRoundMatch, LeaderboardUser } from '@models/leaderboard.models';
+import { TeamNameComponent } from '@shared/components/team-name/team-name.component';
 import { getPredictionPointsStateColor } from '@shared/utils/prediction-points.utils';
 
 @Component({
   selector: 'app-leaderboard-round-modal',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, TeamNameComponent],
   templateUrl: './leaderboard-round-modal.component.html',
   styleUrl: './leaderboard-round-modal.component.scss'
 })

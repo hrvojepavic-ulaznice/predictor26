@@ -120,6 +120,10 @@ export async function importOddsPortalOdds(sourceUrl = worldCupOddsPortalUrl): P
 }
 
 export async function fetchOddsPortalSportData(sourceUrl: string): Promise<OddsPortalSportData> {
+  return parseSportData(await fetchOddsPortalPageHtml(sourceUrl));
+}
+
+export async function fetchOddsPortalPageHtml(sourceUrl: string): Promise<string> {
   const pageResponse = await fetch(sourceUrl, {
     headers: browserHeaders
   });
@@ -128,7 +132,7 @@ export async function fetchOddsPortalSportData(sourceUrl: string): Promise<OddsP
     throw new Error(`OddsPortal page fetch failed with status ${pageResponse.status}.`);
   }
 
-  return parseSportData(await pageResponse.text());
+  return pageResponse.text();
 }
 
 export function oddsPortalRows(sportData: OddsPortalSportData): OddsPortalEventRow[] {
@@ -193,7 +197,7 @@ function toArray<T>(value: readonly T[] | Record<string, T> | undefined): T[] {
   return Array.isArray(value) ? [...value] : Object.values(value);
 }
 
-function decodeHtmlEntities(value: string): string {
+export function decodeHtmlEntities(value: string): string {
   return value
     .replace(/&amp;/g, '&')
     .replace(/&#x27;/g, "'")

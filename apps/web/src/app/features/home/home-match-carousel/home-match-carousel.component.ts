@@ -10,6 +10,7 @@ import {
 import { AppStateService } from '@core/state/app-state.service';
 import { LeaderboardService } from '@services/leaderboard.service';
 import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
+import { TeamNameComponent } from '@shared/components/team-name/team-name.component';
 import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
 import { MatchPredictionsModalComponent } from './match-predictions-modal.component';
 
@@ -25,7 +26,7 @@ interface MatchCardView extends LeaderboardDayMatch {
 
 @Component({
   selector: 'app-home-match-carousel',
-  imports: [DatePipe, MatchPredictionsModalComponent, ModalShellComponent, OddsFormatPipe],
+  imports: [DatePipe, MatchPredictionsModalComponent, ModalShellComponent, OddsFormatPipe, TeamNameComponent],
   templateUrl: './home-match-carousel.component.html',
   styleUrl: './home-match-carousel.component.scss'
 })

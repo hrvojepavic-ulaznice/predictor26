@@ -11,6 +11,7 @@ export const config = {
   nodeEnv,
   port: Number(process.env.PORT ?? 3000),
   databasePath: process.env.DATABASE_PATH ?? join(apiRoot, 'data', 'predictor26.sqlite'),
+  teamLogoAssetsPath: process.env.TEAM_LOGO_ASSETS_PATH ?? join(apiRoot, 'data', 'team-logos'),
   authTokenSecret: readSecret('AUTH_TOKEN_SECRET', () => randomBytes(32).toString('base64url')),
   vapidSubject: process.env.VAPID_SUBJECT ?? 'mailto:admin@predictor26.local',
   vapidPublicKey: readSecret('VAPID_PUBLIC_KEY', () => getDevelopmentVapidKeys().publicKey),

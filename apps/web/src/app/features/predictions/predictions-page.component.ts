@@ -7,10 +7,11 @@ import { AppStateService } from '@core/state/app-state.service';
 import { MatchWithPrediction } from '@models/match.models';
 import { CompetitionsService } from '@services/competitions.service';
 import { MatchesService } from '@services/matches.service';
-import { WorldCupTeamsApiProvider } from '@services/providers/world-cup-teams-api.provider';
+import { CompetitionsApiProvider } from '@services/providers/competitions-api.provider';
 import { MatchSortMode, MatchSortPreferenceService } from '@core/state/match-sort-preference.service';
 import { MatchSortMenuComponent } from '@shared/components/match-sort-menu/match-sort-menu.component';
 import { PredictionPointsComponent } from '@shared/components/prediction-points/prediction-points.component';
+import { TeamNameComponent } from '@shared/components/team-name/team-name.component';
 import { OddsFormatPipe } from '@shared/pipes/odds-format.pipe';
 import {
   calculatePredictionPoints,
@@ -36,7 +37,7 @@ interface MatchSection {
 
 @Component({
   selector: 'app-predictions-page',
-  imports: [DatePipe, MatchSortMenuComponent, OddsFormatPipe, PredictionPointsComponent],
+  imports: [DatePipe, MatchSortMenuComponent, OddsFormatPipe, PredictionPointsComponent, TeamNameComponent],
   templateUrl: './predictions-page.component.html',
   styleUrl: './predictions-page.component.scss'
 })
@@ -45,7 +46,7 @@ export class PredictionsPageComponent {
   private readonly competitionsService = inject(CompetitionsService);
   private readonly matchesService = inject(MatchesService);
   private readonly sortPreference = inject(MatchSortPreferenceService);
-  private readonly worldCupTeamsApi = inject(WorldCupTeamsApiProvider);
+  private readonly competitionsApi = inject(CompetitionsApiProvider);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly activeCompetition = this.appState.activeCompetition;
@@ -216,7 +217,7 @@ export class PredictionsPageComponent {
   }
 
   private loadTiebreakerOptions(): void {
-    this.worldCupTeamsApi.getWorldCupTeams().subscribe({
+    this.competitionsApi.getCompetitionTeams().subscribe({
       next: ({ teams }) => {
         this.tiebreakerOptions.set(teams);
       },

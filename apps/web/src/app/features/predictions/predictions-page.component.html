@@ -101,9 +101,9 @@
                     </div>
 
                     <div class="teams">
-                      <span class="team-name">{{ match.homeTeam.flag }} {{ match.homeTeam.name }}</span>
+                      <span class="team-name"><app-team-name [name]="match.homeTeam.name" [flag]="match.homeTeam.flag" /></span>
                       <span class="versus">vs</span>
-                      <span class="team-name">{{ match.awayTeam.flag }} {{ match.awayTeam.name }}</span>
+                      <span class="team-name"><app-team-name [name]="match.awayTeam.name" [flag]="match.awayTeam.flag" /></span>
                     </div>
 
                     <div class="odds" aria-label="Match odds">
