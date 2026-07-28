@@ -97,7 +97,9 @@ export type JoinCompetitionResult =
 
 export async function getCompetitionsForUser(userId: number, role: UserRole): Promise<CompetitionsResponse> {
   if (role === 'super_admin') {
-    return getCompetitionsForAdmin();
+    return {
+      competitions: findCompetitionsForAdmin().map(toCompetitionResponse)
+    };
   }
 
   return {
@@ -105,8 +107,8 @@ export async function getCompetitionsForUser(userId: number, role: UserRole): Pr
   };
 }
 
-export async function getCompetitionsForAdmin(userId?: number, role: UserRole = 'super_admin'): Promise<CompetitionsResponse> {
-  if (role !== 'super_admin' && userId !== undefined) {
+export async function getCompetitionsForAdmin(userId: number, role: UserRole): Promise<CompetitionsResponse> {
+  if (role !== 'super_admin') {
     return {
       competitions: findCompetitionsForAdminUser(userId).map(toCompetitionResponse)
     };
