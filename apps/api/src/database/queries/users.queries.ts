@@ -78,6 +78,7 @@ export async function getUserByIdForCompetition(id: number, competitionId: numbe
         INNER JOIN competition_users ON competition_users.user_id = users.id
         WHERE users.id = ?
           AND competition_users.competition_id = ?
+          AND users.role != 'super_admin'
       `
       )
       .get(id, competitionId) as UserRow | undefined;

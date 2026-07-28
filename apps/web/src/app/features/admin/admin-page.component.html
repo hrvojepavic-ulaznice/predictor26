@@ -18,10 +18,29 @@
   </nav>
 
   <section class="competition-picker" aria-labelledby="admin-competition-picker-title">
-    <div>
-      <h2 id="admin-competition-picker-title">Competitions</h2>
-      <p>Choose a competition to manage its users, matches, payments, jobs, notifications, and source settings.</p>
+    <div class="picker-heading">
+      <div>
+        <h2 id="admin-competition-picker-title">Competitions</h2>
+        <p>Choose a competition to manage its users, matches, payments, jobs, notifications, and source settings.</p>
+      </div>
+      <button
+        class="add-competition-button"
+        type="button"
+        aria-label="Create competition"
+        [disabled]="loadingRuleTemplates()"
+        (click)="openCreateCompetitionModal()"
+      >
+        +
+      </button>
     </div>
+
+    @if (createSuccessMessage(); as message) {
+      <p class="picker-message picker-success">{{ message }}</p>
+    }
+
+    @if (loadingRuleTemplates()) {
+      <p class="picker-message">Loading rule templates...</p>
+    }
 
     @if (loadingCompetitions()) {
       <p class="picker-message">Loading competitions...</p>
@@ -42,4 +61,110 @@
     }
   </section>
 
+  @if (createCompetitionModalOpen()) {
+    <app-modal-shell
+      labelledBy="admin-create-competition-title"
+      panelWidth="760px"
+      [closeOnBackdrop]="false"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelCreateCompetitionModal()"
+    >
+      @if (createSecretPromptOpen()) {
+        <app-secret-code-modal
+          title="Confirm competition"
+          label="What is the secret code?"
+          confirmLabel="Create competition"
+          [errorMessage]="createSecretCodeErrorMessage()"
+          [isSubmitting]="creatingCompetition()"
+          (confirmSecretCode)="confirmCreateSecretCode($event)"
+          (cancelModal)="cancelCreateSecretCode()"
+        />
+      } @else {
+        <div class="create-competition-modal">
+          <header class="modal-create-header">
+            <div>
+              <h2 id="admin-create-competition-title">Create competition</h2>
+              <p>Add a competition globally. The slug is generated from the title and kept unique for URLs.</p>
+            </div>
+            <button class="modal-close-button" type="button" aria-label="Close create competition" (click)="cancelCreateCompetitionModal()">×</button>
+          </header>
+
+          <form class="competition-form" [formGroup]="createForm" (ngSubmit)="openCreateSecretCode()">
+            <div class="form-grid">
+              <label>
+                <span>Title</span>
+                <input type="text" formControlName="name" autocomplete="off" />
+              </label>
+
+              <label>
+                <span>Entry passcode</span>
+                <input type="text" formControlName="passcode" autocomplete="off" />
+              </label>
+            </div>
+
+            <div class="logo-field">
+              @if (createLogoPreview(); as logoUrl) {
+                <img class="logo-preview" [src]="logoUrl" alt="" width="56" height="56" />
+              } @else {
+                <span class="logo-placeholder" aria-hidden="true"></span>
+              }
+              <div class="logo-actions">
+                <label class="file-button">
+                  <span>Import logo</span>
+                  <input type="file" accept="image/*" (change)="importCreateLogo($event)" />
+                </label>
+                @if (createLogoPreview()) {
+                  <button class="secondary-button" type="button" (click)="removeCreateLogo()">Remove</button>
+                }
+              </div>
+            </div>
+
+            <label class="toggle-row">
+              <input type="checkbox" formControlName="isFinished" />
+              <span>Competition has ended</span>
+            </label>
+
+            <div class="form-grid">
+              <label>
+                <span>Schedule source URL</span>
+                <input type="url" formControlName="scheduleSourceUrl" autocomplete="off" />
+              </label>
+
+              <label>
+                <span>Odds and live score source URL</span>
+                <input type="url" formControlName="oddsSourceUrl" autocomplete="off" />
+              </label>
+            </div>
+
+            <fieldset formArrayName="rules">
+              <legend>Rules</legend>
+
+              <div class="rules-grid">
+                @for (template of ruleTemplates(); track template.key; let index = $index) {
+                  <div class="rule-row" [formGroupName]="index">
+                    <label class="toggle-row">
+                      <input type="checkbox" formControlName="isEnabled" />
+                      <span>{{ template.textTemplate }}</span>
+                    </label>
+
+                    @if (template.valueLabel) {
+                      <label>
+                        <span>{{ template.valueLabel }}</span>
+                        <input type="text" formControlName="value" autocomplete="off" />
+                      </label>
+                    }
+                  </div>
+                }
+              </div>
+            </fieldset>
+
+            <button class="primary-button" type="submit" [disabled]="creatingCompetition() || createForm.invalid">
+              Continue
+            </button>
+          </form>
+        </div>
+      }
+    </app-modal-shell>
+  }
 </section>

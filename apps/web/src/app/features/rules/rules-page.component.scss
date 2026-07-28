@@ -41,6 +41,16 @@ h1 {
   line-height: 1.5;
 }
 
+.status-message {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.status-error {
+  color: #b91c1c;
+}
+
 .home-link {
   display: inline-flex;
   margin-top: 24px;

@@ -11,13 +11,81 @@
     <div class="competition-list">
       @for (competition of competitions(); track competition.id) {
         <button class="competition-button" type="button" (click)="enterCompetition(competition)">
+          @if (competition.logoUrl) {
+            <img class="competition-logo" [src]="competition.logoUrl" alt="" width="52" height="52" />
+          } @else {
+            <span class="competition-logo competition-logo-placeholder" aria-hidden="true"></span>
+          }
           <span class="competition-title">{{ competition.name }}</span>
           @if (competition.isFinished) {
             <span class="competition-status">Finished</span>
+          } @else if (competition.isJoined) {
+            <span class="competition-status competition-status-active">Active</span>
+          } @else if (!competition.isJoined) {
+            <span class="competition-status competition-status-join">Open</span>
           }
-          <span class="competition-action">See details</span>
+          <span class="competition-action">{{ competition.isJoined ? 'See details' : 'Enter passcode' }}</span>
         </button>
       }
     </div>
+  }
+
+  @if (joinCompetitionPrompt(); as competition) {
+    <app-modal-shell
+      labelledBy="join-competition-title"
+      panelWidth="420px"
+      [closeOnBackdrop]="false"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelJoinCompetition()"
+    >
+      <form class="join-form" [formGroup]="joinForm" (ngSubmit)="confirmJoinCompetition()">
+        <header class="modal-header">
+          <div>
+            <h2 id="join-competition-title">Join {{ competition.name }}</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close" [disabled]="joiningCompetition()" (click)="cancelJoinCompetition()">×</button>
+        </header>
+
+        <div class="modal-content">
+          <section class="rules-panel" aria-label="Competition rules">
+            <p class="rules-title">The Rules</p>
+            @if (loadingJoinRules()) {
+              <p class="rules-state">Loading rules...</p>
+            } @else if (joinRules().length > 0) {
+              <ol>
+                @for (rule of joinRules(); track rule) {
+                  <li>{{ rule }}</li>
+                }
+              </ol>
+            } @else {
+              <p class="rules-state">Rules are not available for this competition yet.</p>
+            }
+          </section>
+
+          <label class="field">
+            <span>Competition passcode</span>
+            <input
+              type="password"
+              autocomplete="current-password"
+              maxlength="120"
+              autofocus
+              appFormFieldState="required"
+              formControlName="passcode"
+              [readonly]="joiningCompetition()"
+            />
+          </label>
+
+          <p class="form-error" [class.form-error-visible]="joinErrorMessage()">{{ joinErrorMessage() || '&nbsp;' }}</p>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="secondary-button" type="button" [disabled]="joiningCompetition()" (click)="cancelJoinCompetition()">Cancel</button>
+          <button class="confirm-button" type="submit" [disabled]="joiningCompetition() || joinForm.invalid">
+            {{ joiningCompetition() ? 'Joining...' : 'Join competition' }}
+          </button>
+        </footer>
+      </form>
+    </app-modal-shell>
   }
 </section>

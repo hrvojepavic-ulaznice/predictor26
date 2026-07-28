@@ -1,5 +1,5 @@
 <header class="site-header">
-  <a class="brand" routerLink="/" aria-label="Predictor26 home">
+  <a class="brand" routerLink="/" [state]="{ showCompetitionList: true }" aria-label="Predictor26 home">
     <img class="brand-icon" src="icons/predictor26-icon.svg" alt="" width="34" height="34" />
     <span class="brand-name">Predictor26</span>
   </a>
@@ -29,14 +29,14 @@
         } @else {
           <span class="user-name">{{ user.username }}</span>
         }
-        @if (user.isVerified) {
+        @if (routeCompetition() && user.isVerified) {
           <app-tooltip class="verified-tooltip" text="I've paid my dues!" placement="bottom-end">
             <img class="verified-badge" src="icons/verified-badge.svg" alt="" width="18" height="23" aria-hidden="true" />
           </app-tooltip>
         }
       </span>
       @if (routeCompetition(); as competition) {
-        <a class="nav-link" routerLink="/" animate.enter="account-nav-enter">{{ competition.name }}</a>
+        <a class="nav-link" routerLink="/" [state]="{ showCompetitionList: true }" animate.enter="account-nav-enter">{{ competition.name }}</a>
       }
       @if (user.role === 'super_admin' || user.role === 'admin') {
         <a class="nav-link" routerLink="/admin" animate.enter="account-nav-enter">Admin</a>

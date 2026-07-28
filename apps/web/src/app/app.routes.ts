@@ -63,7 +63,8 @@ export const routes: Routes = [
     component: RegisterPageComponent
   },
   {
-    path: 'rules',
+    path: 'competition/:slug/rules',
+    canActivate: [authGuard, competitionSlugGuard],
     component: RulesPageComponent
   },
   {

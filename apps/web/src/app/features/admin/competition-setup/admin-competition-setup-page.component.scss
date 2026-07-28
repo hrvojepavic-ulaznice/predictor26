@@ -108,6 +108,12 @@ p {
   gap: 12px;
 }
 
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 label {
   display: grid;
   gap: 6px;
@@ -125,6 +131,119 @@ input {
   font: inherit;
   font-size: 0.92rem;
   padding: 11px 12px;
+}
+
+.logo-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-preview,
+.logo-placeholder {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  object-fit: contain;
+}
+
+.logo-placeholder::before {
+  content: "";
+  display: block;
+  width: 24px;
+  height: 24px;
+  margin: 15px;
+  border-radius: 6px;
+  background: #d1d5db;
+}
+
+.logo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.file-button,
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 10px 12px;
+}
+
+.file-button:hover,
+.file-button:focus-within,
+.secondary-button:hover,
+.secondary-button:focus-visible {
+  border-color: #111827;
+  outline: 0;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.toggle-row input {
+  width: auto;
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
+fieldset {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin: 0;
+  padding: 14px;
+}
+
+legend {
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0 5px;
+}
+
+.rules-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.rule-row {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 10px;
+}
+
+.rule-row:first-child {
+  border-top: 0;
+  padding-top: 0;
 }
 
 input:focus {
@@ -167,5 +286,9 @@ button:disabled {
 
   button {
     justify-self: start;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 }
