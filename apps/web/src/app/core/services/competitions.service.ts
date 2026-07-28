@@ -105,6 +105,11 @@ export class CompetitionsService {
   updateTiebreaker(tiebreakerName: string): Observable<UpdateCompetitionTiebreakerResponse> {
     return this.competitionsApi.updateTiebreaker({ tiebreakerName }).pipe(
       tap(({ competition }) => {
+        this.competitionsSignal.update((competitions) =>
+          competitions.map((currentCompetition) =>
+            currentCompetition.id === competition.id ? competition : currentCompetition
+          )
+        );
         this.appState.setActiveCompetition(competition);
         this.leaderboardService.clearCompetitionData();
         this.notificationRemindersService.clearCompetitionData();
