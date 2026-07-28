@@ -2,7 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 
 import { AppStateService } from '@core/state/app-state.service';
-import { Competition, CompetitionsResponse, UpdateCompetitionTiebreakerResponse } from '@models/competition.models';
+import { Competition, CompetitionsResponse, JoinCompetitionResponse, UpdateCompetitionTiebreakerResponse } from '@models/competition.models';
 import { LeaderboardService } from '@services/leaderboard.service';
 import { MatchesService } from '@services/matches.service';
 import { NotificationRemindersService } from '@services/notification-reminders.service';
@@ -84,12 +84,31 @@ export class CompetitionsService {
     this.paymentsService.clearPaymentInfo();
   }
 
+  clearCompetitions(): void {
+    this.competitionsSignal.set([]);
+    this.loadedSignal.set(false);
+    this.exitCompetition();
+  }
+
   updateTiebreaker(tiebreakerName: string): Observable<UpdateCompetitionTiebreakerResponse> {
     return this.competitionsApi.updateTiebreaker({ tiebreakerName }).pipe(
       tap(({ competition }) => {
         this.appState.setActiveCompetition(competition);
         this.leaderboardService.clearCompetitionData();
         this.notificationRemindersService.clearCompetitionData();
+      })
+    );
+  }
+
+  joinCompetition(competition: Competition, passcode: string): Observable<JoinCompetitionResponse> {
+    return this.competitionsApi.joinCompetition(competition.id, { passcode }).pipe(
+      tap(({ competition: joinedCompetition }) => {
+        this.competitionsSignal.update((competitions) =>
+          competitions.map((currentCompetition) =>
+            currentCompetition.id === joinedCompetition.id ? joinedCompetition : currentCompetition
+          )
+        );
+        this.enterCompetition(joinedCompetition);
       })
     );
   }

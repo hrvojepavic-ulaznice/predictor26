@@ -1,5 +1,5 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { Observable, of, tap } from 'rxjs';
+import { finalize, Observable, of, shareReplay, tap } from 'rxjs';
 
 import { PaymentInfo } from '@models/payment-info.models';
 import { PaymentsApiProvider } from './providers/payments-api.provider';
@@ -23,8 +23,11 @@ export class PaymentsService {
       this.loadingRequest = this.paymentsApi.getPaymentInfo().pipe(
         tap((paymentInfo) => {
           this.paymentInfoSignal.set(paymentInfo);
+        }),
+        finalize(() => {
           this.loadingRequest = null;
-        })
+        }),
+        shareReplay({ bufferSize: 1, refCount: true })
       );
     }
 

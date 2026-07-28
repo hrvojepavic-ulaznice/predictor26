@@ -28,6 +28,7 @@ export class LeaderboardService {
   private readonly statsSignal = signal<LeaderboardStatsResponse | null>(null);
   private readonly statsLoadedSignal = signal(false);
   private leaderboardRequest: Observable<LeaderboardResponse> | null = null;
+  private matchDaysRequest: Observable<LeaderboardMatchDaysResponse> | null = null;
   private readonly roundDetailsCache = new Map<string, LeaderboardRoundDetails>();
   private readonly matchPredictionsCache = new Map<number, LeaderboardMatchPredictionsResponse>();
 
@@ -60,12 +61,22 @@ export class LeaderboardService {
       return null;
     }
 
-    return this.leaderboardApi.getMatchDays().pipe(
+    if (!options.force && this.matchDaysRequest) {
+      return this.matchDaysRequest;
+    }
+
+    this.matchDaysRequest = this.leaderboardApi.getMatchDays().pipe(
       tap(({ days }) => {
         this.matchDaysSignal.set(days);
         this.matchDaysLoadedSignal.set(true);
-      })
+      }),
+      finalize(() => {
+        this.matchDaysRequest = null;
+      }),
+      shareReplay({ bufferSize: 1, refCount: true })
     );
+
+    return this.matchDaysRequest;
   }
 
   ensureStats(options: EnsureLeaderboardOptions = {}): Observable<LeaderboardStatsResponse> | null {
@@ -158,6 +169,7 @@ export class LeaderboardService {
 
   clearCompetitionData(): void {
     this.leaderboardRequest = null;
+    this.matchDaysRequest = null;
     this.leaderboardSignal.set(null);
     this.matchDaysSignal.set(null);
     this.loadedSignal.set(false);

@@ -5,8 +5,10 @@
 
 <div class="modal-content">
   <ul>
-    @for (rule of rules; track rule) {
+    @for (rule of rules(); track rule) {
       <li>{{ rule }}</li>
+    } @empty {
+      <li>Rules could not be loaded.</li>
     }
   </ul>
 </div>

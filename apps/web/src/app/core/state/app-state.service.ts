@@ -135,6 +135,9 @@ function isPersistedCompetition(value: unknown): value is Competition {
     Number.isInteger(competition.id) &&
     typeof competition.name === 'string' &&
     typeof competition.slug === 'string' &&
+    (typeof competition.logoUrl === 'string' || competition.logoUrl === null) &&
+    typeof competition.isFinished === 'boolean' &&
+    typeof competition.isJoined === 'boolean' &&
     (typeof competition.tiebreakerName === 'string' || competition.tiebreakerName === null)
   );
 }

@@ -11,13 +11,43 @@
     <div class="competition-list">
       @for (competition of competitions(); track competition.id) {
         <button class="competition-button" type="button" (click)="enterCompetition(competition)">
+          @if (competition.logoUrl) {
+            <img class="competition-logo" [src]="competition.logoUrl" alt="" width="52" height="52" />
+          } @else {
+            <span class="competition-logo competition-logo-placeholder" aria-hidden="true"></span>
+          }
           <span class="competition-title">{{ competition.name }}</span>
           @if (competition.isFinished) {
             <span class="competition-status">Finished</span>
+          } @else if (competition.isJoined) {
+            <span class="competition-status competition-status-active">Active</span>
+          } @else if (!competition.isJoined) {
+            <span class="competition-status competition-status-join">Open</span>
           }
-          <span class="competition-action">See details</span>
+          <span class="competition-action">{{ competition.isJoined ? 'See details' : 'Enter passcode' }}</span>
         </button>
       }
     </div>
+  }
+
+  @if (joinCompetitionPrompt(); as competition) {
+    <app-modal-shell
+      labelledBy="join-competition-title"
+      panelWidth="420px"
+      [closeOnBackdrop]="false"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelJoinCompetition()"
+    >
+      <app-secret-code-modal
+        title="Join {{ competition.name }}"
+        label="What is the competition passcode?"
+        confirmLabel="Join competition"
+        [errorMessage]="joinErrorMessage()"
+        [isSubmitting]="joiningCompetition()"
+        (confirmSecretCode)="confirmJoinCompetition($event)"
+        (cancelModal)="cancelJoinCompetition()"
+      />
+    </app-modal-shell>
   }
 </section>

@@ -1,6 +1,6 @@
-import { Component, output } from '@angular/core';
+import { Component, inject, output, signal } from '@angular/core';
 
-import { PREDICTOR_RULES } from './rules.constants';
+import { CompetitionsApiProvider } from '@services/providers/competitions-api.provider';
 
 @Component({
   selector: 'app-rules-modal',
@@ -8,8 +8,21 @@ import { PREDICTOR_RULES } from './rules.constants';
   styleUrl: './rules-modal.component.scss'
 })
 export class RulesModalComponent {
+  private readonly competitionsApi = inject(CompetitionsApiProvider);
+
   readonly closeModal = output<void>();
-  protected readonly rules = PREDICTOR_RULES;
+  protected readonly rules = signal<string[]>([]);
+
+  constructor() {
+    this.competitionsApi.getDefaultCompetitionRules().subscribe({
+      next: ({ rules }) => {
+        this.rules.set(rules);
+      },
+      error: () => {
+        this.rules.set([]);
+      }
+    });
+  }
 
   protected close(): void {
     this.closeModal.emit();

@@ -17,14 +17,49 @@
 
   <section class="settings-panel settings-panel-form" aria-labelledby="competition-sources-title">
     <div class="settings-copy">
-      <h2 id="competition-sources-title">Sources</h2>
-      <p>Configure the URLs used by fixture import, odds sync, and live score sync for this competition.</p>
+      <h2 id="competition-sources-title">Competition settings</h2>
+      <p>Configure title, status, passcode, rules, and source URLs for this competition.</p>
     </div>
 
     @if (loadingSourceSettings()) {
-      <p class="status-message">Loading source settings...</p>
+      <p class="status-message">Loading competition settings...</p>
     } @else {
       <form class="source-form" [formGroup]="sourceForm" (ngSubmit)="openSourceSettingsSecretCode()">
+        <div class="form-grid">
+          <label>
+            <span>Title</span>
+            <input type="text" formControlName="name" autocomplete="off" />
+          </label>
+
+          <label>
+            <span>New entry passcode</span>
+            <input type="text" formControlName="passcode" autocomplete="off" placeholder="Leave empty to keep current passcode" />
+          </label>
+        </div>
+
+        <div class="logo-field">
+          @if (logoPreview(); as logoUrl) {
+            <img class="logo-preview" [src]="logoUrl" alt="" width="56" height="56" />
+          } @else {
+            <span class="logo-placeholder" aria-hidden="true"></span>
+          }
+          <div class="logo-actions">
+            <label class="file-button">
+              <span>Import logo</span>
+              <input type="file" accept="image/*" (change)="importLogo($event)" />
+            </label>
+            @if (logoPreview()) {
+              <button class="secondary-button" type="button" (click)="removeLogo()">Remove</button>
+            }
+          </div>
+        </div>
+
+        <label class="toggle-row">
+          <input type="checkbox" formControlName="isFinished" />
+          <span>Competition has ended</span>
+        </label>
+
+        <div class="form-grid">
         <label>
           <span>Schedule source URL</span>
           <input type="url" formControlName="scheduleSourceUrl" autocomplete="off" />
@@ -34,9 +69,32 @@
           <span>Odds and live score source URL</span>
           <input type="url" formControlName="oddsSourceUrl" autocomplete="off" />
         </label>
+        </div>
+
+        <fieldset formArrayName="rules">
+          <legend>Rules</legend>
+
+          <div class="rules-grid">
+            @for (template of ruleTemplates(); track template.key; let index = $index) {
+              <div class="rule-row" [formGroupName]="index">
+                <label class="toggle-row">
+                  <input type="checkbox" formControlName="isEnabled" />
+                  <span>{{ template.textTemplate }}</span>
+                </label>
+
+                @if (template.valueLabel) {
+                  <label>
+                    <span>{{ template.valueLabel }}</span>
+                    <input type="text" formControlName="value" autocomplete="off" />
+                  </label>
+                }
+              </div>
+            }
+          </div>
+        </fieldset>
 
         <button class="primary-button" type="submit" [disabled]="savingSourceSettings() || sourceForm.invalid">
-          {{ savingSourceSettings() ? 'Saving...' : 'Save sources' }}
+          {{ savingSourceSettings() ? 'Saving...' : 'Save settings' }}
         </button>
       </form>
     }
@@ -54,7 +112,7 @@
       <app-secret-code-modal
         title="Confirm source settings"
         label="What is the secret code?"
-        confirmLabel="Save sources"
+        confirmLabel="Save settings"
         [errorMessage]="sourceSecretCodeErrorMessage()"
         [isSubmitting]="savingSourceSettings()"
         (confirmSecretCode)="confirmSourceSecretCode($event)"

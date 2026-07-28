@@ -1,10 +1,20 @@
 import { NextFunction, Request, Response } from 'express';
 
-import { UpdateAdminCompetitionSettingsRequest, UpdateCompetitionTiebreakerRequest } from './competitions.interfaces.js';
 import {
+  CreateAdminCompetitionRequest,
+  JoinCompetitionRequest,
+  UpdateAdminCompetitionSettingsRequest,
+  UpdateCompetitionTiebreakerRequest
+} from './competitions.interfaces.js';
+import {
+  createAdminCompetition,
   getAdminCompetitionSettings,
+  getAdminRuleTemplates,
+  getDefaultCompetitionRules,
+  getCompetitionRulesForViewer,
   getCompetitionsForAdmin,
   getCompetitionsForUser,
+  joinCompetition,
   resolveCompetitionIdForAdmin,
   updateAdminCompetitionSettings,
   updateTiebreakerForUser
@@ -21,6 +31,108 @@ export async function getCompetitionsController(req: Request, res: Response, nex
 export async function getAdminCompetitionsController(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     res.json(await getCompetitionsForAdmin());
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createAdminCompetitionController(
+  req: Request<object, object, CreateAdminCompetitionRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const result = await createAdminCompetition(req.body);
+
+    if (result.status === 'invalid') {
+      res.status(400).json({ message: 'Please check the competition details.' });
+      return;
+    }
+
+    if (result.status === 'invalid_secret') {
+      res.status(403).json({ message: 'Secret code is incorrect.' });
+      return;
+    }
+
+    res.status(201).json({ competition: result.competition });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getAdminRuleTemplatesController(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    res.json(await getAdminRuleTemplates());
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getCompetitionRulesController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const headerValue = req.header('x-competition-id');
+    const requestedCompetitionId = headerValue ? Number(headerValue) : null;
+
+    if (requestedCompetitionId !== null && (!Number.isInteger(requestedCompetitionId) || requestedCompetitionId < 1)) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const rules = await getCompetitionRulesForViewer(req.authUser!.id, req.authUser!.role, requestedCompetitionId);
+
+    if (!rules) {
+      res.status(404).json({ message: 'Competition rules could not be found.' });
+      return;
+    }
+
+    res.json(rules);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getDefaultCompetitionRulesController(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    res.json(await getDefaultCompetitionRules());
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function joinCompetitionController(
+  req: Request<{ readonly competitionId: string }, object, JoinCompetitionRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const result = await joinCompetition(req.authUser!.id, req.authUser!.role, Number(req.params.competitionId), req.body);
+
+    if (result.status === 'invalid') {
+      res.status(400).json({ message: 'Please enter a valid competition passcode.' });
+      return;
+    }
+
+    if (result.status === 'invalid_passcode') {
+      res.status(403).json({ message: 'Competition passcode is incorrect.' });
+      return;
+    }
+
+    if (result.status === 'finished') {
+      res.status(409).json({ message: 'This competition has ended.' });
+      return;
+    }
+
+    if (result.status === 'forbidden') {
+      res.status(403).json({ message: 'Super admin cannot join competitions.' });
+      return;
+    }
+
+    if (result.status === 'not_found') {
+      res.status(404).json({ message: 'Competition could not be found.' });
+      return;
+    }
+
+    res.json(result.response);
   } catch (error) {
     next(error);
   }

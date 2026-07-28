@@ -3,12 +3,6 @@ import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
 
 import { config } from '../config/index.js';
-import {
-  defaultCompetitionName,
-  defaultCompetitionSlug,
-  defaultScheduleSourceUrl,
-  defaultOddsPortalSourceUrl
-} from '../shared/constants/default-competition.constants.js';
 import { hashPassword } from '../shared/utils/password.js';
 
 let databaseInitialized = false;
@@ -68,6 +62,7 @@ function initializeDatabase(db: Database.Database) {
   ensureUsersTableSupportsTiebreaker(db);
   ensureUsersTableSupportsVerification(db);
   ensureCompetitionSchema(db);
+  ensureSuperAdminCompetitionMembershipBlocked(db);
   ensureMatchesTableSupportsOdds(db);
   ensureMatchesTableSupportsPlayoffMappings(db);
 
@@ -208,11 +203,10 @@ function initializeDatabase(db: Database.Database) {
     );
   `);
 
-  seedDefaultCompetition(db);
+  ensureSuperAdminPredictionsBlocked(db);
+  seedRuleTemplates(db);
+  seedMissingCompetitionRules(db);
   ensureCompetitionScopedIndexes(db);
-
-  seedPaymentSettings(db);
-  seedPaymentSettingsConfig(db);
 
   // Older compatibility migrations. These are not specific to the competition layer.
   ensurePaymentSettingsSupportsFastPayUrl(db);
@@ -228,10 +222,13 @@ function ensureCompetitionSchema(db: Database.Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE CHECK(length(name) BETWEEN 1 AND 120),
       slug TEXT NOT NULL UNIQUE CHECK(length(slug) BETWEEN 1 AND 140),
+      passcode_hash TEXT CHECK(passcode_hash IS NULL OR length(passcode_hash) <= 255),
+      logo_url TEXT NOT NULL DEFAULT '' CHECK(length(logo_url) <= 200000),
       schedule_source_url TEXT NOT NULL DEFAULT '' CHECK(length(schedule_source_url) <= 500),
       odds_source_url TEXT NOT NULL DEFAULT '' CHECK(length(odds_source_url) <= 500),
       notification_reminders_enabled INTEGER NOT NULL DEFAULT 0 CHECK(notification_reminders_enabled IN (0, 1)),
       live_score_sync_enabled INTEGER NOT NULL DEFAULT 0 CHECK(live_score_sync_enabled IN (0, 1)),
+      is_finished INTEGER NOT NULL DEFAULT 0 CHECK(is_finished IN (0, 1)),
       is_archived INTEGER NOT NULL DEFAULT 0 CHECK(is_archived IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -245,74 +242,241 @@ function ensureCompetitionSchema(db: Database.Database) {
       joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (competition_id, user_id)
     );
+
+    CREATE TABLE IF NOT EXISTS rule_templates (
+      key TEXT PRIMARY KEY CHECK(length(key) BETWEEN 1 AND 80),
+      text_template TEXT NOT NULL CHECK(length(text_template) BETWEEN 1 AND 500),
+      value_label TEXT CHECK(value_label IS NULL OR length(value_label) BETWEEN 1 AND 120),
+      default_value TEXT CHECK(default_value IS NULL OR length(default_value) <= 120),
+      sort_order INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS competition_rules (
+      competition_id INTEGER NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
+      template_key TEXT NOT NULL REFERENCES rule_templates(key) ON DELETE CASCADE,
+      value TEXT CHECK(value IS NULL OR length(value) <= 120),
+      sort_order INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (competition_id, template_key)
+    );
   `);
+
+  ensureCompetitionTableSupportsManagementFields(db);
 }
 
-function seedDefaultCompetition(db: Database.Database) {
-  db.prepare(
-    `
-      INSERT INTO competitions (name, slug, schedule_source_url, odds_source_url, live_score_sync_enabled)
-      VALUES (?, ?, ?, ?, 1)
-      ON CONFLICT(slug) DO UPDATE SET
-        name = excluded.name,
-        schedule_source_url = CASE
-          WHEN competitions.schedule_source_url = '' THEN excluded.schedule_source_url
-          ELSE competitions.schedule_source_url
-        END,
-        odds_source_url = CASE
-          WHEN competitions.odds_source_url = '' THEN excluded.odds_source_url
-          ELSE competitions.odds_source_url
-        END,
-        live_score_sync_enabled = competitions.live_score_sync_enabled,
-        updated_at = CURRENT_TIMESTAMP
-    `
-  ).run(defaultCompetitionName, defaultCompetitionSlug, defaultScheduleSourceUrl, defaultOddsPortalSourceUrl);
-}
-
-function getDefaultCompetitionId(db: Database.Database): number {
-  const competition = db
-    .prepare('SELECT id FROM competitions WHERE slug = ?')
-    .get(defaultCompetitionSlug) as { id: number } | undefined;
-
-  if (!competition) {
-    throw new Error(`${defaultCompetitionName} competition could not be loaded.`);
-  }
-
-  return competition.id;
-}
-
-function seedPaymentSettings(db: Database.Database) {
-  const defaultCompetitionId = getDefaultCompetitionId(db);
-  const rows: Array<{ type: string; isEnabled: 0 | 1 }> = [
-    { type: 'iban', isEnabled: 1 },
-    { type: 'keks', isEnabled: 1 },
-    { type: 'revolut', isEnabled: 1 },
-    { type: 'cash', isEnabled: 0 }
+function seedRuleTemplates(db: Database.Database) {
+  const templates = [
+    {
+      key: 'exact-score',
+      text: 'Exact score predictions award 1 point.',
+      valueLabel: null,
+      defaultValue: null
+    },
+    {
+      key: 'odds-outcome',
+      text: 'Correct match outcome predictions award points equal to the selected odds coefficient.',
+      valueLabel: null,
+      defaultValue: null
+    },
+    {
+      key: 'regular-time',
+      text: 'Final scores are based on regular time only; extra time and penalties do not count.',
+      valueLabel: null,
+      defaultValue: null
+    },
+    {
+      key: 'accumulate-points',
+      text: 'Points accumulate match by match across the competition.',
+      valueLabel: null,
+      defaultValue: null
+    },
+    {
+      key: 'rank-total-points',
+      text: 'Users are ranked first by total points.',
+      valueLabel: null,
+      defaultValue: null
+    },
+    {
+      key: 'winner-tiebreaker',
+      text: 'The competition winner is the second ranking criterion in case of a tied result.',
+      valueLabel: null,
+      defaultValue: null
+    },
+    {
+      key: 'buy-in',
+      text: 'Buy-in is {{value}} per player.',
+      valueLabel: 'Buy-in amount',
+      defaultValue: '25 EUR'
+    },
+    {
+      key: 'prize-split',
+      text: 'Prize money is split 60% for 1st place, 30% for 2nd place, and 10% for 3rd place.',
+      valueLabel: null,
+      defaultValue: null
+    },
+    {
+      key: 'split-ties',
+      text: 'If users are still tied, prize money is split according to the configured prize distribution.',
+      valueLabel: null,
+      defaultValue: null
+    },
+    {
+      key: 'round-deadline',
+      text: 'Predictions must be submitted before the first match of each round.',
+      valueLabel: null,
+      defaultValue: null
+    },
+    {
+      key: 'visible-after-deadline',
+      text: 'After the deadline, all users can see all predictions for that round.',
+      valueLabel: null,
+      defaultValue: null
+    }
   ];
 
   const statement = db.prepare(
     `
-      INSERT INTO payment_settings (competition_id, type, is_enabled)
-      VALUES (?, ?, ?)
-      ON CONFLICT(competition_id, type) DO NOTHING
+      INSERT INTO rule_templates (key, text_template, value_label, default_value, sort_order)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET
+        text_template = excluded.text_template,
+        value_label = excluded.value_label,
+        default_value = excluded.default_value,
+        sort_order = excluded.sort_order,
+        updated_at = CURRENT_TIMESTAMP
     `
   );
 
-  for (const row of rows) {
-    statement.run(defaultCompetitionId, row.type, row.isEnabled);
+  templates.forEach((template, index) => {
+    statement.run(template.key, template.text, template.valueLabel, template.defaultValue, index + 1);
+  });
+}
+
+function seedMissingCompetitionRules(db: Database.Database) {
+  db.prepare(
+    `
+      INSERT INTO competition_rules (competition_id, template_key, value, sort_order)
+      SELECT competitions.id, rule_templates.key, rule_templates.default_value, rule_templates.sort_order
+      FROM competitions
+      CROSS JOIN rule_templates
+      WHERE competitions.is_archived = 0
+        AND NOT EXISTS (
+          SELECT 1
+          FROM competition_rules
+          WHERE competition_rules.competition_id = competitions.id
+        )
+    `
+  ).run();
+}
+
+function ensureCompetitionTableSupportsManagementFields(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(competitions)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columns.length === 0) {
+    return;
+  }
+
+  if (!columnNames.has('passcode_hash')) {
+    db.exec('ALTER TABLE competitions ADD COLUMN passcode_hash TEXT CHECK(passcode_hash IS NULL OR length(passcode_hash) <= 255)');
+  }
+
+  if (!columnNames.has('is_finished')) {
+    db.exec('ALTER TABLE competitions ADD COLUMN is_finished INTEGER NOT NULL DEFAULT 0 CHECK(is_finished IN (0, 1))');
+  }
+
+  if (!columnNames.has('logo_url')) {
+    db.exec("ALTER TABLE competitions ADD COLUMN logo_url TEXT NOT NULL DEFAULT '' CHECK(length(logo_url) <= 200000)");
   }
 }
 
-function seedPaymentSettingsConfig(db: Database.Database) {
-  const defaultCompetitionId = getDefaultCompetitionId(db);
+function ensureSuperAdminCompetitionMembershipBlocked(db: Database.Database) {
+  db.exec(`
+    DELETE FROM competition_users
+    WHERE EXISTS (
+      SELECT 1
+      FROM users
+      WHERE users.id = competition_users.user_id
+        AND users.role = 'super_admin'
+    );
 
-  db.prepare(
-    `
-      INSERT INTO payment_settings_config (competition_id, show_payment_info)
-      VALUES (?, 0)
-      ON CONFLICT(competition_id) DO NOTHING
-    `
-  ).run(defaultCompetitionId);
+    CREATE TRIGGER IF NOT EXISTS competition_users_prevent_super_admin_insert
+    BEFORE INSERT ON competition_users
+    WHEN EXISTS (
+      SELECT 1
+      FROM users
+      WHERE users.id = NEW.user_id
+        AND users.role = 'super_admin'
+    )
+    BEGIN
+      SELECT RAISE(ABORT, 'super_admin cannot join competitions');
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS competition_users_prevent_super_admin_update
+    BEFORE UPDATE OF user_id ON competition_users
+    WHEN EXISTS (
+      SELECT 1
+      FROM users
+      WHERE users.id = NEW.user_id
+        AND users.role = 'super_admin'
+    )
+    BEGIN
+      SELECT RAISE(ABORT, 'super_admin cannot join competitions');
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS users_remove_competition_membership_for_super_admin
+    AFTER UPDATE OF role ON users
+    WHEN NEW.role = 'super_admin'
+    BEGIN
+      DELETE FROM competition_users WHERE user_id = NEW.id;
+    END;
+  `);
+}
+
+function ensureSuperAdminPredictionsBlocked(db: Database.Database) {
+  db.exec(`
+    DELETE FROM predictions
+    WHERE EXISTS (
+      SELECT 1
+      FROM users
+      WHERE users.id = predictions.user_id
+        AND users.role = 'super_admin'
+    );
+
+    CREATE TRIGGER IF NOT EXISTS predictions_prevent_super_admin_insert
+    BEFORE INSERT ON predictions
+    WHEN EXISTS (
+      SELECT 1
+      FROM users
+      WHERE users.id = NEW.user_id
+        AND users.role = 'super_admin'
+    )
+    BEGIN
+      SELECT RAISE(ABORT, 'super_admin cannot submit predictions');
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS predictions_prevent_super_admin_update
+    BEFORE UPDATE OF user_id ON predictions
+    WHEN EXISTS (
+      SELECT 1
+      FROM users
+      WHERE users.id = NEW.user_id
+        AND users.role = 'super_admin'
+    )
+    BEGIN
+      SELECT RAISE(ABORT, 'super_admin cannot submit predictions');
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS users_remove_predictions_for_super_admin
+    AFTER UPDATE OF role ON users
+    WHEN NEW.role = 'super_admin'
+    BEGIN
+      DELETE FROM predictions WHERE user_id = NEW.id;
+    END;
+  `);
 }
 
 function seedSuperAdmin(db: Database.Database) {
