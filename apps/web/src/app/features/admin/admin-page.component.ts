@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
@@ -25,6 +25,7 @@ export class AdminPageComponent {
   private readonly router = inject(Router);
 
   protected readonly activeCompetition = this.appState.activeCompetition;
+  protected readonly isSuperAdmin = computed(() => this.appState.currentUser()?.role === 'super_admin');
   protected readonly competitions = this.competitionsService.competitions;
   protected readonly loadingCompetitions = signal(true);
   protected readonly loadingRuleTemplates = signal(true);
@@ -41,6 +42,7 @@ export class AdminPageComponent {
     logoUrl: ['', [Validators.maxLength(200000)]],
     passcode: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(120)]],
     isFinished: [false],
+    playoffsEnabled: [false],
     oddsSourceUrl: ['', [Validators.required, Validators.maxLength(500)]],
     rules: this.formBuilder.array<
       ReturnType<AdminPageComponent['createRuleControl']>
@@ -62,20 +64,24 @@ export class AdminPageComponent {
       }
     });
 
-    this.competitionsApi.getAdminRuleTemplates().subscribe({
-      next: ({ templates }) => {
-        this.ruleTemplates.set(templates);
-        this.createForm.setControl(
-          'rules',
-          this.formBuilder.array(templates.map((template) => this.createRuleControl(template)))
-        );
-        this.loadingRuleTemplates.set(false);
-      },
-      error: () => {
-        this.competitionErrorMessage.set('Rule templates could not be loaded.');
-        this.loadingRuleTemplates.set(false);
-      }
-    });
+    if (this.isSuperAdmin()) {
+      this.competitionsApi.getAdminRuleTemplates().subscribe({
+        next: ({ templates }) => {
+          this.ruleTemplates.set(templates);
+          this.createForm.setControl(
+            'rules',
+            this.formBuilder.array(templates.map((template) => this.createRuleControl(template)))
+          );
+          this.loadingRuleTemplates.set(false);
+        },
+        error: () => {
+          this.competitionErrorMessage.set('Rule templates could not be loaded.');
+          this.loadingRuleTemplates.set(false);
+        }
+      });
+    } else {
+      this.loadingRuleTemplates.set(false);
+    }
   }
 
   protected selectCompetition(competition: Competition): void {
@@ -146,6 +152,7 @@ export class AdminPageComponent {
         passcode: formValue.passcode,
         logoUrl: formValue.logoUrl,
         isFinished: formValue.isFinished,
+        playoffsEnabled: formValue.playoffsEnabled,
         oddsSourceUrl: formValue.oddsSourceUrl,
         rules,
         secretCode
@@ -158,6 +165,7 @@ export class AdminPageComponent {
             logoUrl: '',
             passcode: '',
             isFinished: false,
+            playoffsEnabled: false,
             oddsSourceUrl: ''
           });
           this.createLogoPreview.set(null);

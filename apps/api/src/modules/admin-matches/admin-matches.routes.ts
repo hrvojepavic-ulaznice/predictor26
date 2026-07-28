@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { requireRoles } from '../../shared/middleware/require-auth.middleware.js';
+import { requireAuth } from '../../shared/middleware/require-auth.middleware.js';
 import {
   getAdminMatchesController,
   importMatchesController,
@@ -12,7 +12,7 @@ import {
 
 export const adminMatchesRoutes = Router();
 
-adminMatchesRoutes.use('/admin/matches', requireRoles(['super_admin', 'admin']));
+adminMatchesRoutes.use('/admin/matches', requireAuth);
 adminMatchesRoutes.get('/admin/matches', getAdminMatchesController);
 adminMatchesRoutes.post('/admin/matches/import', importMatchesController);
 adminMatchesRoutes.post('/admin/matches/sync-odds', syncMatchOddsController);

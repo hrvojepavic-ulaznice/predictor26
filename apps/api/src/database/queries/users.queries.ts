@@ -72,7 +72,7 @@ export async function getUserByIdForCompetition(id: number, competitionId: numbe
           users.last_name,
           competition_users.tiebreaker_name,
           users.password_hash,
-          users.role,
+          competition_users.role,
           competition_users.is_verified
         FROM users
         INNER JOIN competition_users ON competition_users.user_id = users.id
@@ -119,7 +119,7 @@ export async function listUsersForCompetition(competitionId: number): Promise<Us
           users.last_name,
           competition_users.tiebreaker_name,
           users.password_hash,
-          users.role,
+          competition_users.role,
           competition_users.is_verified
         FROM users
         INNER JOIN competition_users ON competition_users.user_id = users.id
@@ -194,27 +194,44 @@ export async function createUser(input: CreateUserInput): Promise<UserRow> {
   }
 }
 
-export async function updateUserRole(id: number, role: Exclude<UserRole, 'super_admin'>): Promise<UserRow | undefined> {
+export async function updateUserCompetitionRole(id: number, competitionId: number, role: Exclude<UserRole, 'super_admin'>): Promise<UserRow | undefined> {
   const db = openDatabase();
 
   try {
     db.prepare(
       `
-        UPDATE users
-        SET role = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND role != 'super_admin'
+        UPDATE competition_users
+        SET role = ?
+        WHERE user_id = ?
+          AND competition_id = ?
+          AND EXISTS (
+            SELECT 1
+            FROM users
+            WHERE users.id = competition_users.user_id
+              AND users.role != 'super_admin'
+          )
       `
-    ).run(role, id);
+    ).run(role, id, competitionId);
 
     return db
       .prepare(
         `
-        SELECT id, username, first_name, last_name, tiebreaker_name, password_hash, role, is_verified
+        SELECT
+          users.id,
+          users.username,
+          users.first_name,
+          users.last_name,
+          competition_users.tiebreaker_name,
+          users.password_hash,
+          competition_users.role,
+          competition_users.is_verified
         FROM users
-        WHERE id = ?
+        INNER JOIN competition_users ON competition_users.user_id = users.id
+        WHERE users.id = ?
+          AND competition_users.competition_id = ?
       `
       )
-      .get(id) as UserRow | undefined;
+      .get(id, competitionId) as UserRow | undefined;
   } finally {
     db.close();
   }
@@ -305,7 +322,7 @@ export async function updateUserVerificationForCompetition(
           users.last_name,
           competition_users.tiebreaker_name,
           users.password_hash,
-          users.role,
+          competition_users.role,
           competition_users.is_verified
         FROM users
         INNER JOIN competition_users ON competition_users.user_id = users.id

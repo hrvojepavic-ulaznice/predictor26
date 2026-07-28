@@ -4,6 +4,7 @@ export interface CompetitionResponse {
   readonly slug: string;
   readonly logoUrl: string | null;
   readonly isFinished: boolean;
+  readonly playoffsEnabled: boolean;
   readonly isJoined: boolean;
   readonly tiebreakerName: string | null;
 }
@@ -34,6 +35,7 @@ export interface AdminCompetitionSettingsResponse {
   readonly slug: string;
   readonly logoUrl: string | null;
   readonly isFinished: boolean;
+  readonly playoffsEnabled: boolean;
   readonly passcodeSet: boolean;
   readonly scheduleSourceUrl: string;
   readonly oddsSourceUrl: string;
@@ -47,6 +49,7 @@ export interface UpdateAdminCompetitionSettingsRequest {
   readonly logoUrl: string;
   readonly passcode?: string;
   readonly isFinished: boolean;
+  readonly playoffsEnabled: boolean;
   readonly scheduleSourceUrl?: string;
   readonly oddsSourceUrl: string;
   readonly secretCode: string;
@@ -58,6 +61,7 @@ export interface CreateAdminCompetitionRequest {
   readonly logoUrl?: string;
   readonly passcode: string;
   readonly isFinished: boolean;
+  readonly playoffsEnabled?: boolean;
   readonly scheduleSourceUrl?: string;
   readonly oddsSourceUrl: string;
   readonly secretCode: string;

@@ -111,7 +111,7 @@ function readStoredSession(): StoredSession | null {
     return {
       token: parsedSession.token,
       user: null,
-      activeCompetition: isPersistedCompetition(parsedSession.activeCompetition) ? parsedSession.activeCompetition : null
+      activeCompetition: normalizePersistedCompetition(parsedSession.activeCompetition)
     };
   } catch {
     localStorage.removeItem(sessionStorageKey);
@@ -123,14 +123,14 @@ function writeStoredSession(token: string, activeCompetition: Competition | null
   localStorage.setItem(sessionStorageKey, JSON.stringify({ token, activeCompetition } satisfies PersistedSession));
 }
 
-function isPersistedCompetition(value: unknown): value is Competition {
+function normalizePersistedCompetition(value: unknown): Competition | null {
   if (typeof value !== 'object' || value === null) {
-    return false;
+    return null;
   }
 
   const competition = value as Partial<Competition>;
 
-  return (
+  const isValid =
     typeof competition.id === 'number' &&
     Number.isInteger(competition.id) &&
     typeof competition.name === 'string' &&
@@ -138,6 +138,20 @@ function isPersistedCompetition(value: unknown): value is Competition {
     (typeof competition.logoUrl === 'string' || competition.logoUrl === null) &&
     typeof competition.isFinished === 'boolean' &&
     typeof competition.isJoined === 'boolean' &&
-    (typeof competition.tiebreakerName === 'string' || competition.tiebreakerName === null)
-  );
+    (typeof competition.tiebreakerName === 'string' || competition.tiebreakerName === null);
+
+  if (!isValid) {
+    return null;
+  }
+
+  return {
+    id: competition.id,
+    name: competition.name,
+    slug: competition.slug,
+    logoUrl: competition.logoUrl,
+    isFinished: competition.isFinished,
+    playoffsEnabled: competition.playoffsEnabled === true || (competition.playoffsEnabled === undefined && competition.slug === 'world-cup-2026'),
+    isJoined: competition.isJoined,
+    tiebreakerName: competition.tiebreakerName
+  };
 }

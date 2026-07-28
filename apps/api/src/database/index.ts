@@ -230,6 +230,7 @@ function ensureCompetitionSchema(db: Database.Database) {
       odds_source_url TEXT NOT NULL DEFAULT '' CHECK(length(odds_source_url) <= 500),
       notification_reminders_enabled INTEGER NOT NULL DEFAULT 0 CHECK(notification_reminders_enabled IN (0, 1)),
       live_score_sync_enabled INTEGER NOT NULL DEFAULT 0 CHECK(live_score_sync_enabled IN (0, 1)),
+      playoffs_enabled INTEGER NOT NULL DEFAULT 0 CHECK(playoffs_enabled IN (0, 1)),
       is_finished INTEGER NOT NULL DEFAULT 0 CHECK(is_finished IN (0, 1)),
       is_archived INTEGER NOT NULL DEFAULT 0 CHECK(is_archived IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -239,6 +240,7 @@ function ensureCompetitionSchema(db: Database.Database) {
     CREATE TABLE IF NOT EXISTS competition_users (
       competition_id INTEGER NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin', 'user')),
       is_verified INTEGER NOT NULL DEFAULT 0 CHECK(is_verified IN (0, 1)),
       tiebreaker_name TEXT CHECK(tiebreaker_name IS NULL OR length(tiebreaker_name) BETWEEN 1 AND 80),
       joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -278,7 +280,17 @@ function ensureCompetitionSchema(db: Database.Database) {
   `);
 
   ensureCompetitionTableSupportsManagementFields(db);
+  ensureCompetitionUsersTableSupportsScopedRole(db);
   ensureCompetitionTeamsTableSupportsGroupName(db);
+}
+
+function ensureCompetitionUsersTableSupportsScopedRole(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(competition_users)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columns.length > 0 && !columnNames.has('role')) {
+    db.exec("ALTER TABLE competition_users ADD COLUMN role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin', 'user'))");
+  }
 }
 
 function ensureCompetitionTeamsTableSupportsGroupName(db: Database.Database) {
@@ -413,6 +425,10 @@ function ensureCompetitionTableSupportsManagementFields(db: Database.Database) {
 
   if (!columnNames.has('logo_url')) {
     db.exec("ALTER TABLE competitions ADD COLUMN logo_url TEXT NOT NULL DEFAULT '' CHECK(length(logo_url) <= 200000)");
+  }
+
+  if (!columnNames.has('playoffs_enabled')) {
+    db.exec('ALTER TABLE competitions ADD COLUMN playoffs_enabled INTEGER NOT NULL DEFAULT 0 CHECK(playoffs_enabled IN (0, 1))');
   }
 }
 

@@ -6,9 +6,9 @@ import { getCompetitionSettingsController, updateCompetitionSettingsController }
 export const competitionSettingsRoutes = Router();
 
 competitionSettingsRoutes.get('/competition/settings', getCompetitionSettingsController);
-competitionSettingsRoutes.get('/admin/competition/settings', requireRoles(['super_admin', 'admin']), getCompetitionSettingsController);
+competitionSettingsRoutes.get('/admin/competition/settings', requireRoles(['super_admin']), getCompetitionSettingsController);
 competitionSettingsRoutes.patch(
   '/admin/competition/settings',
-  requireRoles(['super_admin', 'admin']),
+  requireRoles(['super_admin']),
   updateCompetitionSettingsController
 );

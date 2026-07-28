@@ -11,6 +11,7 @@ export interface CompetitionRow {
   readonly odds_source_url: string;
   readonly notification_reminders_enabled: 0 | 1;
   readonly live_score_sync_enabled: 0 | 1;
+  readonly playoffs_enabled: 0 | 1;
   readonly is_archived: 0 | 1;
   readonly is_finished: 0 | 1;
   readonly is_joined: 0 | 1;
@@ -52,6 +53,7 @@ export function listCompetitionsForUser(userId: number): CompetitionRow[] {
             competitions.odds_source_url,
             competitions.notification_reminders_enabled,
             competitions.live_score_sync_enabled,
+            competitions.playoffs_enabled,
             competitions.is_archived,
             competitions.is_finished,
             CASE WHEN competition_users.user_id IS NULL THEN 0 ELSE 1 END AS is_joined,
@@ -94,6 +96,7 @@ export function listCompetitions(): CompetitionRow[] {
             odds_source_url,
             notification_reminders_enabled,
             live_score_sync_enabled,
+            playoffs_enabled,
             is_archived,
             is_finished,
             1 AS is_joined,
@@ -104,6 +107,82 @@ export function listCompetitions(): CompetitionRow[] {
         `
       )
       .all() as CompetitionRow[];
+  } finally {
+    db.close();
+  }
+}
+
+export function listCompetitionsForAdminUser(userId: number): CompetitionRow[] {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+          SELECT
+            competitions.id,
+            competitions.name,
+            competitions.slug,
+            competitions.passcode_hash,
+            competitions.logo_url,
+            competitions.schedule_source_url,
+            competitions.odds_source_url,
+            competitions.notification_reminders_enabled,
+            competitions.live_score_sync_enabled,
+            competitions.playoffs_enabled,
+            competitions.is_archived,
+            competitions.is_finished,
+            1 AS is_joined,
+            competition_users.tiebreaker_name
+          FROM competitions
+          INNER JOIN competition_users ON competition_users.competition_id = competitions.id
+          INNER JOIN users ON users.id = competition_users.user_id
+          WHERE competition_users.user_id = ?
+            AND competition_users.role = 'admin'
+            AND users.role != 'super_admin'
+            AND competitions.is_archived = 0
+          ORDER BY competitions.name COLLATE NOCASE ASC
+        `
+      )
+      .all(userId) as CompetitionRow[];
+  } finally {
+    db.close();
+  }
+}
+
+export function getCompetitionForAdminUser(userId: number, competitionId: number): CompetitionRow | undefined {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+          SELECT
+            competitions.id,
+            competitions.name,
+            competitions.slug,
+            competitions.passcode_hash,
+            competitions.logo_url,
+            competitions.schedule_source_url,
+            competitions.odds_source_url,
+            competitions.notification_reminders_enabled,
+            competitions.live_score_sync_enabled,
+            competitions.playoffs_enabled,
+            competitions.is_archived,
+            competitions.is_finished,
+            1 AS is_joined,
+            competition_users.tiebreaker_name
+          FROM competitions
+          INNER JOIN competition_users ON competition_users.competition_id = competitions.id
+          INNER JOIN users ON users.id = competition_users.user_id
+          WHERE competition_users.user_id = ?
+            AND competitions.id = ?
+            AND competition_users.role = 'admin'
+            AND users.role != 'super_admin'
+            AND competitions.is_archived = 0
+        `
+      )
+      .get(userId, competitionId) as CompetitionRow | undefined;
   } finally {
     db.close();
   }
@@ -126,6 +205,7 @@ export function getCompetitionById(competitionId: number): CompetitionRow | unde
             odds_source_url,
             notification_reminders_enabled,
             live_score_sync_enabled,
+            playoffs_enabled,
             is_archived,
             is_finished,
             1 AS is_joined,
@@ -158,6 +238,7 @@ export function getCompetitionForUser(userId: number, competitionId: number): Co
             competitions.odds_source_url,
             competitions.notification_reminders_enabled,
             competitions.live_score_sync_enabled,
+            competitions.playoffs_enabled,
             competitions.is_archived,
             competitions.is_finished,
             CASE WHEN competition_users.user_id IS NULL THEN 0 ELSE 1 END AS is_joined,
@@ -194,6 +275,7 @@ export function getDefaultCompetition(): CompetitionRow | undefined {
             odds_source_url,
             notification_reminders_enabled,
             live_score_sync_enabled,
+            playoffs_enabled,
             is_archived,
             is_finished,
             1 AS is_joined,
@@ -225,6 +307,7 @@ export function getDefaultCompetitionForUser(userId: number): CompetitionRow | u
             competitions.odds_source_url,
             competitions.notification_reminders_enabled,
             competitions.live_score_sync_enabled,
+            competitions.playoffs_enabled,
             competitions.is_archived,
             competitions.is_finished,
             1 AS is_joined,
@@ -280,6 +363,7 @@ export function updateCompetitionTiebreaker(
             competitions.odds_source_url,
             competitions.notification_reminders_enabled,
             competitions.live_score_sync_enabled,
+            competitions.playoffs_enabled,
             competitions.is_archived,
             competitions.is_finished,
             1 AS is_joined,
@@ -334,6 +418,7 @@ export function listCompetitionsWithLiveScoreSyncEnabled(): CompetitionRow[] {
             odds_source_url,
             notification_reminders_enabled,
             live_score_sync_enabled,
+            playoffs_enabled,
             is_archived,
             is_finished,
             1 AS is_joined,
@@ -367,6 +452,7 @@ export function listCompetitionsWithNotificationRemindersEnabled(): CompetitionR
             odds_source_url,
             notification_reminders_enabled,
             live_score_sync_enabled,
+            playoffs_enabled,
             is_archived,
             is_finished,
             1 AS is_joined,
@@ -451,6 +537,7 @@ export function getCompetitionBySlug(slug: string): CompetitionRow | undefined {
             odds_source_url,
             notification_reminders_enabled,
             live_score_sync_enabled,
+            playoffs_enabled,
             is_archived,
             is_finished,
             1 AS is_joined,
@@ -527,6 +614,7 @@ export function createCompetition(input: {
   readonly passcodeHash: string;
   readonly logoUrl: string;
   readonly isFinished: boolean;
+  readonly playoffsEnabled: boolean;
   readonly scheduleSourceUrl: string;
   readonly oddsSourceUrl: string;
   readonly rules: ReadonlyArray<{ readonly templateKey: string; readonly value: string | null; readonly sortOrder: number }>;
@@ -547,12 +635,22 @@ export function createCompetition(input: {
               schedule_source_url,
               odds_source_url,
               notification_reminders_enabled,
-              live_score_sync_enabled
+              live_score_sync_enabled,
+              playoffs_enabled
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
           `
         )
-        .run(input.name, input.slug, input.passcodeHash, input.logoUrl, input.isFinished ? 1 : 0, input.scheduleSourceUrl, input.oddsSourceUrl);
+        .run(
+          input.name,
+          input.slug,
+          input.passcodeHash,
+          input.logoUrl,
+          input.isFinished ? 1 : 0,
+          input.scheduleSourceUrl,
+          input.oddsSourceUrl,
+          input.playoffsEnabled ? 1 : 0
+        );
       const competitionId = Number(result.lastInsertRowid);
 
       insertDefaultPaymentSettings(db, competitionId);
@@ -575,6 +673,7 @@ export function updateCompetitionManagementSettings(
     readonly passcodeHash?: string;
     readonly logoUrl: string;
     readonly isFinished: boolean;
+    readonly playoffsEnabled: boolean;
     readonly scheduleSourceUrl: string;
     readonly oddsSourceUrl: string;
     readonly rules: ReadonlyArray<{ readonly templateKey: string; readonly value: string | null; readonly sortOrder: number }>;
@@ -600,6 +699,7 @@ export function updateCompetitionManagementSettings(
               passcode_hash = ?,
               logo_url = ?,
               is_finished = ?,
+              playoffs_enabled = ?,
               schedule_source_url = ?,
               odds_source_url = ?,
               updated_at = CURRENT_TIMESTAMP
@@ -611,6 +711,7 @@ export function updateCompetitionManagementSettings(
           input.passcodeHash,
           input.logoUrl,
           input.isFinished ? 1 : 0,
+          input.playoffsEnabled ? 1 : 0,
           input.scheduleSourceUrl,
           input.oddsSourceUrl,
           competitionId
@@ -624,12 +725,22 @@ export function updateCompetitionManagementSettings(
               slug = ?,
               logo_url = ?,
               is_finished = ?,
+              playoffs_enabled = ?,
               schedule_source_url = ?,
               odds_source_url = ?,
               updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
           `
-        ).run(input.name, input.slug, input.logoUrl, input.isFinished ? 1 : 0, input.scheduleSourceUrl, input.oddsSourceUrl, competitionId);
+        ).run(
+          input.name,
+          input.slug,
+          input.logoUrl,
+          input.isFinished ? 1 : 0,
+          input.playoffsEnabled ? 1 : 0,
+          input.scheduleSourceUrl,
+          input.oddsSourceUrl,
+          competitionId
+        );
       }
 
       replaceCompetitionRulesInDatabase(db, competitionId, input.rules);

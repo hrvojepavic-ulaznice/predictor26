@@ -21,10 +21,12 @@ import {
   findCompetitionBySlug,
   findCompetitionForUser,
   findCompetitionForAdmin,
+  findCompetitionForAdminUser,
   findCompetitionRules,
   findCompetitionTeams,
   findCompetitionsForUser,
   findCompetitionsForAdmin,
+  findCompetitionsForAdminUser,
   findDefaultCompetition,
   findDefaultCompetitionForUser,
   joinCompetitionForUser,
@@ -95,7 +97,9 @@ export type JoinCompetitionResult =
 
 export async function getCompetitionsForUser(userId: number, role: UserRole): Promise<CompetitionsResponse> {
   if (role === 'super_admin') {
-    return getCompetitionsForAdmin();
+    return {
+      competitions: findCompetitionsForAdmin().map(toCompetitionResponse)
+    };
   }
 
   return {
@@ -103,7 +107,13 @@ export async function getCompetitionsForUser(userId: number, role: UserRole): Pr
   };
 }
 
-export async function getCompetitionsForAdmin(): Promise<CompetitionsResponse> {
+export async function getCompetitionsForAdmin(userId: number, role: UserRole): Promise<CompetitionsResponse> {
+  if (role !== 'super_admin') {
+    return {
+      competitions: findCompetitionsForAdminUser(userId).map(toCompetitionResponse)
+    };
+  }
+
   return {
     competitions: findCompetitionsForAdmin().map(toCompetitionResponse)
   };
@@ -194,7 +204,11 @@ export async function resolveCompetitionIdForAdmin(
     return findCompetitionsForAdmin()[0]?.id ?? null;
   }
 
-  return resolveCompetitionIdForViewer(userId, role, competitionId);
+  if (competitionId !== null) {
+    return findCompetitionForAdminUser(userId, competitionId)?.id ?? null;
+  }
+
+  return findCompetitionsForAdminUser(userId)[0]?.id ?? null;
 }
 
 export async function updateTiebreakerForUser(
@@ -348,6 +362,7 @@ export async function createAdminCompetition(
     logoUrl: parsed.logoUrl,
     passcodeHash: hashPassword(parsed.passcode!),
     isFinished: parsed.isFinished,
+    playoffsEnabled: parsed.playoffsEnabled,
     scheduleSourceUrl: parsed.scheduleSourceUrl,
     oddsSourceUrl: parsed.oddsSourceUrl,
     rules: parsed.rules
@@ -382,6 +397,7 @@ export async function updateAdminCompetitionSettings(
     logoUrl: parsed.logoUrl,
     passcodeHash: parsed.passcode ? hashPassword(parsed.passcode) : undefined,
     isFinished: parsed.isFinished,
+    playoffsEnabled: parsed.playoffsEnabled,
     scheduleSourceUrl: parsed.scheduleSourceUrl,
     oddsSourceUrl: parsed.oddsSourceUrl,
     rules: parsed.rules
@@ -399,6 +415,7 @@ function toCompetitionResponse(competition: {
   readonly slug: string;
   readonly logo_url: string;
   readonly is_finished: 0 | 1;
+  readonly playoffs_enabled: 0 | 1;
   readonly is_joined: 0 | 1;
   readonly tiebreaker_name: string | null;
 }): CompetitionResponse {
@@ -408,6 +425,7 @@ function toCompetitionResponse(competition: {
     slug: competition.slug,
     logoUrl: competition.logo_url || null,
     isFinished: competition.is_finished === 1,
+    playoffsEnabled: competition.playoffs_enabled === 1,
     isJoined: competition.is_joined === 1,
     tiebreakerName: competition.tiebreaker_name ?? null
   };
@@ -424,6 +442,7 @@ function toAdminCompetitionSettingsResponse(competition: {
   readonly notification_reminders_enabled: 0 | 1;
   readonly live_score_sync_enabled: 0 | 1;
   readonly is_finished: 0 | 1;
+  readonly playoffs_enabled: 0 | 1;
 }): AdminCompetitionSettingsResponse {
   return {
     id: competition.id,
@@ -431,6 +450,7 @@ function toAdminCompetitionSettingsResponse(competition: {
     slug: competition.slug,
     logoUrl: competition.logo_url || null,
     isFinished: competition.is_finished === 1,
+    playoffsEnabled: competition.playoffs_enabled === 1,
     passcodeSet: competition.passcode_hash !== null,
     scheduleSourceUrl: competition.schedule_source_url,
     oddsSourceUrl: competition.odds_source_url,
@@ -504,6 +524,7 @@ async function parseAdminCompetitionInput(
       readonly logoUrl: string;
       readonly passcode: string | null;
       readonly isFinished: boolean;
+      readonly playoffsEnabled: boolean;
       readonly scheduleSourceUrl: string;
       readonly oddsSourceUrl: string;
       readonly rules: ReadonlyArray<{ readonly templateKey: string; readonly value: string | null; readonly sortOrder: number }>;
@@ -526,6 +547,7 @@ async function parseAdminCompetitionInput(
   const name = input.name.trim();
   const logoUrl = typeof input.logoUrl === 'string' ? input.logoUrl.trim() : '';
   const passcode = typeof input.passcode === 'string' ? input.passcode.trim() : null;
+  const playoffsEnabled = typeof input.playoffsEnabled === 'boolean' ? input.playoffsEnabled : false;
   const scheduleSourceUrl = typeof input.scheduleSourceUrl === 'string' ? input.scheduleSourceUrl.trim() : '';
   const oddsSourceUrl = input.oddsSourceUrl.trim();
 
@@ -586,6 +608,7 @@ async function parseAdminCompetitionInput(
     logoUrl,
     passcode,
     isFinished: input.isFinished,
+    playoffsEnabled,
     scheduleSourceUrl,
     oddsSourceUrl,
     rules

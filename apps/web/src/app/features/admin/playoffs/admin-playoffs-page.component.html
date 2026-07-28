@@ -15,7 +15,9 @@
     <p class="status-message">{{ message }}</p>
   }
 
-  @if (loading()) {
+  @if (!playoffsEnabled()) {
+    <p class="status-message">Playoffs are disabled for this competition.</p>
+  } @else if (loading()) {
     <p class="status-message">Loading playoff mappings...</p>
   } @else {
     <div class="mapping-list">

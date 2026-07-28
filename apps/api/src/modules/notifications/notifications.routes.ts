@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { requireAuth, requireRoles } from '../../shared/middleware/require-auth.middleware.js';
+import { requireAuth } from '../../shared/middleware/require-auth.middleware.js';
 import {
   getNotificationConfigController,
   getNotificationSettingsController,
@@ -14,7 +14,7 @@ export const notificationsRoutes = Router();
 
 notificationsRoutes.get('/notifications/config', requireAuth, getNotificationConfigController);
 notificationsRoutes.post('/notifications/subscriptions', requireAuth, savePushSubscriptionController);
-notificationsRoutes.get('/admin/notifications/settings', requireRoles(['super_admin', 'admin']), getNotificationSettingsController);
-notificationsRoutes.patch('/admin/notifications/settings', requireRoles(['super_admin', 'admin']), updateNotificationSettingsController);
-notificationsRoutes.post('/admin/notifications/reset-subscriptions', requireRoles(['super_admin', 'admin']), resetNotificationSubscriptionsController);
-notificationsRoutes.post('/admin/notifications/test', requireRoles(['super_admin', 'admin']), sendTestNotificationController);
+notificationsRoutes.get('/admin/notifications/settings', requireAuth, getNotificationSettingsController);
+notificationsRoutes.patch('/admin/notifications/settings', requireAuth, updateNotificationSettingsController);
+notificationsRoutes.post('/admin/notifications/reset-subscriptions', requireAuth, resetNotificationSubscriptionsController);
+notificationsRoutes.post('/admin/notifications/test', requireAuth, sendTestNotificationController);

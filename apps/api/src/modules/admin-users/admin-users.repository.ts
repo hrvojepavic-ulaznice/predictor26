@@ -8,7 +8,7 @@ import {
   updateUserVerificationForCompetition,
   updateUserVerification,
   updateUsername,
-  updateUserRole,
+  updateUserCompetitionRole,
   UserRole
 } from '../../database/queries/users.queries.js';
 
@@ -36,8 +36,8 @@ export async function findUserByUsernameForAdmin(username: string) {
   return getUserByUsername(username);
 }
 
-export async function setUserRole(userId: number, role: Exclude<UserRole, 'super_admin'>) {
-  return updateUserRole(userId, role);
+export async function setUserRole(userId: number, competitionId: number, role: Exclude<UserRole, 'super_admin'>) {
+  return updateUserCompetitionRole(userId, competitionId, role);
 }
 
 export async function setUsername(userId: number, username: string) {

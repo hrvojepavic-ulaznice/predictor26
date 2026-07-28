@@ -49,6 +49,8 @@ interface RankedLeaderboardResponse extends Omit<LeaderboardResponse, 'comingUpM
   readonly rounds: LeaderboardRoundHeading[];
   readonly users: RankedLeaderboardUser[];
   readonly liveMovementMatchId: number | null;
+  readonly showWinnerColumn: boolean;
+  readonly showInterimTotalColumn: boolean;
 }
 
 interface SelectedLeaderboardRound {
@@ -118,6 +120,8 @@ export class HomeLeaderboardComponent {
     return {
       ...leaderboard,
       liveMovementMatchId: leaderboard.liveMatches.find((match) => match.finalScore)?.matchId ?? null,
+      showWinnerColumn: leaderboard.rounds[0]?.locked === true,
+      showInterimTotalColumn: leaderboard.rounds.length > 1,
       liveMatches: leaderboard.liveMatches.map((match) => ({
         ...match,
         label: this.getMatchLabel(match),
