@@ -214,7 +214,6 @@ h3 {
 }
 
 .cash-status-icon {
-  position: relative;
   display: inline-grid;
   width: 18px;
   height: 18px;
@@ -222,27 +221,10 @@ h3 {
   place-items: center;
   border-radius: 999px;
   background: #dcfce7;
-}
-
-.cash-status-icon::before {
-  position: absolute;
-  width: 10px;
-  height: 7px;
-  border-right: 2px solid #16a34a;
-  border-bottom: 2px solid #16a34a;
-  content: '';
-  transform: translateY(-1px) rotate(45deg);
-}
-
-.cash-status-icon::after {
-  position: absolute;
-  bottom: 3px;
-  width: 10px;
-  height: 2px;
-  border-radius: 999px;
-  background: #16a34a;
-  content: '';
-  opacity: 0.3;
+  color: #166534;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .verified-payment-note {
