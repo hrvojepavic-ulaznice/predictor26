@@ -301,6 +301,12 @@ export async function changePlayoffMapping(
     return { status: 'invalid' };
   }
 
+  const competition = findCompetitionForAdmin(competitionId);
+
+  if (!competition || competition.playoffs_enabled !== 1) {
+    return { status: 'invalid' };
+  }
+
   const match = setPlayoffTeamMapping(competitionId, matchId, input.side, input.teamName, input.teamFlag);
 
   if (!match) {

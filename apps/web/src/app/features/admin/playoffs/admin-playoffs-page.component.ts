@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 
 import { Match, PlayoffMappingSide } from '@models/match.models';
 import { CompetitionGroupTeam } from '@models/competition.models';
+import { AppStateService } from '@core/state/app-state.service';
 import { AdminMatchesApiProvider } from '@services/providers/admin-matches-api.provider';
 import { CompetitionsApiProvider } from '@services/providers/competitions-api.provider';
 
@@ -23,9 +24,12 @@ interface TeamSlotContext {
   styleUrl: './admin-playoffs-page.component.scss'
 })
 export class AdminPlayoffsPageComponent {
+  private readonly appState = inject(AppStateService);
   private readonly adminMatchesApi = inject(AdminMatchesApiProvider);
   private readonly competitionsApi = inject(CompetitionsApiProvider);
 
+  protected readonly activeCompetition = this.appState.activeCompetition;
+  protected readonly playoffsEnabled = computed(() => this.activeCompetition()?.playoffsEnabled === true);
   protected readonly matches = signal<Match[]>([]);
   protected readonly groupTeams = signal<CompetitionGroupTeam[]>([]);
   protected readonly loading = signal(true);
@@ -42,7 +46,11 @@ export class AdminPlayoffsPageComponent {
   );
 
   constructor() {
-    this.loadData();
+    if (this.playoffsEnabled()) {
+      this.loadData();
+    } else {
+      this.loading.set(false);
+    }
   }
 
   protected updateMapping(context: TeamSlotContext, teamName: string): void {

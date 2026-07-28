@@ -3,7 +3,6 @@ import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
 
 import { config } from '../config/index.js';
-import { defaultCompetitionSlug } from '../shared/constants/default-competition.constants.js';
 import { hashPassword } from '../shared/utils/password.js';
 
 let databaseInitialized = false;
@@ -65,7 +64,6 @@ function initializeDatabase(db: Database.Database) {
   ensureUsersTableUsesLowercaseUsernames(db);
   ensureUsersTableSupportsCaseInsensitiveUsername(db);
   ensureCompetitionSchema(db);
-  ensureAdminRolesAreCompetitionScoped(db);
   ensureSuperAdminCompetitionMembershipBlocked(db);
   ensureMatchesTableSupportsOdds(db);
   ensureMatchesTableSupportsPlayoffMappings(db);
@@ -232,6 +230,7 @@ function ensureCompetitionSchema(db: Database.Database) {
       odds_source_url TEXT NOT NULL DEFAULT '' CHECK(length(odds_source_url) <= 500),
       notification_reminders_enabled INTEGER NOT NULL DEFAULT 0 CHECK(notification_reminders_enabled IN (0, 1)),
       live_score_sync_enabled INTEGER NOT NULL DEFAULT 0 CHECK(live_score_sync_enabled IN (0, 1)),
+      playoffs_enabled INTEGER NOT NULL DEFAULT 0 CHECK(playoffs_enabled IN (0, 1)),
       is_finished INTEGER NOT NULL DEFAULT 0 CHECK(is_finished IN (0, 1)),
       is_archived INTEGER NOT NULL DEFAULT 0 CHECK(is_archived IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -292,44 +291,6 @@ function ensureCompetitionUsersTableSupportsScopedRole(db: Database.Database) {
   if (columns.length > 0 && !columnNames.has('role')) {
     db.exec("ALTER TABLE competition_users ADD COLUMN role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin', 'user'))");
   }
-}
-
-function ensureAdminRolesAreCompetitionScoped(db: Database.Database) {
-  const migrationKey = 'competition_scoped_admin_roles';
-  const completed = db.prepare('SELECT value FROM app_metadata WHERE key = ?').get(migrationKey) as { value: string } | undefined;
-
-  if (completed?.value === 'true') {
-    return;
-  }
-
-  const defaultCompetition = db.prepare('SELECT id FROM competitions WHERE slug = ?').get(defaultCompetitionSlug) as { id: number } | undefined;
-
-  if (defaultCompetition) {
-    db.prepare(
-      `
-        UPDATE competition_users
-        SET role = 'admin'
-        WHERE competition_id = ?
-          AND EXISTS (
-            SELECT 1
-            FROM users
-            WHERE users.id = competition_users.user_id
-              AND users.role = 'admin'
-          )
-      `
-    ).run(defaultCompetition.id);
-  }
-
-  db.exec("UPDATE users SET role = 'user', updated_at = CURRENT_TIMESTAMP WHERE role = 'admin'");
-  db.prepare(
-    `
-      INSERT INTO app_metadata (key, value)
-      VALUES (?, 'true')
-      ON CONFLICT(key) DO UPDATE SET
-        value = excluded.value,
-        updated_at = CURRENT_TIMESTAMP
-    `
-  ).run(migrationKey);
 }
 
 function ensureCompetitionTeamsTableSupportsGroupName(db: Database.Database) {
@@ -464,6 +425,10 @@ function ensureCompetitionTableSupportsManagementFields(db: Database.Database) {
 
   if (!columnNames.has('logo_url')) {
     db.exec("ALTER TABLE competitions ADD COLUMN logo_url TEXT NOT NULL DEFAULT '' CHECK(length(logo_url) <= 200000)");
+  }
+
+  if (!columnNames.has('playoffs_enabled')) {
+    db.exec('ALTER TABLE competitions ADD COLUMN playoffs_enabled INTEGER NOT NULL DEFAULT 0 CHECK(playoffs_enabled IN (0, 1))');
   }
 }
 

@@ -43,8 +43,14 @@ export class CompetitionsService {
 
         const activeCompetition = this.appState.activeCompetition();
 
-        if (activeCompetition && !competitions.some((competition) => competition.id === activeCompetition.id)) {
+        const refreshedActiveCompetition = activeCompetition
+          ? competitions.find((competition) => competition.id === activeCompetition.id)
+          : null;
+
+        if (activeCompetition && !refreshedActiveCompetition) {
           this.appState.clearActiveCompetition();
+        } else if (refreshedActiveCompetition) {
+          this.appState.setActiveCompetition(refreshedActiveCompetition);
         }
       })
     );
@@ -58,8 +64,14 @@ export class CompetitionsService {
 
         const activeCompetition = this.appState.activeCompetition();
 
-        if (activeCompetition && !competitions.some((competition) => competition.id === activeCompetition.id)) {
+        const refreshedActiveCompetition = activeCompetition
+          ? competitions.find((competition) => competition.id === activeCompetition.id)
+          : null;
+
+        if (activeCompetition && !refreshedActiveCompetition) {
           this.appState.clearActiveCompetition();
+        } else if (refreshedActiveCompetition) {
+          this.appState.setActiveCompetition(refreshedActiveCompetition);
         }
       })
     );

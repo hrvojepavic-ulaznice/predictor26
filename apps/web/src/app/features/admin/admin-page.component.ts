@@ -42,6 +42,7 @@ export class AdminPageComponent {
     logoUrl: ['', [Validators.maxLength(200000)]],
     passcode: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(120)]],
     isFinished: [false],
+    playoffsEnabled: [false],
     oddsSourceUrl: ['', [Validators.required, Validators.maxLength(500)]],
     rules: this.formBuilder.array<
       ReturnType<AdminPageComponent['createRuleControl']>
@@ -151,6 +152,7 @@ export class AdminPageComponent {
         passcode: formValue.passcode,
         logoUrl: formValue.logoUrl,
         isFinished: formValue.isFinished,
+        playoffsEnabled: formValue.playoffsEnabled,
         oddsSourceUrl: formValue.oddsSourceUrl,
         rules,
         secretCode
@@ -163,6 +165,7 @@ export class AdminPageComponent {
             logoUrl: '',
             passcode: '',
             isFinished: false,
+            playoffsEnabled: false,
             oddsSourceUrl: ''
           });
           this.createLogoPreview.set(null);
