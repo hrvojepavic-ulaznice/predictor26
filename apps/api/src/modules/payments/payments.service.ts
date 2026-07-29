@@ -34,6 +34,7 @@ function toPaymentMethods(rows: readonly PaymentSettingRow[]): PaymentInfoMethod
       type: 'iban',
       label: 'IBAN',
       value: iban.value,
+      ibanHolderName: iban.iban_holder_name || null,
       fastPayUrl: null,
       copyable: true
     });
@@ -44,6 +45,7 @@ function toPaymentMethods(rows: readonly PaymentSettingRow[]): PaymentInfoMethod
       type: 'keks',
       label: 'KEKS',
       value: keks.value,
+      ibanHolderName: null,
       fastPayUrl: keks.fast_pay_url || null,
       copyable: keks.value.length > 0
     });
@@ -54,6 +56,7 @@ function toPaymentMethods(rows: readonly PaymentSettingRow[]): PaymentInfoMethod
       type: 'revolut',
       label: 'Revolut',
       value: revolut.value,
+      ibanHolderName: null,
       fastPayUrl: revolut.fast_pay_url || null,
       copyable: revolut.value.length > 0
     });
@@ -64,6 +67,7 @@ function toPaymentMethods(rows: readonly PaymentSettingRow[]): PaymentInfoMethod
       type: 'cash',
       label: 'Cash',
       value: 'You can pay by cash as well.',
+      ibanHolderName: null,
       fastPayUrl: null,
       copyable: false
     });

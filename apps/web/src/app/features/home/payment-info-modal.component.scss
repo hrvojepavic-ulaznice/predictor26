@@ -129,6 +129,22 @@ h3 {
   gap: 8px;
 }
 
+.iban-holder-name {
+  display: grid;
+  gap: 3px;
+  color: #4b5563;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.iban-holder-name strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+
 .copy-value {
   display: flex;
   min-width: 0;

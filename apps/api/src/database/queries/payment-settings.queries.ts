@@ -5,12 +5,14 @@ export type PaymentSettingType = 'iban' | 'keks' | 'revolut' | 'cash';
 export interface PaymentSettingRow {
   readonly type: PaymentSettingType;
   readonly value: string;
+  readonly iban_holder_name: string;
   readonly fast_pay_url: string;
   readonly is_enabled: 0 | 1;
 }
 
 export interface UpdatePaymentSettingsInput {
   readonly iban: string;
+  readonly ibanHolderName: string;
   readonly keks: string;
   readonly keksFastPayUrl: string;
   readonly revolut: string;
@@ -30,7 +32,7 @@ export async function listPaymentSettings(competitionId: number): Promise<Paymen
     return db
       .prepare(
         `
-        SELECT type, value, fast_pay_url, is_enabled
+        SELECT type, value, iban_holder_name, fast_pay_url, is_enabled
         FROM payment_settings
         WHERE competition_id = ?
         ORDER BY
@@ -73,22 +75,23 @@ export async function updatePaymentSettings(competitionId: number, input: Update
     const updateStatement = db.prepare(
       `
         UPDATE payment_settings
-        SET value = ?, fast_pay_url = ?, is_enabled = ?, updated_at = CURRENT_TIMESTAMP
+        SET value = ?, iban_holder_name = ?, fast_pay_url = ?, is_enabled = ?, updated_at = CURRENT_TIMESTAMP
         WHERE competition_id = ? AND type = ?
       `
     );
 
     const transaction = db.transaction(() => {
-      updateStatement.run(input.iban, '', input.iban.length > 0 ? 1 : 0, competitionId, 'iban');
-      updateStatement.run(input.keks, input.keksFastPayUrl, input.keks.length > 0 || input.keksFastPayUrl.length > 0 ? 1 : 0, competitionId, 'keks');
+      updateStatement.run(input.iban, input.ibanHolderName, '', input.iban.length > 0 ? 1 : 0, competitionId, 'iban');
+      updateStatement.run(input.keks, '', input.keksFastPayUrl, input.keks.length > 0 || input.keksFastPayUrl.length > 0 ? 1 : 0, competitionId, 'keks');
       updateStatement.run(
         input.revolut,
+        '',
         input.revolutFastPayUrl,
         input.revolut.length > 0 || input.revolutFastPayUrl.length > 0 ? 1 : 0,
         competitionId,
         'revolut'
       );
-      updateStatement.run('', '', input.cashEnabled ? 1 : 0, competitionId, 'cash');
+      updateStatement.run('', '', '', input.cashEnabled ? 1 : 0, competitionId, 'cash');
       db.prepare(
         `
           UPDATE payment_settings_config
@@ -103,7 +106,7 @@ export async function updatePaymentSettings(competitionId: number, input: Update
     return db
       .prepare(
         `
-        SELECT type, value, fast_pay_url, is_enabled
+        SELECT type, value, iban_holder_name, fast_pay_url, is_enabled
         FROM payment_settings
         WHERE competition_id = ?
         ORDER BY

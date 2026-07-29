@@ -73,6 +73,7 @@ function initializeDatabase(db: Database.Database) {
       competition_id INTEGER NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
       type TEXT NOT NULL CHECK(type IN ('iban', 'keks', 'revolut', 'cash')),
       value TEXT NOT NULL DEFAULT '' CHECK(length(value) <= 200),
+      iban_holder_name TEXT NOT NULL DEFAULT '' CHECK(length(iban_holder_name) <= 200),
       fast_pay_url TEXT NOT NULL DEFAULT '' CHECK(length(fast_pay_url) <= 500),
       is_enabled INTEGER NOT NULL DEFAULT 0 CHECK(is_enabled IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -212,6 +213,7 @@ function initializeDatabase(db: Database.Database) {
 
   // Older compatibility migrations. These are not specific to the competition layer.
   ensurePaymentSettingsSupportsFastPayUrl(db);
+  ensurePaymentSettingsSupportsIbanHolderName(db);
   ensurePredictionsTableSupportsOddsSnapshot(db);
   ensureNotificationReminderDeliveriesSupportsOneHour(db);
 
@@ -560,6 +562,17 @@ function ensurePaymentSettingsSupportsFastPayUrl(db: Database.Database) {
   }
 
   db.exec("ALTER TABLE payment_settings ADD COLUMN fast_pay_url TEXT NOT NULL DEFAULT '' CHECK(length(fast_pay_url) <= 500)");
+}
+
+function ensurePaymentSettingsSupportsIbanHolderName(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(payment_settings)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columns.length === 0 || columnNames.has('iban_holder_name')) {
+    return;
+  }
+
+  db.exec("ALTER TABLE payment_settings ADD COLUMN iban_holder_name TEXT NOT NULL DEFAULT '' CHECK(length(iban_holder_name) <= 200)");
 }
 
 function ensureUsersTableSupportsAdminRole(db: Database.Database) {

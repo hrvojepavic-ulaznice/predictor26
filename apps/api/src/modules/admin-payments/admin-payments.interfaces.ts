@@ -1,5 +1,6 @@
 export interface AdminPaymentSettingsResponse {
   readonly iban: string;
+  readonly ibanHolderName: string;
   readonly keks: string;
   readonly keksFastPayUrl: string;
   readonly revolut: string;
@@ -10,6 +11,7 @@ export interface AdminPaymentSettingsResponse {
 
 export interface UpdateAdminPaymentSettingsRequest {
   readonly iban: string;
+  readonly ibanHolderName: string;
   readonly keks: string;
   readonly keksFastPayUrl: string;
   readonly revolut: string;
