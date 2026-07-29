@@ -5,15 +5,13 @@ import { AbstractControl, ReactiveFormsModule, ValidationErrors, Validators, For
 import { Router } from '@angular/router';
 
 import { AppStateService } from '@core/state/app-state.service';
-import { RulesModalComponent } from '@features/rules/rules-modal.component';
 import { AuthApiProvider } from '@services/providers/auth-api.provider';
 import { CompetitionSettingsApiProvider } from '@services/providers/competition-settings-api.provider';
-import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
 import { FormFieldStateDirective } from '@shared/directives/form-field-state.directive';
 
 @Component({
   selector: 'app-register-page',
-  imports: [ReactiveFormsModule, FormFieldStateDirective, ModalShellComponent, RulesModalComponent],
+  imports: [ReactiveFormsModule, FormFieldStateDirective],
   templateUrl: './register-page.component.html',
   styleUrl: './register-page.component.scss'
 })
@@ -26,7 +24,6 @@ export class RegisterPageComponent {
 
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
-  protected readonly isRulesModalOpen = signal(false);
   protected readonly registrationsDisabled = signal(false);
   protected readonly registrationClosedMessage = 'Registrations are not possible.';
   protected readonly formMessage = computed(() =>
@@ -125,14 +122,6 @@ export class RegisterPageComponent {
           this.isSubmitting.set(false);
         }
       });
-  }
-
-  protected openRulesModal(): void {
-    this.isRulesModalOpen.set(true);
-  }
-
-  protected closeRulesModal(): void {
-    this.isRulesModalOpen.set(false);
   }
 
   private hasOnlyPasswordMinLengthError(): boolean {
