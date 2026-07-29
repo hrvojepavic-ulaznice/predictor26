@@ -42,6 +42,7 @@ export async function changeAdminPaymentSettings(
 ): Promise<UpdateAdminPaymentSettingsResult> {
   if (
     typeof input?.iban !== 'string' ||
+    typeof input.ibanHolderName !== 'string' ||
     typeof input.keks !== 'string' ||
     typeof input.keksFastPayUrl !== 'string' ||
     typeof input.revolut !== 'string' ||
@@ -56,6 +57,7 @@ export async function changeAdminPaymentSettings(
   }
 
   const iban = input.iban.trim();
+  const ibanHolderName = input.ibanHolderName.trim();
   const keks = input.keks.trim();
   const keksFastPayUrl = input.keksFastPayUrl.trim();
   const revolut = input.revolut.trim();
@@ -63,6 +65,7 @@ export async function changeAdminPaymentSettings(
 
   if (
     iban.length > paymentValueMaxLength ||
+    ibanHolderName.length > paymentValueMaxLength ||
     keks.length > paymentValueMaxLength ||
     revolut.length > paymentValueMaxLength ||
     keksFastPayUrl.length > paymentUrlMaxLength ||
@@ -79,6 +82,7 @@ export async function changeAdminPaymentSettings(
 
   const rows = await savePaymentSettingsForAdmin(competitionId, {
     iban,
+    ibanHolderName,
     keks,
     keksFastPayUrl,
     revolut,
@@ -123,6 +127,7 @@ function toPaymentSettingsResponse(
 
   return {
     iban: byType.get('iban')?.value ?? '',
+    ibanHolderName: byType.get('iban')?.iban_holder_name ?? '',
     keks: byType.get('keks')?.value ?? '',
     keksFastPayUrl: byType.get('keks')?.fast_pay_url ?? '',
     revolut: byType.get('revolut')?.value ?? '',

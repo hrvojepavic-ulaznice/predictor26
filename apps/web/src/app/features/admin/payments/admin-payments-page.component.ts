@@ -27,6 +27,7 @@ export class AdminPaymentsPageComponent {
 
   protected readonly paymentForm = this.formBuilder.nonNullable.group({
     iban: ['', [Validators.maxLength(200)]],
+    ibanHolderName: ['', [Validators.maxLength(200)]],
     keks: ['', [Validators.maxLength(200)]],
     keksFastPayUrl: ['', [Validators.maxLength(500)]],
     revolut: ['', [Validators.maxLength(200)]],

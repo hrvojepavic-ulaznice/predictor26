@@ -28,6 +28,13 @@
             <span>{{ method.value }}</span>
           </p>
         } @else if (method.value) {
+          @if (method.type === 'iban' && method.ibanHolderName) {
+            <p class="iban-holder-name">
+              <span>Name and last name</span>
+              <strong>{{ method.ibanHolderName }}</strong>
+            </p>
+          }
+
           <div class="method-actions">
             @if (method.copyable) {
               <button class="copy-value" type="button" (click)="copyValue(method)">
