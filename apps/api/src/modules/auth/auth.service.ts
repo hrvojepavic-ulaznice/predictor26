@@ -32,7 +32,7 @@ export async function login(credentials: Partial<LoginRequest> | undefined): Pro
     return null;
   }
 
-  const username = normalizeUsername(credentials.username);
+  const username = trimUsername(credentials.username);
   const password = credentials.password;
 
   if (
@@ -44,7 +44,7 @@ export async function login(credentials: Partial<LoginRequest> | undefined): Pro
     return null;
   }
 
-  const user = await findUserByUsername(username);
+  const user = await findUserByUsername(normalizeUsernameForLookup(username));
 
   if (!user || !verifyPassword(password, user.password_hash)) {
     return null;
@@ -85,7 +85,7 @@ export async function register(input: Partial<RegisterRequest> | undefined): Pro
     return { status: 'invalid' };
   }
 
-  const username = normalizeUsername(input.username);
+  const username = trimUsername(input.username);
   const name = input.name.trim();
   const lastname = input.lastname.trim();
   const password = input.password;
@@ -103,7 +103,7 @@ export async function register(input: Partial<RegisterRequest> | undefined): Pro
     return { status: 'invalid' };
   }
 
-  const existingUser = await findUserByUsername(username);
+  const existingUser = await findUserByUsername(normalizeUsernameForLookup(username));
 
   if (existingUser) {
     return { status: 'username_taken' };
@@ -143,6 +143,10 @@ function toAuthUserResponse(user: UserRow): AuthUserResponse {
   };
 }
 
-function normalizeUsername(username: string): string {
+function trimUsername(username: string): string {
+  return username.trim();
+}
+
+function normalizeUsernameForLookup(username: string): string {
   return username.trim().toLowerCase();
 }

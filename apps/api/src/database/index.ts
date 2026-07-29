@@ -61,7 +61,6 @@ function initializeDatabase(db: Database.Database) {
 
   ensureUsersTableSupportsTiebreaker(db);
   ensureUsersTableSupportsVerification(db);
-  ensureUsersTableUsesLowercaseUsernames(db);
   ensureUsersTableSupportsCaseInsensitiveUsername(db);
   ensureCompetitionSchema(db);
   ensureSuperAdminCompetitionMembershipBlocked(db);
@@ -657,32 +656,6 @@ function ensureUsersTableSupportsVerification(db: Database.Database) {
   db.exec('ALTER TABLE users ADD COLUMN is_verified INTEGER NOT NULL DEFAULT 0 CHECK(is_verified IN (0, 1))');
 }
 
-function ensureUsersTableUsesLowercaseUsernames(db: Database.Database) {
-  const users = db.prepare('SELECT id, username FROM users').all() as Array<{ id: number; username: string }>;
-  const seenUserIdsByUsername = new Map<string, number>();
-
-  for (const user of users) {
-    const normalizedUsername = normalizeUsername(user.username);
-    const existingUserId = seenUserIdsByUsername.get(normalizedUsername);
-
-    if (existingUserId !== undefined && existingUserId !== user.id) {
-      console.warn(
-        `Skipping lowercase username normalization because duplicate username casing exists for "${normalizedUsername}".`
-      );
-      return;
-    }
-
-    seenUserIdsByUsername.set(normalizedUsername, user.id);
-  }
-
-  const updateUsername = db.prepare('UPDATE users SET username = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND username != ?');
-
-  for (const user of users) {
-    const normalizedUsername = normalizeUsername(user.username);
-    updateUsername.run(normalizedUsername, user.id, normalizedUsername);
-  }
-}
-
 function ensureUsersTableSupportsCaseInsensitiveUsername(db: Database.Database) {
   const duplicate = db
     .prepare(
@@ -704,10 +677,6 @@ function ensureUsersTableSupportsCaseInsensitiveUsername(db: Database.Database) 
   }
 
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_username_nocase_unique ON users(username COLLATE NOCASE)');
-}
-
-function normalizeUsername(username: string): string {
-  return username.trim().toLowerCase();
 }
 
 function ensureMatchesTableSupportsOdds(db: Database.Database) {

@@ -155,7 +155,7 @@ export async function changeUsername(
     return { status: 'invalid' };
   }
 
-  const username = normalizeUsername(input.username);
+  const username = trimUsername(input.username);
 
   if (username.length < usernameMinLength || username.length > usernameMaxLength) {
     return { status: 'invalid' };
@@ -175,7 +175,7 @@ export async function changeUsername(
     return { status: 'protected_role' };
   }
 
-  const existingUser = await findUserByUsernameForAdmin(username);
+  const existingUser = await findUserByUsernameForAdmin(normalizeUsernameForLookup(username));
 
   if (existingUser && existingUser.id !== userId) {
     return { status: 'username_taken' };
@@ -253,6 +253,10 @@ function toAdminUserResponse(user: UserRow): AdminUserResponse {
   };
 }
 
-function normalizeUsername(username: string): string {
+function trimUsername(username: string): string {
+  return username.trim();
+}
+
+function normalizeUsernameForLookup(username: string): string {
   return username.trim().toLowerCase();
 }
