@@ -14,167 +14,171 @@
       <span class="visually-hidden">Loading prediction table...</span>
     </div>
   } @else if (leaderboard(); as table) {
-    <div class="table-shell leaderboard-table-shell">
-      <table class="leaderboard-table">
-        <thead>
-          <tr>
-            <th class="users-heading" rowspan="2" scope="col">Users ({{ table.totalUsers }})</th>
-            @if (table.liveMatches.length > 0) {
-              <th class="live-heading" [attr.colspan]="table.liveMatches.length" scope="colgroup">
-                <span class="live-heading-content">
-                  <span class="live-dot" aria-hidden="true"></span>
-                  <span>Live</span>
-                </span>
-              </th>
-            }
-            @if (table.comingUpMatches.length > 0) {
-              <th class="coming-up-heading" [attr.colspan]="table.comingUpMatches.length" scope="colgroup">
-                <span class="coming-up-heading-content"><span class="coming-up-dot" aria-hidden="true"></span>Coming up</span>
-              </th>
-            }
-            @for (round of table.rounds; track round.label) {
-              <th class="round-heading" colspan="2" scope="colgroup">{{ round.heading }}</th>
-              @if ($first && table.showInterimTotalColumn) {
-                <th class="total-heading interim-total-heading" rowspan="2" scope="col">Total</th>
-              }
-            }
-            @if (table.showWinnerColumn) {
-              <th class="winner-heading" rowspan="2" scope="col">Winner</th>
-            }
-            <th class="total-heading" rowspan="2" scope="col">Total</th>
-          </tr>
-          <tr>
-            @for (match of table.liveMatches; track match.matchId) {
-              <th class="live-match-heading" scope="col">
-                <span class="live-match-heading-content">
-                  <span>{{ match.label }}</span>
-                  @if (match.liveScoreLabel) {
-                    <span class="live-heading-score">{{ match.liveScoreLabel }}</span>
-                  }
-                </span>
-              </th>
-            }
-            @for (match of table.comingUpMatches; track match.matchId) {
-              <th class="coming-up-match-heading" scope="col">{{ match.label }}</th>
-            }
-            @for (round of table.rounds; track round.label) {
-              <th scope="col">Tips</th>
-              <th scope="col">Pts</th>
-            }
-          </tr>
-        </thead>
-        <tbody>
-          @for (user of table.users; track user.id) {
-            <tr
-              [class.current-user-row]="user.id === currentUserId()"
-              [class.top-three-row]="user.rank <= 3"
-              [class.top-ranked-row]="user.rank === 1"
-            >
-              <th class="user-cell" scope="row">
-                <span class="user-cell-content">
-                  <span class="user-rank">{{ user.rankLabel }}</span>
-                  <span class="user-divider" aria-hidden="true"></span>
-                  @if (user.id === currentUserId()) {
-                    <span class="current-user-star" aria-label="Your row">★</span>
-                  }
-                  <span class="user-name-text">{{ user.username }}</span>
-                </span>
-              </th>
-              @for (livePrediction of user.livePredictions; track livePrediction.matchId) {
-                <td
-                  class="live-score-cell"
-                  [class.live-score-cell-exact]="livePrediction.matchesLiveScore"
-                  [attr.aria-label]="livePrediction.matchesLiveScore ? 'Prediction matches the current live score' : null"
-                >
-                  <span class="live-score-content">
-                    @if (user.showLiveMovement && livePrediction.matchId === table.liveMovementMatchId) {
-                      <span
-                        class="live-rank-movement"
-                        [class.live-rank-movement-up]="user.liveMovementState === 'up'"
-                        [class.live-rank-movement-down]="user.liveMovementState === 'down'"
-                        [attr.aria-label]="'Live rank movement ' + user.liveMovementLabel"
-                      >
-                        @if (user.liveMovementLabel) {
-                          <span>{{ user.liveMovementLabel }}</span>
-                        }
-                      </span>
-                    }
-                    @if (livePrediction.prediction; as prediction) {
-                      <span [class.live-score-exact-pill]="livePrediction.matchesLiveScore">
-                        {{ prediction.home }}-{{ prediction.away }}
-                      </span>
-                    } @else {
-                      <span class="live-score-empty">-</span>
-                    }
+    <div class="leaderboard-scroll-shell">
+      <div class="table-shell leaderboard-table-shell">
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th class="users-heading" rowspan="2" scope="col">Users ({{ table.totalUsers }})</th>
+              @if (table.liveMatches.length > 0) {
+                <th class="live-heading" [attr.colspan]="table.liveMatches.length" scope="colgroup">
+                  <span class="live-heading-content">
+                    <span class="live-dot" aria-hidden="true"></span>
+                    <span>Live</span>
                   </span>
-                </td>
+                </th>
               }
-              @for (comingUpPrediction of user.comingUpPredictions; track comingUpPrediction.matchId) {
-                <td class="coming-up-score-cell">
-                  @if (comingUpPrediction.prediction; as prediction) {
-                    {{ prediction.home }}-{{ prediction.away }}
-                  } @else {
-                    <span class="coming-up-score-empty">-</span>
-                  }
-                </td>
+              @if (table.comingUpMatches.length > 0) {
+                <th class="coming-up-heading" [attr.colspan]="table.comingUpMatches.length" scope="colgroup">
+                  <span class="coming-up-heading-content"><span class="coming-up-dot" aria-hidden="true"></span>Coming up</span>
+                </th>
               }
-              @for (round of user.rounds; track round.label) {
-                <td>
-                  @if (isLoggedIn() && round.viewable) {
-                    <button
-                      class="tips-button"
-                      type="button"
-                      [disabled]="isOpeningRound(user, round)"
-                      (click)="openRound(user, round)"
-                    >
-                      {{ round.submittedCount }}/{{ round.expectedCount }}
-                    </button>
-
-                  } @else {
-                    <span class="tips-outcome-number">
-                      {{ round.submittedCount }}/{{ round.expectedCount }}
-                    </span>
-                  }
-                </td>
-                <td>{{ formatPoints(round.points) }}</td>
+              @for (round of table.rounds; track round.label) {
+                <th class="round-heading" colspan="2" scope="colgroup">{{ round.heading }}</th>
                 @if ($first && table.showInterimTotalColumn) {
-                  <td class="total-cell interim-total-cell">{{ formatPoints(user.totalPoints) }}</td>
+                  <th class="total-heading interim-total-heading" rowspan="2" scope="col">Total</th>
                 }
               }
               @if (table.showWinnerColumn) {
-                <td class="winner-cell">
-                  @if (user.winnerTeam; as winnerTeam) {
-                    @if (isImageTeamFlag(winnerTeam.flag)) {
-                      <img class="winner-logo" [src]="winnerTeam.flag!" [alt]="winnerTeam.name" [title]="winnerTeam.name" width="22" height="22" />
-                    } @else {
-                      <span class="winner-team" [title]="winnerTeam.name">{{ winnerTeam.flag || winnerTeam.name }}</span>
-                    }
-                  } @else {
-                    <span class="winner-empty">-</span>
-                  }
-                </td>
+                <th class="winner-heading" rowspan="2" scope="col">Winner</th>
               }
-              <td class="total-cell">{{ formatPoints(user.totalPoints) }}</td>
+              <th class="total-heading" rowspan="2" scope="col">Total</th>
             </tr>
-          } @empty {
             <tr>
-              <td
-                class="empty-cell"
-                [attr.colspan]="
-                  table.rounds.length * 2 +
-                  table.liveMatches.length +
-                  table.comingUpMatches.length +
-                  2 +
-                  (table.showInterimTotalColumn ? 1 : 0) +
-                  (table.showWinnerColumn ? 1 : 0)
-                "
-              >
-                No registered users yet.
-              </td>
+              @for (match of table.liveMatches; track match.matchId) {
+                <th class="live-match-heading" scope="col">
+                  <span class="live-match-heading-content">
+                    <span>{{ match.label }}</span>
+                    @if (match.liveScoreLabel) {
+                      <span class="live-heading-score">{{ match.liveScoreLabel }}</span>
+                    }
+                  </span>
+                </th>
+              }
+              @for (match of table.comingUpMatches; track match.matchId) {
+                <th class="coming-up-match-heading" scope="col">{{ match.label }}</th>
+              }
+              @for (round of table.rounds; track round.label) {
+                <th scope="col">Tips</th>
+                <th scope="col">Pts</th>
+              }
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (user of table.users; track user.id) {
+              <tr
+                [class.current-user-row]="user.id === currentUserId()"
+                [class.highlighted-rank-row]="user.highlightRank"
+                [class.first-ranked-row]="user.highlightRank && user.rank === 1"
+                [class.second-ranked-row]="user.highlightRank && user.rank === 2"
+                [class.third-ranked-row]="user.highlightRank && user.rank === 3"
+              >
+                <th class="user-cell" scope="row">
+                  <span class="user-cell-content">
+                    <span class="user-rank">{{ user.rankLabel }}</span>
+                    <span class="user-divider" aria-hidden="true"></span>
+                    @if (user.id === currentUserId()) {
+                      <span class="current-user-star" aria-label="Your row">★</span>
+                    }
+                    <span class="user-name-text">{{ user.username }}</span>
+                  </span>
+                </th>
+                @for (livePrediction of user.livePredictions; track livePrediction.matchId) {
+                  <td
+                    class="live-score-cell"
+                    [class.live-score-cell-exact]="livePrediction.matchesLiveScore"
+                    [attr.aria-label]="livePrediction.matchesLiveScore ? 'Prediction matches the current live score' : null"
+                  >
+                    <span class="live-score-content">
+                      @if (user.showLiveMovement && livePrediction.matchId === table.liveMovementMatchId) {
+                        <span
+                          class="live-rank-movement"
+                          [class.live-rank-movement-up]="user.liveMovementState === 'up'"
+                          [class.live-rank-movement-down]="user.liveMovementState === 'down'"
+                          [attr.aria-label]="'Live rank movement ' + user.liveMovementLabel"
+                        >
+                          @if (user.liveMovementLabel) {
+                            <span>{{ user.liveMovementLabel }}</span>
+                          }
+                        </span>
+                      }
+                      @if (livePrediction.prediction; as prediction) {
+                        <span [class.live-score-exact-pill]="livePrediction.matchesLiveScore">
+                          {{ prediction.home }}-{{ prediction.away }}
+                        </span>
+                      } @else {
+                        <span class="live-score-empty">-</span>
+                      }
+                    </span>
+                  </td>
+                }
+                @for (comingUpPrediction of user.comingUpPredictions; track comingUpPrediction.matchId) {
+                  <td class="coming-up-score-cell">
+                    @if (comingUpPrediction.prediction; as prediction) {
+                      {{ prediction.home }}-{{ prediction.away }}
+                    } @else {
+                      <span class="coming-up-score-empty">-</span>
+                    }
+                  </td>
+                }
+                @for (round of user.rounds; track round.label) {
+                  <td>
+                    @if (isLoggedIn() && round.viewable) {
+                      <button
+                        class="tips-button"
+                        type="button"
+                        [disabled]="isOpeningRound(user, round)"
+                        (click)="openRound(user, round)"
+                      >
+                        {{ round.submittedCount }}/{{ round.expectedCount }}
+                      </button>
+
+                    } @else {
+                      <span class="tips-outcome-number">
+                        {{ round.submittedCount }}/{{ round.expectedCount }}
+                      </span>
+                    }
+                  </td>
+                  <td>{{ formatPoints(round.points) }}</td>
+                  @if ($first && table.showInterimTotalColumn) {
+                    <td class="total-cell interim-total-cell">{{ formatPoints(user.totalPoints) }}</td>
+                  }
+                }
+                @if (table.showWinnerColumn) {
+                  <td class="winner-cell">
+                    @if (user.winnerTeam; as winnerTeam) {
+                      @if (isImageTeamFlag(winnerTeam.flag)) {
+                        <img class="winner-logo" [src]="winnerTeam.flag!" [alt]="winnerTeam.name" [title]="winnerTeam.name" width="22" height="22" />
+                      } @else {
+                        <span class="winner-team" [title]="winnerTeam.name">{{ winnerTeam.flag || winnerTeam.name }}</span>
+                      }
+                    } @else {
+                      <span class="winner-empty">-</span>
+                    }
+                  </td>
+                }
+                <td class="total-cell">{{ formatPoints(user.totalPoints) }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td
+                  class="empty-cell"
+                  [attr.colspan]="
+                    table.rounds.length * 2 +
+                    table.liveMatches.length +
+                    table.comingUpMatches.length +
+                    2 +
+                    (table.showInterimTotalColumn ? 1 : 0) +
+                    (table.showWinnerColumn ? 1 : 0)
+                  "
+                >
+                  No registered users yet.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
   }
 

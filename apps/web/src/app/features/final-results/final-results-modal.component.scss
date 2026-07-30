@@ -176,21 +176,21 @@ h2 {
 }
 
 .podium-place-1 .place-badge {
-  border-color: #facc15;
-  background: #fef3c7;
-  color: #a16207;
+  border-color: var(--rank-first-accent);
+  background: var(--rank-first-surface);
+  color: var(--rank-first-color);
 }
 
 .podium-place-2 .place-badge {
-  border-color: #38bdf8;
-  background: #e0f2fe;
-  color: #0369a1;
+  border-color: var(--rank-second-accent);
+  background: var(--rank-second-surface);
+  color: var(--rank-second-color);
 }
 
 .podium-place-3 .place-badge {
-  border-color: #fb7185;
-  background: #ffe4e6;
-  color: #be123c;
+  border-color: var(--rank-third-accent);
+  background: var(--rank-third-surface);
+  color: var(--rank-third-color);
 }
 
 h3 {
@@ -225,19 +225,19 @@ h3 {
 
 .podium-place-1 .podium-block {
   min-height: 132px;
-  background: #fbbf24;
-  color: #713f12;
+  background: var(--rank-first-block);
+  color: var(--rank-first-block-text);
 }
 
 .podium-place-2 .podium-block {
   min-height: 106px;
-  background: #38bdf8;
-  color: #075985;
+  background: var(--rank-second-block);
+  color: var(--rank-second-block-text);
 }
 
 .podium-place-3 .podium-block {
-  background: #fb7185;
-  color: #881337;
+  background: var(--rank-third-block);
+  color: var(--rank-third-block-text);
 }
 
 .podium-block span {
