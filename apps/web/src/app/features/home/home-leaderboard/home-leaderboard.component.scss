@@ -40,7 +40,6 @@
 }
 
 .table-shell {
-  overflow-x: auto;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #ffffff;
@@ -53,7 +52,18 @@
 }
 
 .leaderboard-table-shell {
+  width: max-content;
+  min-width: 100%;
   @include animations.content-fade-in;
+}
+
+.leaderboard-scroll-shell {
+  display: flex;
+  overflow-x: auto;
+}
+
+.leaderboard-table-shell {
+  flex: 0 0 auto;
 }
 
 .visually-hidden {
@@ -68,7 +78,7 @@
 
 .leaderboard-table {
   width: 100%;
-  min-width: 720px;
+  min-width: max-content;
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -109,6 +119,23 @@ thead th {
 tbody tr:last-child th,
 tbody tr:last-child td {
   border-bottom: 0;
+}
+
+thead tr:first-child th:first-child {
+  border-top-left-radius: 7px;
+}
+
+thead tr:first-child th:last-child {
+  border-top-right-radius: 7px;
+}
+
+tbody tr:last-child th:first-child {
+  border-bottom-left-radius: 7px;
+}
+
+tbody tr:last-child td:last-child,
+tbody tr:last-child th:last-child {
+  border-bottom-right-radius: 7px;
 }
 
 .users-heading,
@@ -413,6 +440,7 @@ tbody tr:last-child td {
 
 .total-heading,
 .total-cell {
+  min-width: 72px;
   border-left: 2px solid #d1d5db;
 }
 
@@ -468,18 +496,11 @@ td {
 @media (max-width: 760px) {
   .leaderboard {
     gap: 12px;
+    margin-inline: 0;
+  }
+
+  .leaderboard-scroll-shell {
     margin-right: -12px;
-    margin-left: 0;
-  }
-
-  .table-shell {
-    border-right: 0;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-  }
-
-  .leaderboard-table {
-    min-width: 640px;
   }
 
   .leaderboard-skeleton {
@@ -497,21 +518,21 @@ td {
 
   td,
   .user-cell {
-    font-size: 0.82rem;
+    font-size: 0.72rem;
   }
 
   .users-heading {
     left: 0;
-    width: 144px;
+    width: 150px;
     min-width: 134px;
-    max-width: 144px;
+    max-width: 150px;
   }
 
   .user-cell {
     left: 0;
-    width: 144px;
+    width: 150px;
     min-width: 134px;
-    max-width: 144px;
+    max-width: 150px;
   }
 
   .current-user-row .user-cell {
