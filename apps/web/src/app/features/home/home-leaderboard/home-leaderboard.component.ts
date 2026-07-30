@@ -21,6 +21,7 @@ interface LeaderboardLivePredictionView extends LeaderboardLivePrediction {
 interface RankedLeaderboardUser extends Omit<LeaderboardUser, 'livePredictions'> {
   readonly rank: number;
   readonly rankLabel: string;
+  readonly highlightRank: boolean;
   readonly liveMovementLabel: string;
   readonly liveMovementState: 'up' | 'down' | 'same';
   readonly showLiveMovement: boolean;
@@ -116,6 +117,35 @@ export class HomeLeaderboardComponent {
     let lastPoints: number | null = null;
     let lastRank = 0;
     const liveScoresByMatchId = new Map(leaderboard.liveMatches.map((match) => [match.matchId, match.finalScore]));
+    const rankedUsers = leaderboard.users.map((user) => {
+      if (lastPoints === null || user.totalPoints !== lastPoints) {
+        lastRank += 1;
+        lastPoints = user.totalPoints;
+      }
+
+      return {
+        ...user,
+        rank: lastRank,
+        rankLabel: this.getRankLabel(lastRank),
+        liveMovementLabel: this.getLiveMovementLabel(user.liveRankMovement),
+        liveMovementState: this.getLiveMovementState(user.liveRankMovement),
+        showLiveMovement: leaderboard.liveMatches.some((match) => match.finalScore) && user.liveRankMovement !== 0,
+        livePredictions: user.livePredictions.map((livePrediction) => {
+          const liveScore = liveScoresByMatchId.get(livePrediction.matchId);
+
+          return {
+            ...livePrediction,
+            matchesLiveScore:
+              livePrediction.prediction !== null &&
+              liveScore !== null &&
+              liveScore !== undefined &&
+              livePrediction.prediction.home === liveScore.home &&
+              livePrediction.prediction.away === liveScore.away
+          };
+        })
+      };
+    });
+    const allUsersSameRank = rankedUsers.length > 1 && rankedUsers.every((user) => user.rank === rankedUsers[0].rank);
 
     return {
       ...leaderboard,
@@ -137,34 +167,10 @@ export class HomeLeaderboardComponent {
         locked: round.locked,
         viewable: round.viewable
       })),
-      users: leaderboard.users.map((user) => {
-        if (lastPoints === null || user.totalPoints !== lastPoints) {
-          lastRank += 1;
-          lastPoints = user.totalPoints;
-        }
-
-        return {
-          ...user,
-          rank: lastRank,
-          rankLabel: this.getRankLabel(lastRank),
-          liveMovementLabel: this.getLiveMovementLabel(user.liveRankMovement),
-          liveMovementState: this.getLiveMovementState(user.liveRankMovement),
-          showLiveMovement: leaderboard.liveMatches.some((match) => match.finalScore) && user.liveRankMovement !== 0,
-          livePredictions: user.livePredictions.map((livePrediction) => {
-            const liveScore = liveScoresByMatchId.get(livePrediction.matchId);
-
-            return {
-              ...livePrediction,
-              matchesLiveScore:
-                livePrediction.prediction !== null &&
-                liveScore !== null &&
-                liveScore !== undefined &&
-                livePrediction.prediction.home === liveScore.home &&
-                livePrediction.prediction.away === liveScore.away
-            };
-          })
-        };
-      })
+      users: rankedUsers.map((user) => ({
+        ...user,
+        highlightRank: user.rank <= 3 && !allUsersSameRank
+      }))
     };
   }
 

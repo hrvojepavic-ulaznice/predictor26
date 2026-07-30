@@ -145,7 +145,7 @@ tbody tr:last-child td {
   background: #ffffff;
   color: #111827;
   font-size: 0.92rem;
-  font-weight: 850;
+  font-weight: 650;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -175,7 +175,7 @@ tbody tr:last-child td {
   min-width: 24px;
   color: inherit;
   font-size: inherit;
-  font-weight: 900;
+  font-weight: inherit;
   line-height: 1;
   text-align: right;
 }
@@ -252,17 +252,28 @@ tbody tr:last-child td {
   color: #dc2626;
 }
 
-.top-three-row .user-cell,
-.top-three-row .total-cell {
+.highlighted-rank-row .user-cell,
+.highlighted-rank-row .total-cell {
   font-weight: 950;
 }
 
-.top-ranked-row .user-cell {
-  color: #dc2626;
+.first-ranked-row .user-cell,
+.first-ranked-row .total-cell {
+  color: var(--rank-first-color);
 }
 
-.top-ranked-row.current-user-row .user-cell,
-.top-ranked-row.current-user-row .current-user-star {
+.second-ranked-row .user-cell,
+.second-ranked-row .total-cell {
+  color: var(--rank-second-color);
+}
+
+.third-ranked-row .user-cell,
+.third-ranked-row .total-cell {
+  color: var(--rank-third-color);
+}
+
+.highlighted-rank-row.current-user-row .user-cell,
+.highlighted-rank-row.current-user-row .current-user-star {
   color: #16a34a;
 }
 
@@ -406,8 +417,8 @@ tbody tr:last-child td {
 }
 
 .total-cell {
-  color: #166534;
-  font-weight: 900;
+  color: #111827;
+  font-weight: 650;
 }
 
 .interim-total-heading,
@@ -477,7 +488,7 @@ td {
 
   th,
   td {
-    padding: 8px 9px;
+    padding: 8px 6px;
   }
 
   thead th {
@@ -508,7 +519,7 @@ td {
   }
 
   .user-cell-content {
-    gap: 6px;
+    gap: 3px;
   }
 
   .user-rank {

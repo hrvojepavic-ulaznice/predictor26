@@ -2,6 +2,26 @@
   box-sizing: border-box;
 }
 
+:root {
+  --rank-first-color: #a16207;
+  --rank-first-accent: #facc15;
+  --rank-first-surface: #fef3c7;
+  --rank-first-block: #fbbf24;
+  --rank-first-block-text: #713f12;
+
+  --rank-second-color: #0369a1;
+  --rank-second-accent: #38bdf8;
+  --rank-second-surface: #e0f2fe;
+  --rank-second-block: #38bdf8;
+  --rank-second-block-text: #075985;
+
+  --rank-third-color: #be123c;
+  --rank-third-accent: #fb7185;
+  --rank-third-surface: #ffe4e6;
+  --rank-third-block: #fb7185;
+  --rank-third-block-text: #881337;
+}
+
 html {
   height: 100%;
   background: #f8fafc;

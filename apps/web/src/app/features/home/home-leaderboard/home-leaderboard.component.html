@@ -67,8 +67,10 @@
           @for (user of table.users; track user.id) {
             <tr
               [class.current-user-row]="user.id === currentUserId()"
-              [class.top-three-row]="user.rank <= 3"
-              [class.top-ranked-row]="user.rank === 1"
+              [class.highlighted-rank-row]="user.highlightRank"
+              [class.first-ranked-row]="user.highlightRank && user.rank === 1"
+              [class.second-ranked-row]="user.highlightRank && user.rank === 2"
+              [class.third-ranked-row]="user.highlightRank && user.rank === 3"
             >
               <th class="user-cell" scope="row">
                 <span class="user-cell-content">
