@@ -14,7 +14,7 @@
       <span class="visually-hidden">Loading prediction table...</span>
     </div>
   } @else if (leaderboard(); as table) {
-    <div class="leaderboard-scroll-shell">
+    <div class="leaderboard-scroll-shell" [class.leaderboard-scroll-shell-scrolled]="isHorizontallyScrolled()" (scroll)="onTableScroll($event)">
       <div class="table-shell leaderboard-table-shell">
         <table class="leaderboard-table">
           <thead>
