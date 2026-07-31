@@ -29,12 +29,20 @@ interface RankedLeaderboardUser extends Omit<LeaderboardUser, 'livePredictions'>
 }
 
 interface LeaderboardLiveMatchHeading extends LeaderboardLiveMatch {
-  readonly label: string;
+  readonly homeTeamDisplay: LeaderboardTeamHeading;
+  readonly awayTeamDisplay: LeaderboardTeamHeading;
   readonly liveScoreLabel: string | null;
 }
 
 interface LeaderboardComingUpMatchHeading extends LeaderboardComingUpMatch {
-  readonly label: string;
+  readonly homeTeamDisplay: LeaderboardTeamHeading;
+  readonly awayTeamDisplay: LeaderboardTeamHeading;
+}
+
+interface LeaderboardTeamHeading {
+  readonly name: string;
+  readonly shortLabel: string;
+  readonly iconUrl: string | null;
 }
 
 interface LeaderboardRoundHeading {
@@ -155,12 +163,14 @@ export class HomeLeaderboardComponent {
       showInterimTotalColumn: leaderboard.rounds.length > 1,
       liveMatches: leaderboard.liveMatches.map((match) => ({
         ...match,
-        label: this.getMatchLabel(match),
+        homeTeamDisplay: this.getTeamHeading(match.homeTeam),
+        awayTeamDisplay: this.getTeamHeading(match.awayTeam),
         liveScoreLabel: match.finalScore ? `${match.finalScore.home}:${match.finalScore.away}` : null
       })),
       comingUpMatches: leaderboard.comingUpMatches.map((match) => ({
         ...match,
-        label: this.getMatchLabel(match)
+        homeTeamDisplay: this.getTeamHeading(match.homeTeam),
+        awayTeamDisplay: this.getTeamHeading(match.awayTeam)
       })),
       rounds: leaderboard.rounds.map((round) => ({
         label: round.label,
@@ -250,21 +260,19 @@ export class HomeLeaderboardComponent {
     return typeof flag === 'string' && /^(?:https:\/\/|\/)/i.test(flag);
   }
 
-  private getMatchLabel(match: LeaderboardLiveMatch | LeaderboardComingUpMatch): string {
-    return `${this.teamLabel(match.homeTeam)} - ${this.teamLabel(match.awayTeam)}`;
-  }
-
-  private teamLabel(team: LeaderboardLiveMatch['homeTeam'] | LeaderboardComingUpMatch['homeTeam']): string {
+  private getTeamHeading(team: LeaderboardLiveMatch['homeTeam'] | LeaderboardComingUpMatch['homeTeam']): LeaderboardTeamHeading {
     const shortName = team.name
       .split(/\s+/)
       .map((part) => part[0])
       .join('')
-      .slice(0, 3)
+      .slice(0, 2)
       .toUpperCase();
 
-    const flag = team.flag && !/^(?:https:\/\/|\/)/i.test(team.flag) ? team.flag : '';
-
-    return `${flag} ${shortName || team.name.slice(0, 3).toUpperCase()}`.trim();
+    return {
+      name: team.name,
+      shortLabel: shortName || team.name.slice(0, 2).toUpperCase(),
+      iconUrl: this.isImageTeamFlag(team.flag) ? team.flag : null
+    };
   }
 
   private getRoundKey(userId: number, roundLabel: string): string {

@@ -48,7 +48,23 @@
               @for (match of table.liveMatches; track match.matchId) {
                 <th class="live-match-heading" scope="col">
                   <span class="live-match-heading-content">
-                    <span>{{ match.label }}</span>
+                    <span class="match-heading-teams" [attr.aria-label]="match.homeTeamDisplay.name + ' vs ' + match.awayTeamDisplay.name">
+                      <span class="match-heading-team" [title]="match.homeTeamDisplay.name">
+                        @if (match.homeTeamDisplay.iconUrl; as iconUrl) {
+                          <img class="match-heading-logo" [src]="iconUrl" [alt]="match.homeTeamDisplay.name" width="16" height="16" />
+                        } @else {
+                          <span class="match-heading-fallback">{{ match.homeTeamDisplay.shortLabel }}</span>
+                        }
+                      </span>
+                      <span class="match-heading-separator" aria-hidden="true">vs</span>
+                      <span class="match-heading-team" [title]="match.awayTeamDisplay.name">
+                        @if (match.awayTeamDisplay.iconUrl; as iconUrl) {
+                          <img class="match-heading-logo" [src]="iconUrl" [alt]="match.awayTeamDisplay.name" width="16" height="16" />
+                        } @else {
+                          <span class="match-heading-fallback">{{ match.awayTeamDisplay.shortLabel }}</span>
+                        }
+                      </span>
+                    </span>
                     @if (match.liveScoreLabel) {
                       <span class="live-heading-score">{{ match.liveScoreLabel }}</span>
                     }
@@ -56,7 +72,25 @@
                 </th>
               }
               @for (match of table.comingUpMatches; track match.matchId) {
-                <th class="coming-up-match-heading" scope="col">{{ match.label }}</th>
+                <th class="coming-up-match-heading" scope="col">
+                  <span class="match-heading-teams" [attr.aria-label]="match.homeTeamDisplay.name + ' vs ' + match.awayTeamDisplay.name">
+                    <span class="match-heading-team" [title]="match.homeTeamDisplay.name">
+                      @if (match.homeTeamDisplay.iconUrl; as iconUrl) {
+                        <img class="match-heading-logo" [src]="iconUrl" [alt]="match.homeTeamDisplay.name" width="16" height="16" />
+                      } @else {
+                        <span class="match-heading-fallback">{{ match.homeTeamDisplay.shortLabel }}</span>
+                      }
+                    </span>
+                    <span class="match-heading-separator" aria-hidden="true">vs</span>
+                    <span class="match-heading-team" [title]="match.awayTeamDisplay.name">
+                      @if (match.awayTeamDisplay.iconUrl; as iconUrl) {
+                        <img class="match-heading-logo" [src]="iconUrl" [alt]="match.awayTeamDisplay.name" width="16" height="16" />
+                      } @else {
+                        <span class="match-heading-fallback">{{ match.awayTeamDisplay.shortLabel }}</span>
+                      }
+                    </span>
+                  </span>
+                </th>
               }
               @for (round of table.rounds; track round.label) {
                 <th scope="col">Tips</th>
