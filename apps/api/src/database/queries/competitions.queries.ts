@@ -425,6 +425,7 @@ export function listCompetitionsWithLiveScoreSyncEnabled(): CompetitionRow[] {
             NULL AS tiebreaker_name
           FROM competitions
           WHERE is_archived = 0
+            AND is_finished = 0
             AND live_score_sync_enabled = 1
           ORDER BY id ASC
         `
@@ -459,6 +460,7 @@ export function listCompetitionsWithNotificationRemindersEnabled(): CompetitionR
             NULL AS tiebreaker_name
           FROM competitions
           WHERE is_archived = 0
+            AND is_finished = 0
             AND notification_reminders_enabled = 1
           ORDER BY id ASC
         `
@@ -487,6 +489,23 @@ export function updateCompetitionJobSettings(
       return undefined;
     }
 
+    const notificationRemindersEnabled =
+      existing.is_finished === 1
+        ? 0
+        : settings.notificationRemindersEnabled === undefined
+          ? existing.notification_reminders_enabled
+          : settings.notificationRemindersEnabled
+            ? 1
+            : 0;
+    const liveScoreSyncEnabled =
+      existing.is_finished === 1
+        ? 0
+        : settings.liveScoreSyncEnabled === undefined
+          ? existing.live_score_sync_enabled
+          : settings.liveScoreSyncEnabled
+            ? 1
+            : 0;
+
     db.prepare(
       `
         UPDATE competitions
@@ -501,16 +520,8 @@ export function updateCompetitionJobSettings(
     ).run(
       settings.scheduleSourceUrl ?? existing.schedule_source_url,
       settings.oddsSourceUrl ?? existing.odds_source_url,
-      settings.notificationRemindersEnabled === undefined
-        ? existing.notification_reminders_enabled
-        : settings.notificationRemindersEnabled
-          ? 1
-          : 0,
-      settings.liveScoreSyncEnabled === undefined
-        ? existing.live_score_sync_enabled
-        : settings.liveScoreSyncEnabled
-          ? 1
-          : 0,
+      notificationRemindersEnabled,
+      liveScoreSyncEnabled,
       competitionId
     );
 
@@ -702,6 +713,8 @@ export function updateCompetitionManagementSettings(
               playoffs_enabled = ?,
               schedule_source_url = ?,
               odds_source_url = ?,
+              notification_reminders_enabled = ?,
+              live_score_sync_enabled = ?,
               updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
           `
@@ -714,6 +727,8 @@ export function updateCompetitionManagementSettings(
           input.playoffsEnabled ? 1 : 0,
           input.scheduleSourceUrl,
           input.oddsSourceUrl,
+          input.isFinished ? 0 : existing.notification_reminders_enabled,
+          input.isFinished ? 0 : existing.live_score_sync_enabled,
           competitionId
         );
       } else {
@@ -728,6 +743,8 @@ export function updateCompetitionManagementSettings(
               playoffs_enabled = ?,
               schedule_source_url = ?,
               odds_source_url = ?,
+              notification_reminders_enabled = ?,
+              live_score_sync_enabled = ?,
               updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
           `
@@ -739,6 +756,8 @@ export function updateCompetitionManagementSettings(
           input.playoffsEnabled ? 1 : 0,
           input.scheduleSourceUrl,
           input.oddsSourceUrl,
+          input.isFinished ? 0 : existing.notification_reminders_enabled,
+          input.isFinished ? 0 : existing.live_score_sync_enabled,
           competitionId
         );
       }

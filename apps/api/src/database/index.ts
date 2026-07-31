@@ -66,6 +66,7 @@ function initializeDatabase(db: Database.Database) {
   ensureSuperAdminCompetitionMembershipBlocked(db);
   ensureMatchesTableSupportsOdds(db);
   ensureMatchesTableSupportsPlayoffMappings(db);
+  ensureFinishedCompetitionsHaveJobsDisabled(db);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS payment_settings (
@@ -431,6 +432,35 @@ function ensureCompetitionTableSupportsManagementFields(db: Database.Database) {
   if (!columnNames.has('playoffs_enabled')) {
     db.exec('ALTER TABLE competitions ADD COLUMN playoffs_enabled INTEGER NOT NULL DEFAULT 0 CHECK(playoffs_enabled IN (0, 1))');
   }
+}
+
+function ensureFinishedCompetitionsHaveJobsDisabled(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(competitions)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (
+    columns.length === 0 ||
+    !columnNames.has('is_finished') ||
+    !columnNames.has('notification_reminders_enabled') ||
+    !columnNames.has('live_score_sync_enabled')
+  ) {
+    return;
+  }
+
+  db.prepare(
+    `
+      UPDATE competitions
+      SET
+        notification_reminders_enabled = 0,
+        live_score_sync_enabled = 0,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE is_finished = 1
+        AND (
+          notification_reminders_enabled = 1
+          OR live_score_sync_enabled = 1
+        )
+    `
+  ).run();
 }
 
 function ensureSuperAdminCompetitionMembershipBlocked(db: Database.Database) {

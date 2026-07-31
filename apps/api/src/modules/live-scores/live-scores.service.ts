@@ -48,7 +48,7 @@ export interface LiveScoreRunReport {
 
 export async function getLiveScoreJobSnapshot(competitionId: number) {
   const competition = findCompetitionForAdmin(competitionId);
-  const enabled = competition?.live_score_sync_enabled === 1;
+  const enabled = isLiveScoreSyncEnabled(competition);
   const matches = findLiveScoreMatchesForCompetition(competitionId);
   const now = new Date();
   const latestSnapshotsByMatchId = new Map(
@@ -57,9 +57,7 @@ export async function getLiveScoreJobSnapshot(competitionId: number) {
   const activeMatches = getActiveMatches(matches, now, latestSnapshotsByMatchId);
   const nextRunAt = enabled ? calculateNextRunAt(matches, now, activeMatches.length > 0, latestSnapshotsByMatchId) : null;
 
-  if (!scheduledNextRunAtByCompetitionId.has(competitionId)) {
-    scheduledNextRunAtByCompetitionId.set(competitionId, nextRunAt);
-  }
+  scheduledNextRunAtByCompetitionId.set(competitionId, nextRunAt);
 
   return {
     enabled,
@@ -121,9 +119,12 @@ export async function runLiveScoreSyncNow(competitionId: number): Promise<LiveSc
 }
 
 export function setLiveScoreSyncEnabled(competitionId: number, enabled: boolean): void {
-  setCompetitionJobSettings(competitionId, { liveScoreSyncEnabled: enabled });
+  const competition = findCompetitionForAdmin(competitionId);
+  const nextEnabled = enabled && competition?.is_finished === 0;
 
-  if (enabled) {
+  setCompetitionJobSettings(competitionId, { liveScoreSyncEnabled: nextEnabled });
+
+  if (nextEnabled) {
     scheduleNextLiveScoreSync(0);
     return;
   }
@@ -144,7 +145,7 @@ async function runLiveScoreSync(competitionId: number, options: { readonly force
       competitionId,
       startedAt: now.toISOString(),
       finishedAt: now.toISOString(),
-      enabled: findCompetitionForAdmin(competitionId)?.live_score_sync_enabled === 1,
+      enabled: isLiveScoreSyncEnabled(findCompetitionForAdmin(competitionId)),
       status: 'skipped' as const,
       checkedMatches: 0,
       updatedMatches: 0,
@@ -164,7 +165,7 @@ async function runLiveScoreSync(competitionId: number, options: { readonly force
   syncRunning = true;
   const startedAt = new Date();
   const competition = findCompetitionForAdmin(competitionId);
-  const enabled = competition?.live_score_sync_enabled === 1;
+  const enabled = isLiveScoreSyncEnabled(competition);
   let checkedMatches = 0;
   let updatedMatches = 0;
   let liveMatches = 0;
@@ -442,6 +443,12 @@ function getSchedulerStatus(enabled: boolean, activeMatchCount: number): 'disabl
   }
 
   return activeMatchCount > 0 ? 'polling_live_match' : 'waiting_for_next_match';
+}
+
+function isLiveScoreSyncEnabled(
+  competition: ReturnType<typeof findCompetitionForAdmin>
+): boolean {
+  return competition?.live_score_sync_enabled === 1 && competition.is_finished === 0;
 }
 
 function toRunInput(report: LiveScoreRunReport) {
