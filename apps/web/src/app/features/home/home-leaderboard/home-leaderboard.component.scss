@@ -362,6 +362,42 @@ tbody tr:last-child th:last-child {
   gap: 5px;
 }
 
+.match-heading-teams {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.match-heading-team {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+}
+
+.match-heading-logo {
+  display: block;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.match-heading-fallback {
+  font-size: 0.64rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.match-heading-separator {
+  color: #6b7280;
+  font-size: 0.52rem;
+  font-weight: 850;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 .live-heading-score {
   border-radius: 999px;
   background: #fee2e2;
