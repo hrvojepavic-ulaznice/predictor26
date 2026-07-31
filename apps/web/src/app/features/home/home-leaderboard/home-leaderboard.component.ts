@@ -86,6 +86,7 @@ export class HomeLeaderboardComponent {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly openingRoundKey = signal<string | null>(null);
   protected readonly selectedRound = signal<SelectedLeaderboardRound | null>(null);
+  protected readonly isHorizontallyScrolled = signal(false);
 
   constructor() {
     this.loadLeaderboard();
@@ -229,6 +230,12 @@ export class HomeLeaderboardComponent {
 
   protected closeRound(): void {
     this.selectedRound.set(null);
+  }
+
+  protected onTableScroll(event: Event): void {
+    const scrollShell = event.currentTarget as HTMLElement | null;
+
+    this.isHorizontallyScrolled.set((scrollShell?.scrollLeft ?? 0) > 0);
   }
 
   protected isOpeningRound(user: RankedLeaderboardUser, round: LeaderboardRound): boolean {
