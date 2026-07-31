@@ -157,13 +157,15 @@ export async function updateNotificationSettings(
   }
 
   const remindersEnabled = input.remindersEnabled === true;
+  const competition = findCompetitionForAdmin(competitionId);
+  const nextRemindersEnabled = remindersEnabled && competition?.is_finished === 0;
 
-  setCompetitionJobSettings(competitionId, { notificationRemindersEnabled: remindersEnabled });
+  setCompetitionJobSettings(competitionId, { notificationRemindersEnabled: nextRemindersEnabled });
 
   return {
     status: 'updated',
     settings: {
-      remindersEnabled
+      remindersEnabled: nextRemindersEnabled
     }
   };
 }
@@ -439,7 +441,9 @@ export function resetUserNotificationSubscriptions(userId: number): { readonly r
 }
 
 async function areNotificationRemindersEnabled(competitionId: number): Promise<boolean> {
-  return findCompetitionForAdmin(competitionId)?.notification_reminders_enabled === 1;
+  const competition = findCompetitionForAdmin(competitionId);
+
+  return competition?.notification_reminders_enabled === 1 && competition.is_finished === 0;
 }
 
 async function getLastNotificationReminderRun(competitionId: number): Promise<NotificationReminderRunReport | null> {
