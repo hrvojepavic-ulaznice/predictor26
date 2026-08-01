@@ -8,11 +8,16 @@ helper_path="/usr/local/bin/predictor26-maintenance"
 include_line="include $snippet_path;"
 server_name="${PREDICTOR26_NGINX_SERVER_NAME:-predictor26.ivanjkv.cc}"
 
-sudo mkdir -p "$static_dir" /etc/nginx/snippets
-sudo cp "$repo_root/deploy/maintenance.html" "$static_dir/predictor26-maintenance.html"
-sudo cp "$repo_root/deploy/nginx-maintenance.conf" "$snippet_path"
-sudo cp "$repo_root/deploy/predictor26-maintenance" "$helper_path"
-sudo chmod 755 "$helper_path"
+if ! sudo -n mkdir -p "$static_dir" /etc/nginx/snippets; then
+  echo "Skipping Predictor26 maintenance setup because passwordless sudo is not available for setup commands."
+  echo "Allow webdev passwordless sudo for maintenance setup, or run this script manually as a sudo-capable user."
+  exit 0
+fi
+
+sudo -n cp "$repo_root/deploy/maintenance.html" "$static_dir/predictor26-maintenance.html"
+sudo -n cp "$repo_root/deploy/nginx-maintenance.conf" "$snippet_path"
+sudo -n cp "$repo_root/deploy/predictor26-maintenance" "$helper_path"
+sudo -n chmod 755 "$helper_path"
 
 nginx_config="${PREDICTOR26_NGINX_CONFIG:-}"
 explicit_nginx_config=0
@@ -23,7 +28,7 @@ fi
 
 if [[ -z "$nginx_config" ]]; then
   mapfile -t nginx_candidates < <(
-    sudo grep -RIlE 'predictor26|/opt/predictor26|/var/www/predictor26|proxy_pass[[:space:]]+http://127\.0\.0\.1:3000|proxy_pass[[:space:]]+http://localhost:3000' \
+    sudo -n grep -RIlE 'predictor26|/opt/predictor26|/var/www/predictor26|proxy_pass[[:space:]]+http://127\.0\.0\.1:3000|proxy_pass[[:space:]]+http://localhost:3000' \
       /etc/nginx/sites-enabled /etc/nginx/sites-available 2>/dev/null \
       | sort -u
   )
@@ -36,7 +41,7 @@ fi
 if [[ -n "$nginx_config" ]]; then
   nginx_config="$(readlink -f "$nginx_config")"
 
-  if sudo awk -v server_name="$server_name" -v include_line="$include_line" '
+  if sudo -n awk -v server_name="$server_name" -v include_line="$include_line" '
     /^[[:space:]]*server[[:space:]]*\{/ {
       in_server = 1;
       found_name = 0;
@@ -60,7 +65,7 @@ if [[ -n "$nginx_config" ]]; then
   ' "$nginx_config"; then
     echo "Predictor26 maintenance nginx include already exists in $nginx_config."
   else
-    matching_server_block_count="$(sudo awk -v server_name="$server_name" '
+    matching_server_block_count="$(sudo -n awk -v server_name="$server_name" '
       /^[[:space:]]*server[[:space:]]*\{/ {
         in_server = 1;
         found_name = 0;
@@ -86,8 +91,8 @@ if [[ -n "$nginx_config" ]]; then
       exit 0
     fi
 
-    sudo cp "$nginx_config" "$nginx_config.predictor26-maintenance.bak"
-    sudo awk -v server_name="$server_name" -v include_line="  $include_line" '
+    sudo -n cp "$nginx_config" "$nginx_config.predictor26-maintenance.bak"
+    sudo -n awk -v server_name="$server_name" -v include_line="  $include_line" '
       /^[[:space:]]*server[[:space:]]*\{/ {
         in_server = 1;
         found_name = 0;
@@ -105,15 +110,15 @@ if [[ -n "$nginx_config" ]]; then
         in_server = 0;
       }
       { print }
-    ' "$nginx_config" | sudo tee "$nginx_config.tmp" >/dev/null
-    sudo mv "$nginx_config.tmp" "$nginx_config"
+    ' "$nginx_config" | sudo -n tee "$nginx_config.tmp" >/dev/null
+    sudo -n mv "$nginx_config.tmp" "$nginx_config"
 
-    if sudo nginx -t; then
-      sudo systemctl reload nginx
+    if sudo -n nginx -t; then
+      sudo -n systemctl reload nginx
       echo "Predictor26 maintenance nginx include installed in $nginx_config."
     else
-      sudo mv "$nginx_config.predictor26-maintenance.bak" "$nginx_config"
-      sudo nginx -t
+      sudo -n mv "$nginx_config.predictor26-maintenance.bak" "$nginx_config"
+      sudo -n nginx -t
       echo "nginx test failed after maintenance include insertion; restored $nginx_config." >&2
       exit 1
     fi
