@@ -30,7 +30,6 @@ interface RoundSummary {
   readonly matches: MatchRow[];
 }
 
-const assumedMatchDurationMs = (2 * 60 + 15) * 60 * 1_000;
 const matchDayTimeZone = 'Europe/Zagreb';
 
 export async function getLeaderboard(competitionId: number): Promise<LeaderboardResponse> {
@@ -325,7 +324,7 @@ function getLiveMatches(
   const now = Date.now();
 
   return matches
-    .filter((match) => Date.parse(match.kickoff_at) <= now && !isSettledForLiveLeaderboard(match, now, latestSnapshotsByMatchId.get(match.id)))
+    .filter((match) => Date.parse(match.kickoff_at) <= now && !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id)))
     .sort(sortMatchesByKickoff);
 }
 
@@ -344,36 +343,15 @@ function getComingUpMatches(rounds: readonly RoundSummary[], liveMatches: readon
     return nextKickoff;
   }, null);
 
-  if (nextKickoffAt === null || shouldHideComingUpMatches(nextKickoffAt, liveMatches)) {
+  if (nextKickoffAt === null || shouldHideComingUpMatches(liveMatches)) {
     return [];
   }
 
   return eligibleMatches.filter((match) => match.kickoff_at === nextKickoffAt).sort(sortMatchesByKickoff);
 }
 
-function isSettledForLiveLeaderboard(match: MatchRow, now: number, snapshot: LatestLiveScoreSnapshotRow | undefined): boolean {
-  if (isFinishedByProvider(snapshot)) {
-    return true;
-  }
-
-  return (
-    match.final_home_score !== null &&
-    match.final_away_score !== null &&
-    now - Date.parse(match.kickoff_at) >= assumedMatchDurationMs
-  );
-}
-
-function shouldHideComingUpMatches(nextKickoffAt: string, liveMatches: readonly MatchRow[]): boolean {
-  if (liveMatches.length === 0) {
-    return false;
-  }
-
-  const nextKickoffTime = Date.parse(nextKickoffAt);
-  const latestLiveWindowEnd = Math.max(
-    ...liveMatches.map((match) => Date.parse(match.kickoff_at) + assumedMatchDurationMs)
-  );
-
-  return nextKickoffTime > latestLiveWindowEnd;
+function shouldHideComingUpMatches(liveMatches: readonly MatchRow[]): boolean {
+  return liveMatches.length > 0;
 }
 
 function toLiveMatchResponse(match: MatchRow): LeaderboardLiveMatchResponse {
@@ -924,18 +902,17 @@ function hiddenPredictionPoints(): LeaderboardPredictionPointsResponse {
 function getMatchStatus(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined): LeaderboardMatchStatusResponse {
   const now = Date.now();
   const kickoffTime = Date.parse(match.kickoff_at);
-  const elapsed = now - kickoffTime;
   const hasFinalScore = match.final_home_score !== null && match.final_away_score !== null;
 
-  if ((hasFinalScore && elapsed >= assumedMatchDurationMs) || isFinishedByProvider(snapshot)) {
+  if (isFinishedByProvider(snapshot)) {
     return 'finished';
   }
 
-  if (kickoffTime <= now && elapsed < assumedMatchDurationMs) {
+  if (kickoffTime <= now && !hasFinalScore) {
     return 'live';
   }
 
-  if (kickoffTime <= now && !hasFinalScore) {
+  if (kickoffTime <= now) {
     return 'undecided';
   }
 

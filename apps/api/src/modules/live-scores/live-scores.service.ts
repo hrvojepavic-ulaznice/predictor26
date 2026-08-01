@@ -332,7 +332,7 @@ function getActiveMatches(
 
     const kickoffTime = Date.parse(match.kickoff_at);
 
-    return kickoffTime <= nowTime + config.liveScoreKickoffBufferMs && kickoffTime + config.liveScoreActiveWindowMs >= nowTime;
+    return kickoffTime <= nowTime + config.liveScoreKickoffBufferMs;
   });
 }
 
@@ -349,7 +349,7 @@ function calculateNextRunAt(
   const nextKickoff = matches
     .filter((match) => !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id)))
     .map((match) => Date.parse(match.kickoff_at))
-    .filter((kickoffTime) => Number.isFinite(kickoffTime) && kickoffTime + config.liveScoreActiveWindowMs >= now.getTime())
+    .filter((kickoffTime) => Number.isFinite(kickoffTime))
     .sort((first, second) => first - second)[0];
 
   if (!nextKickoff) {
