@@ -21,7 +21,7 @@ export interface ProviderLiveScore {
 }
 
 export async function fetchOddsPortalLiveScores(sourceUrl = defaultOddsPortalSourceUrl): Promise<ProviderLiveScore[]> {
-  const sportData = await fetchOddsPortalSportData(sourceUrl);
+  const sportData = await fetchOddsPortalSportData(sourceUrl, { bypassCache: true });
 
   return oddsPortalRows(sportData).flatMap(toProviderLiveScore);
 }

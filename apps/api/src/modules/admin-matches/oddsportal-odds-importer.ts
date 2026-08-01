@@ -33,6 +33,10 @@ export interface OddsPortalEventRow {
   readonly 'country-name'?: string;
 }
 
+interface OddsPortalPageFetchOptions {
+  readonly bypassCache?: boolean;
+}
+
 interface OddsPortalOddsResponse {
   readonly d?: {
     readonly oddsData?: Record<string, OddsPortalOddsData>;
@@ -119,13 +123,28 @@ export async function importOddsPortalOdds(sourceUrl = worldCupOddsPortalUrl): P
   return importedOdds;
 }
 
-export async function fetchOddsPortalSportData(sourceUrl: string): Promise<OddsPortalSportData> {
-  return parseSportData(await fetchOddsPortalPageHtml(sourceUrl));
+export async function fetchOddsPortalSportData(
+  sourceUrl: string,
+  options: OddsPortalPageFetchOptions = {}
+): Promise<OddsPortalSportData> {
+  return parseSportData(await fetchOddsPortalPageHtml(sourceUrl, options));
 }
 
-export async function fetchOddsPortalPageHtml(sourceUrl: string): Promise<string> {
-  const pageResponse = await fetch(sourceUrl, {
-    headers: browserHeaders
+export async function fetchOddsPortalPageHtml(
+  sourceUrl: string,
+  options: OddsPortalPageFetchOptions = {}
+): Promise<string> {
+  const pageResponse = await fetch(options.bypassCache ? withCacheBuster(sourceUrl) : sourceUrl, {
+    cache: options.bypassCache ? 'no-store' : 'default',
+    headers: {
+      ...browserHeaders,
+      ...(options.bypassCache
+        ? {
+            'cache-control': 'no-cache, no-store, max-age=0',
+            pragma: 'no-cache'
+          }
+        : {})
+    }
   });
 
   if (!pageResponse.ok) {
@@ -133,6 +152,12 @@ export async function fetchOddsPortalPageHtml(sourceUrl: string): Promise<string
   }
 
   return pageResponse.text();
+}
+
+function withCacheBuster(sourceUrl: string): string {
+  const url = new URL(sourceUrl);
+  url.searchParams.set('_predictor26_live', String(Date.now()));
+  return url.toString();
 }
 
 export function oddsPortalRows(sportData: OddsPortalSportData): OddsPortalEventRow[] {
