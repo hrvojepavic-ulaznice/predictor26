@@ -6,6 +6,7 @@ static_dir="/var/www/predictor26-maintenance"
 snippet_path="/etc/nginx/snippets/predictor26-maintenance.conf"
 helper_path="/usr/local/bin/predictor26-maintenance"
 include_line="include $snippet_path;"
+server_name="${PREDICTOR26_NGINX_SERVER_NAME:-predictor26.ivanjkv.cc}"
 
 sudo mkdir -p "$static_dir" /etc/nginx/snippets
 sudo cp "$repo_root/deploy/maintenance.html" "$static_dir/predictor26-maintenance.html"
@@ -35,25 +36,73 @@ fi
 if [[ -n "$nginx_config" ]]; then
   nginx_config="$(readlink -f "$nginx_config")"
 
-  if sudo grep -Fq "$include_line" "$nginx_config"; then
+  if sudo awk -v server_name="$server_name" -v include_line="$include_line" '
+    /^[[:space:]]*server[[:space:]]*\{/ {
+      in_server = 1;
+      found_name = 0;
+      found_include = 0;
+    }
+    in_server && $0 ~ "server_name" && $0 ~ server_name {
+      found_name = 1;
+    }
+    in_server && index($0, include_line) > 0 {
+      found_include = 1;
+    }
+    in_server && /^[[:space:]]*\}/ {
+      if (found_name && found_include) {
+        found = 1;
+      }
+      in_server = 0;
+    }
+    END {
+      exit found ? 0 : 1;
+    }
+  ' "$nginx_config"; then
     echo "Predictor26 maintenance nginx include already exists in $nginx_config."
   else
-    server_block_count="$(sudo grep -Ec '^[[:space:]]*server[[:space:]]*\{' "$nginx_config" || true)"
+    matching_server_block_count="$(sudo awk -v server_name="$server_name" '
+      /^[[:space:]]*server[[:space:]]*\{/ {
+        in_server = 1;
+        found_name = 0;
+      }
+      in_server && $0 ~ "server_name" && $0 ~ server_name {
+        found_name = 1;
+      }
+      in_server && /^[[:space:]]*\}/ {
+        if (found_name) {
+          count += 1;
+        }
+        in_server = 0;
+      }
+      END {
+        print count + 0;
+      }
+    ' "$nginx_config")"
 
-    if [[ "$explicit_nginx_config" -eq 0 && "$server_block_count" -ne 1 ]]; then
-      echo "Predictor26 maintenance assets installed, but $nginx_config has $server_block_count server blocks."
-      echo "Set PREDICTOR26_NGINX_CONFIG=$nginx_config and rerun this script if this is the intended nginx config."
+    if [[ "$matching_server_block_count" -ne 1 ]]; then
+      echo "Predictor26 maintenance assets installed, but $nginx_config has $matching_server_block_count server blocks for $server_name."
+      echo "Set PREDICTOR26_NGINX_SERVER_NAME to the exact Predictor26 server_name and rerun this script."
       echo "Predictor26 maintenance setup complete."
       exit 0
     fi
 
     sudo cp "$nginx_config" "$nginx_config.predictor26-maintenance.bak"
-    sudo awk -v include_line="  $include_line" '
-      !inserted && /^[[:space:]]*server[[:space:]]*\{/ {
-        print;
+    sudo awk -v server_name="$server_name" -v include_line="  $include_line" '
+      /^[[:space:]]*server[[:space:]]*\{/ {
+        in_server = 1;
+        found_name = 0;
+      }
+      in_server && $0 ~ "server_name" && $0 ~ server_name {
+        found_name = 1;
+      }
+      in_server && found_name && !inserted && /^[[:space:]]*root[[:space:]]/ {
         print include_line;
+        print;
         inserted = 1;
         next;
+      }
+      in_server && /^[[:space:]]*\}/ {
+        in_server = 0;
       }
       { print }
     ' "$nginx_config" | sudo tee "$nginx_config.tmp" >/dev/null
