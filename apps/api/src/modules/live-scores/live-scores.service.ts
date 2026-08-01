@@ -55,15 +55,15 @@ export async function getLiveScoreJobSnapshot(competitionId: number) {
     findLatestLiveScoreSnapshotsForCompetition(competitionId).map((snapshot) => [snapshot.match_id, snapshot])
   );
   const activeMatches = getActiveMatches(matches, now, latestSnapshotsByMatchId);
-  const nextRunAt = enabled ? calculateNextRunAt(matches, now, activeMatches.length > 0, latestSnapshotsByMatchId) : null;
-
-  scheduledNextRunAtByCompetitionId.set(competitionId, nextRunAt);
+  const calculatedNextRunAt = enabled ? calculateNextRunAt(matches, now, activeMatches.length > 0, latestSnapshotsByMatchId) : null;
+  const scheduledNextRunAt = scheduledNextRunAtByCompetitionId.get(competitionId) ?? null;
+  const nextRunAt = enabled ? scheduledNextRunAt ?? calculatedNextRunAt : null;
 
   return {
     enabled,
     intervalMs: config.liveScorePollIntervalMs,
     status: getSchedulerStatus(enabled, activeMatches.length),
-    nextRunAt: scheduledNextRunAtByCompetitionId.get(competitionId) ?? null,
+    nextRunAt,
     activeMatches: activeMatches.map((match) => {
       const snapshot = latestSnapshotsByMatchId.get(match.id);
 
@@ -222,6 +222,10 @@ async function runLiveScoreSync(competitionId: number, options: { readonly force
           continue;
         }
 
+        if (!shouldApplyProviderScore(providerScore, latestSnapshotsByMatchId.get(match.id))) {
+          continue;
+        }
+
         const applied = applyLiveScoreToFinalScore(competitionId, match.id, providerScore.homeScore, providerScore.awayScore);
 
         if (!applied) {
@@ -352,7 +356,7 @@ function calculateNextRunAt(
     return null;
   }
 
-  const bufferedKickoffTime = nextKickoff + config.liveScoreKickoffBufferMs;
+  const bufferedKickoffTime = nextKickoff - config.liveScoreKickoffBufferMs;
   const nextRunTime =
     bufferedKickoffTime > now.getTime()
       ? bufferedKickoffTime
@@ -363,6 +367,21 @@ function calculateNextRunAt(
 
 function isFinishedByProvider(snapshot: LatestLiveScoreSnapshotRow | undefined): boolean {
   return snapshot?.status === 'finished' && snapshot.home_score !== null && snapshot.away_score !== null;
+}
+
+function shouldApplyProviderScore(
+  providerScore: ProviderLiveScore,
+  latestSnapshot: LatestLiveScoreSnapshotRow | undefined
+): boolean {
+  if (providerScore.status === 'finished') {
+    return true;
+  }
+
+  return (
+    latestSnapshot?.home_score === providerScore.homeScore &&
+    latestSnapshot.away_score === providerScore.awayScore &&
+    latestSnapshot.status === providerScore.status
+  );
 }
 
 function mapProviderScoresToMatches(matches: readonly MatchRow[], scores: readonly ProviderLiveScore[]) {
