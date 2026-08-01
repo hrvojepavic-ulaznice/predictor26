@@ -43,7 +43,9 @@ export async function getLeaderboard(competitionId: number): Promise<Leaderboard
   const liveMatches = getLiveMatches(matches, latestSnapshotsByMatchId);
   const comingUpMatches = getComingUpMatches(roundSummaries, liveMatches);
   const users = findLeaderboardUsers(competitionId);
-  const predictionsByUser = groupPredictionsByUser(findLeaderboardPredictions(competitionId));
+  const predictionsByUser = groupPredictionsByUser(
+    withLiveSnapshotScores(findLeaderboardPredictions(competitionId), latestSnapshotsByMatchId)
+  );
   const liveMatchIds = new Set(liveMatches.map((match) => match.id));
   const leaderboardUsers = users.map<LeaderboardUserResponse>((user) => {
     const userPredictions = predictionsByUser.get(user.id) ?? [];
@@ -87,7 +89,7 @@ export async function getLeaderboard(competitionId: number): Promise<Leaderboard
       locked: round.locked,
       viewable: round.viewable
     })),
-    liveMatches: liveMatches.map(toLiveMatchResponse),
+    liveMatches: liveMatches.map((match) => toLiveMatchResponse(match, latestSnapshotsByMatchId.get(match.id))),
     comingUpMatches: comingUpMatches.map(toComingUpMatchResponse),
     totalUsers: users.length,
     users: leaderboardUsers
@@ -354,20 +356,16 @@ function shouldHideComingUpMatches(liveMatches: readonly MatchRow[]): boolean {
   return liveMatches.length > 0;
 }
 
-function toLiveMatchResponse(match: MatchRow): LeaderboardLiveMatchResponse {
+function toLiveMatchResponse(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined): LeaderboardLiveMatchResponse {
+  const score = getLiveScore(match, snapshot);
+
   return {
     matchId: match.id,
     matchNumber: match.match_number,
     kickoffAt: match.kickoff_at,
     homeTeam: toHomeTeamResponse(match),
     awayTeam: toAwayTeamResponse(match),
-    finalScore:
-      match.final_home_score === null || match.final_away_score === null
-        ? null
-        : {
-            home: match.final_home_score,
-            away: match.final_away_score
-          }
+    finalScore: score
   };
 }
 
@@ -709,6 +707,43 @@ function groupPredictionsByUser(
   }
 
   return groups;
+}
+
+function withLiveSnapshotScores(
+  predictions: readonly LeaderboardPredictionRow[],
+  latestSnapshotsByMatchId: ReadonlyMap<number, LatestLiveScoreSnapshotRow>
+): LeaderboardPredictionRow[] {
+  return predictions.map((prediction) => {
+    const snapshot = latestSnapshotsByMatchId.get(prediction.match_id);
+
+    if (snapshot?.home_score === null || snapshot?.away_score === null || !snapshot || snapshot.status === 'scheduled') {
+      return prediction;
+    }
+
+    return {
+      ...prediction,
+      final_home_score: snapshot.home_score,
+      final_away_score: snapshot.away_score
+    };
+  });
+}
+
+function getLiveScore(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined) {
+  if (snapshot?.home_score !== null && snapshot?.away_score !== null && snapshot) {
+    return {
+      home: snapshot.home_score,
+      away: snapshot.away_score
+    };
+  }
+
+  if (match.final_home_score !== null && match.final_away_score !== null) {
+    return {
+      home: match.final_home_score,
+      away: match.final_away_score
+    };
+  }
+
+  return null;
 }
 
 function getBaselineTotalPoints(
