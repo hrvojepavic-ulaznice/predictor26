@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+flag_file="/var/www/predictor26-maintenance/enabled"
+
+case "${1:-}" in
+  on)
+    mkdir -p "$(dirname "$flag_file")"
+    touch "$flag_file"
+    ;;
+  off)
+    rm -f "$flag_file"
+    ;;
+  status)
+    if [[ -f "$flag_file" ]]; then
+      echo "on"
+    else
+      echo "off"
+    fi
+    ;;
+  *)
+    echo "Usage: predictor26-maintenance {on|off|status}" >&2
+    exit 2
+    ;;
+esac
