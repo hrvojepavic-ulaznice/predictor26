@@ -224,6 +224,18 @@ export function listMatchesWithPredictions(userId: number, competitionId: number
             matches.away_team_name,
             matches.home_team_flag,
             matches.away_team_flag,
+            (
+              SELECT NULLIF(competition_teams.display_name, '')
+              FROM competition_teams
+              WHERE competition_teams.competition_id = matches.competition_id
+                AND competition_teams.normalized_name = lower(trim(matches.home_team_name))
+            ) AS home_team_display_name,
+            (
+              SELECT NULLIF(competition_teams.display_name, '')
+              FROM competition_teams
+              WHERE competition_teams.competition_id = matches.competition_id
+                AND competition_teams.normalized_name = lower(trim(matches.away_team_name))
+            ) AS away_team_display_name,
             matches.home_mapped_team_name,
             matches.away_mapped_team_name,
             matches.home_mapped_team_flag,
@@ -275,6 +287,18 @@ export function listPredictedMatchesWithPredictions(userId: number, competitionI
             matches.away_team_name,
             matches.home_team_flag,
             matches.away_team_flag,
+            (
+              SELECT NULLIF(competition_teams.display_name, '')
+              FROM competition_teams
+              WHERE competition_teams.competition_id = matches.competition_id
+                AND competition_teams.normalized_name = lower(trim(matches.home_team_name))
+            ) AS home_team_display_name,
+            (
+              SELECT NULLIF(competition_teams.display_name, '')
+              FROM competition_teams
+              WHERE competition_teams.competition_id = matches.competition_id
+                AND competition_teams.normalized_name = lower(trim(matches.away_team_name))
+            ) AS away_team_display_name,
             matches.home_mapped_team_name,
             matches.away_mapped_team_name,
             matches.home_mapped_team_flag,
