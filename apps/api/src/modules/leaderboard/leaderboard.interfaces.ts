@@ -99,6 +99,7 @@ export interface LeaderboardMatchDayResponse {
 export interface LeaderboardDayMatchResponse {
   readonly matchId: number;
   readonly matchNumber: number;
+  readonly roundLabel: string;
   readonly kickoffAt: string;
   readonly status: LeaderboardMatchStatusResponse;
   readonly roundLocked: boolean;
