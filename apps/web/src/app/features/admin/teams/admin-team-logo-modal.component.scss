@@ -1,0 +1,185 @@
+:host {
+  display: block;
+}
+
+.team-logo-modal {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+h2,
+p {
+  margin: 0;
+}
+
+.section-label {
+  margin: 0 0 6px;
+  color: #4b5563;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+h2 {
+  color: #111827;
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+
+header p:not(.section-label) {
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 0.92rem;
+}
+
+.logo-preview {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.logo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.image-drop-zone {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #374151;
+  padding: 16px;
+  text-align: center;
+}
+
+.image-drop-zone:focus-visible {
+  border-color: #9ca3af;
+  outline: 2px solid #e5e7eb;
+}
+
+.image-drop-zone span {
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.image-drop-zone small {
+  color: #6b7280;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.file-button {
+  position: relative;
+  display: inline-grid;
+  min-height: 36px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #111827;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 800;
+  margin-top: 4px;
+  padding: 0 12px;
+}
+
+.file-button input {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.clear-button {
+  justify-self: start;
+  min-height: 34px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  font-size: 0.84rem;
+}
+
+.form-field {
+  display: grid;
+  gap: 7px;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #111827;
+  font: inherit;
+  padding: 0 12px;
+}
+
+input:focus {
+  border-color: #9ca3af;
+  outline: 2px solid #e5e7eb;
+}
+
+.modal-error {
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  padding: 10px 12px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+button {
+  min-height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  padding: 0 14px;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.66;
+}
+
+.secondary-button {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+}
+
+.primary-button {
+  border: 1px solid #111827;
+  background: #111827;
+  color: #ffffff;
+}
+
+@media (max-width: 520px) {
+  .team-logo-modal {
+    padding: 16px;
+  }
+}

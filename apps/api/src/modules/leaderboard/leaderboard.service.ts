@@ -410,6 +410,7 @@ function toDayMatchResponse(match: MatchRow, roundLocked: boolean, snapshot: Lat
 function toHomeTeamResponse(match: MatchRow) {
   return {
     name: match.home_mapped_team_name ?? match.home_team_name,
+    displayName: match.home_team_display_name ?? match.home_mapped_team_name ?? match.home_team_name,
     flag: match.home_mapped_team_flag ?? match.home_team_flag,
     placeholderName: null
   };
@@ -418,8 +419,23 @@ function toHomeTeamResponse(match: MatchRow) {
 function toAwayTeamResponse(match: MatchRow) {
   return {
     name: match.away_mapped_team_name ?? match.away_team_name,
+    displayName: match.away_team_display_name ?? match.away_mapped_team_name ?? match.away_team_name,
     flag: match.away_mapped_team_flag ?? match.away_team_flag,
     placeholderName: null
+  };
+}
+
+function toHomeTeamDisplayResponse(match: MatchRow) {
+  return {
+    ...toHomeTeamResponse(match),
+    name: match.home_team_display_name ?? match.home_mapped_team_name ?? match.home_team_name
+  };
+}
+
+function toAwayTeamDisplayResponse(match: MatchRow) {
+  return {
+    ...toAwayTeamResponse(match),
+    name: match.away_team_display_name ?? match.away_mapped_team_name ?? match.away_team_name
   };
 }
 
@@ -436,6 +452,7 @@ function getWinnerTeamsByName(matches: readonly MatchRow[]): Map<string, ReturnT
     if (match.home_team_name && match.home_team_flag) {
       teams.set(toTeamLookupKey(match.home_team_name), {
         name: match.home_team_name,
+        displayName: match.home_team_display_name ?? match.home_team_name,
         flag: match.home_team_flag,
         placeholderName: null
       });
@@ -444,6 +461,7 @@ function getWinnerTeamsByName(matches: readonly MatchRow[]): Map<string, ReturnT
     if (match.away_team_name && match.away_team_flag) {
       teams.set(toTeamLookupKey(match.away_team_name), {
         name: match.away_team_name,
+        displayName: match.away_team_display_name ?? match.away_team_name,
         flag: match.away_team_flag,
         placeholderName: null
       });
@@ -602,8 +620,8 @@ function getHiddenLeaderboardRoundMatches(round: RoundSummary): LeaderboardRound
     matchId: match.id,
     matchNumber: match.match_number,
     kickoffAt: match.kickoff_at,
-    homeTeam: toHomeTeamResponse(match),
-    awayTeam: toAwayTeamResponse(match),
+    homeTeam: toHomeTeamDisplayResponse(match),
+    awayTeam: toAwayTeamDisplayResponse(match),
     prediction: null,
     predictionHidden: true,
     finalScore: null,
@@ -628,8 +646,8 @@ function getViewerOpenRoundMatches(
       matchId: match.id,
       matchNumber: match.match_number,
       kickoffAt: match.kickoff_at,
-      homeTeam: toHomeTeamResponse(match),
-      awayTeam: toAwayTeamResponse(match),
+      homeTeam: toHomeTeamDisplayResponse(match),
+      awayTeam: toAwayTeamDisplayResponse(match),
       prediction: prediction ? toPredictionResponse(prediction) : null,
       predictionHidden: false,
       finalScore: null,
@@ -670,8 +688,8 @@ function getLeaderboardRoundMatches(
       matchId: match.id,
       matchNumber: match.match_number,
       kickoffAt: match.kickoff_at,
-      homeTeam: toHomeTeamResponse(match),
-      awayTeam: toAwayTeamResponse(match),
+      homeTeam: toHomeTeamDisplayResponse(match),
+      awayTeam: toAwayTeamDisplayResponse(match),
       prediction: toPredictionResponse(prediction),
       predictionHidden: false,
       finalScore,
@@ -943,12 +961,16 @@ function getMatchStatus(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | 
     return 'finished';
   }
 
-  if (kickoffTime <= now && !hasFinalScore) {
+  if (snapshot?.status === 'live') {
     return 'live';
   }
 
+  if (hasFinalScore) {
+    return 'finished';
+  }
+
   if (kickoffTime <= now) {
-    return 'undecided';
+    return 'live';
   }
 
   return 'coming_up';

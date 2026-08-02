@@ -7,6 +7,7 @@ import { config } from './config/index.js';
 import { adminJobsRoutes } from './modules/admin-jobs/admin-jobs.routes.js';
 import { adminMatchesRoutes } from './modules/admin-matches/admin-matches.routes.js';
 import { adminPaymentsRoutes } from './modules/admin-payments/admin-payments.routes.js';
+import { adminTeamsRoutes } from './modules/admin-teams/admin-teams.routes.js';
 import { adminUsersRoutes } from './modules/admin-users/admin-users.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { competitionsRoutes } from './modules/competitions/competitions.routes.js';
@@ -35,6 +36,7 @@ app.use('/api', leaderboardRoutes);
 app.use('/api', adminJobsRoutes);
 app.use('/api', adminMatchesRoutes);
 app.use('/api', adminPaymentsRoutes);
+app.use('/api', adminTeamsRoutes);
 app.use('/api', adminUsersRoutes);
 app.use('/api', healthRoutes);
 

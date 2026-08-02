@@ -252,6 +252,7 @@ function ensureCompetitionSchema(db: Database.Database) {
     CREATE TABLE IF NOT EXISTS competition_teams (
       competition_id INTEGER NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
       normalized_name TEXT NOT NULL CHECK(length(normalized_name) BETWEEN 1 AND 140),
+      name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 140),
       display_name TEXT NOT NULL CHECK(length(display_name) BETWEEN 1 AND 140),
       logo_url TEXT NOT NULL DEFAULT '' CHECK(length(logo_url) <= 500),
       group_name TEXT CHECK(group_name IS NULL OR length(group_name) BETWEEN 1 AND 40),
@@ -283,6 +284,7 @@ function ensureCompetitionSchema(db: Database.Database) {
 
   ensureCompetitionTableSupportsManagementFields(db);
   ensureCompetitionUsersTableSupportsScopedRole(db);
+  ensureCompetitionTeamsTableSupportsName(db);
   ensureCompetitionTeamsTableSupportsGroupName(db);
 }
 
@@ -301,6 +303,41 @@ function ensureCompetitionTeamsTableSupportsGroupName(db: Database.Database) {
 
   if (columns.length > 0 && !columnNames.has('group_name')) {
     db.exec('ALTER TABLE competition_teams ADD COLUMN group_name TEXT CHECK(group_name IS NULL OR length(group_name) BETWEEN 1 AND 40)');
+  }
+}
+
+function ensureCompetitionTeamsTableSupportsName(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(competition_teams)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columns.length > 0 && !columnNames.has('name')) {
+    db.exec('ALTER TABLE competition_teams ADD COLUMN name TEXT');
+  }
+
+  if (columns.length > 0) {
+    db.exec(`
+      UPDATE competition_teams
+      SET name = COALESCE(
+        (
+          SELECT team_sources.team_name
+          FROM (
+            SELECT competition_id, home_team_name AS team_name FROM matches
+            UNION
+            SELECT competition_id, away_team_name AS team_name FROM matches
+          ) AS team_sources
+          WHERE team_sources.competition_id = competition_teams.competition_id
+            AND lower(trim(team_sources.team_name)) = competition_teams.normalized_name
+          ORDER BY length(team_sources.team_name) DESC
+          LIMIT 1
+        ),
+        NULLIF(name, ''),
+        NULLIF(display_name, ''),
+        normalized_name
+      )
+      WHERE name IS NULL
+        OR name = ''
+        OR name = display_name
+    `);
   }
 }
 

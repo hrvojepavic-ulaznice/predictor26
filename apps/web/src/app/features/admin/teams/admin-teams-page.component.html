@@ -1,0 +1,104 @@
+<section class="admin-teams-page" aria-labelledby="admin-teams-title">
+  <header class="page-header">
+    <div>
+      <p class="section-label">Admin</p>
+      <h1 id="admin-teams-title">Teams</h1>
+      <a class="back-link" routerLink="../">Back to admin competition</a>
+    </div>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="status-message status-error">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Loading teams...</p>
+  } @else {
+    <div class="teams-list" role="list" aria-label="Competition teams">
+      @for (team of teamRows(); track team.normalizedName) {
+        <article class="team-row" role="listitem">
+          <div class="team-logo-wrap">
+            <div class="team-logo" aria-hidden="true">
+              @if (team.logoUrl) {
+                <img [src]="team.logoUrl" [alt]="team.name">
+              } @else {
+                <span>{{ team.initials }}</span>
+              }
+            </div>
+            <button class="logo-edit-button" type="button" aria-label="Edit team icon" [disabled]="team.isUpdating" (click)="editLogo(team)">
+              <span aria-hidden="true">&#9998;</span>
+            </button>
+          </div>
+
+          <div class="team-main">
+            <span class="team-name">{{ team.name }}</span>
+          </div>
+
+          <label class="display-name-field">
+            <span>Display name</span>
+            <input
+              type="text"
+              maxlength="140"
+              autocomplete="off"
+              [value]="team.draftDisplayName"
+              [readonly]="team.isUpdating"
+              (input)="updateDisplayNameDraft(team.normalizedName, $event)"
+            >
+          </label>
+
+          <button
+            class="save-button"
+            type="button"
+            [disabled]="team.isUpdating || !team.isDisplayNameDirty || team.isDisplayNameInvalid"
+            (click)="requestDisplayNameSave(team)"
+          >
+            {{ team.isUpdating ? 'Saving...' : 'Save' }}
+          </button>
+        </article>
+      } @empty {
+        <p class="status-message">No teams have been imported yet.</p>
+      }
+    </div>
+  }
+
+  @if (pendingDisplayNameChange(); as pendingChange) {
+    <app-modal-shell
+      labelledBy="secret-code-title"
+      panelWidth="420px"
+      [closeOnBackdrop]="true"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelDisplayNameChange()"
+    >
+      <app-secret-code-modal
+        title="Save display name"
+        label="Secret code"
+        confirmLabel="Save"
+        [errorMessage]="displayNameErrorMessage()"
+        [isSubmitting]="pendingChange.team.normalizedName === updatingTeamName()"
+        (confirmSecretCode)="confirmDisplayNameChange($event)"
+        (cancelModal)="cancelDisplayNameChange()"
+      />
+    </app-modal-shell>
+  }
+
+  @if (editingLogoTeam(); as team) {
+    <app-modal-shell
+      labelledBy="team-logo-modal-title"
+      panelWidth="440px"
+      [closeOnBackdrop]="true"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelLogoChange()"
+    >
+      <app-admin-team-logo-modal
+        [teamName]="team.name"
+        [currentLogoUrl]="team.logoUrl"
+        [errorMessage]="logoErrorMessage()"
+        [isSubmitting]="team.normalizedName === updatingTeamName()"
+        (confirmLogoChange)="confirmLogoChange($event)"
+        (cancelModal)="cancelLogoChange()"
+      />
+    </app-modal-shell>
+  }
+</section>

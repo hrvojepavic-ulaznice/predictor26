@@ -1,5 +1,6 @@
 export interface MatchTeam {
   readonly name: string;
+  readonly displayName?: string;
   readonly flag: string | null;
   readonly placeholderName: string | null;
 }
