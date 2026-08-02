@@ -294,7 +294,7 @@ export async function getLeaderboardMatchPredictions(
 
   const locked = round.locked;
   const predictionsByUserId = new Map(
-    findLeaderboardPredictions(competitionId)
+    withLiveSnapshotScores(findLeaderboardPredictions(competitionId), latestSnapshotsByMatchId)
       .filter((prediction) => prediction.match_id === match.id)
       .map((prediction) => [prediction.user_id, prediction])
   );
@@ -380,6 +380,8 @@ function toComingUpMatchResponse(match: MatchRow): LeaderboardComingUpMatchRespo
 }
 
 function toDayMatchResponse(match: MatchRow, roundLocked: boolean, snapshot: LatestLiveScoreSnapshotRow | undefined) {
+  const score = getLiveScore(match, snapshot);
+
   return {
     matchId: match.id,
     matchNumber: match.match_number,
@@ -397,13 +399,7 @@ function toDayMatchResponse(match: MatchRow, roundLocked: boolean, snapshot: Lat
             awayWin: match.away_win_odds,
             syncedAt: match.odds_synced_at
           },
-    finalScore:
-      match.final_home_score === null || match.final_away_score === null
-        ? null
-        : {
-            home: match.final_home_score,
-            away: match.final_away_score
-          }
+    finalScore: score
   };
 }
 
@@ -515,7 +511,11 @@ export async function getLeaderboardUserRoundDetails(
     return null;
   }
 
-  const round = getRoundSummaries(findLeaderboardMatches(competitionId)).find((currentRound) => currentRound.label === roundLabel);
+  const matches = findLeaderboardMatches(competitionId);
+  const latestSnapshotsByMatchId = new Map(
+    findLatestLiveScoreSnapshotsForCompetition(competitionId).map((snapshot) => [snapshot.match_id, snapshot])
+  );
+  const round = getRoundSummaries(matches).find((currentRound) => currentRound.label === roundLabel);
 
   if (!round?.viewable || viewerUserId === null) {
     return null;
@@ -527,7 +527,9 @@ export async function getLeaderboardUserRoundDetails(
     return null;
   }
 
-  const predictions = findLeaderboardPredictions(competitionId).filter((prediction) => prediction.user_id === userId);
+  const predictions = withLiveSnapshotScores(findLeaderboardPredictions(competitionId), latestSnapshotsByMatchId).filter(
+    (prediction) => prediction.user_id === userId
+  );
   const roundPredictions = predictions.filter((prediction) => getPredictionRound(prediction) === round.label);
   const roundMatches = getLeaderboardRoundMatches(round, roundPredictions);
 
