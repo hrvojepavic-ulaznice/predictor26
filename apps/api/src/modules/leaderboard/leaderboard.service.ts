@@ -380,6 +380,8 @@ function toComingUpMatchResponse(match: MatchRow): LeaderboardComingUpMatchRespo
 }
 
 function toDayMatchResponse(match: MatchRow, roundLocked: boolean, snapshot: LatestLiveScoreSnapshotRow | undefined) {
+  const score = getLiveScore(match, snapshot);
+
   return {
     matchId: match.id,
     matchNumber: match.match_number,
@@ -397,13 +399,7 @@ function toDayMatchResponse(match: MatchRow, roundLocked: boolean, snapshot: Lat
             awayWin: match.away_win_odds,
             syncedAt: match.odds_synced_at
           },
-    finalScore:
-      match.final_home_score === null || match.final_away_score === null
-        ? null
-        : {
-            home: match.final_home_score,
-            away: match.final_away_score
-          }
+    finalScore: score
   };
 }
 
