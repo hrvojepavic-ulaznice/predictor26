@@ -1,11 +1,14 @@
 import { listMatches, MatchRow, PredictionOddsOutcome, PredictionRow } from '../../database/queries/matches.queries.js';
+import { LatestLiveScoreSnapshotRow } from '../../database/queries/live-scores.queries.js';
 import {
   MatchesResponse,
   MatchWithPredictionResponse,
   SavePredictionRequest,
-  SavePredictionResponse
+  SavePredictionResponse,
+  ScoreResponse
 } from './matches.interfaces.js';
 import { findMatchesForUser, findPredictedMatchesForUser, savePrediction } from './matches.repository.js';
+import { findLatestLiveScoreSnapshotsForCompetition } from '../live-scores/live-scores.repository.js';
 
 export type SavePredictionResult =
   | {
@@ -23,17 +26,20 @@ export type SavePredictionResult =
     };
 
 export async function getMatchesForUser(userId: number, competitionId: number): Promise<MatchesResponse> {
-  return toMatchesResponse(findMatchesForUser(userId, competitionId));
+  return toMatchesResponse(findMatchesForUser(userId, competitionId), getLatestSnapshotsByMatchId(competitionId));
 }
 
 export async function getPredictedMatchesForUser(userId: number, competitionId: number): Promise<MatchesResponse> {
-  return toMatchesResponse(findPredictedMatchesForUser(userId, competitionId));
+  return toMatchesResponse(findPredictedMatchesForUser(userId, competitionId), getLatestSnapshotsByMatchId(competitionId));
 }
 
-function toMatchesResponse(matches: ReturnType<typeof findMatchesForUser>): MatchesResponse {
+function toMatchesResponse(
+  matches: ReturnType<typeof findMatchesForUser>,
+  latestSnapshotsByMatchId: ReadonlyMap<number, LatestLiveScoreSnapshotRow>
+): MatchesResponse {
   return {
     matches: withPredictionLockData(matches).map((match) => ({
-      ...toMatchResponse(match),
+      ...toMatchResponse(match, latestSnapshotsByMatchId.get(match.id)),
       prediction:
         match.prediction_home_score === null || match.prediction_away_score === null
           ? null
@@ -47,6 +53,10 @@ function toMatchesResponse(matches: ReturnType<typeof findMatchesForUser>): Matc
             })
     }))
   };
+}
+
+function getLatestSnapshotsByMatchId(competitionId: number): Map<number, LatestLiveScoreSnapshotRow> {
+  return new Map(findLatestLiveScoreSnapshotsForCompetition(competitionId).map((snapshot) => [snapshot.match_id, snapshot]));
 }
 
 export async function submitPrediction(
@@ -107,7 +117,12 @@ function toPredictionResponse(prediction: PredictionRow): SavePredictionResponse
   };
 }
 
-function toMatchResponse(match: MatchRowWithLockData): Omit<MatchWithPredictionResponse, 'prediction'> {
+function toMatchResponse(
+  match: MatchRowWithLockData,
+  snapshot: LatestLiveScoreSnapshotRow | undefined
+): Omit<MatchWithPredictionResponse, 'prediction'> {
+  const score = getLiveScore(match, snapshot);
+
   return {
     id: match.id,
     matchNumber: match.match_number,
@@ -142,14 +157,26 @@ function toMatchResponse(match: MatchRowWithLockData): Omit<MatchWithPredictionR
             awayWin: match.away_win_odds,
             syncedAt: match.odds_synced_at
           },
-    finalScore:
-      match.final_home_score === null || match.final_away_score === null
-        ? null
-        : {
-            home: match.final_home_score,
-            away: match.final_away_score
-          }
+    finalScore: score
   };
+}
+
+function getLiveScore(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined): ScoreResponse | null {
+  if (snapshot?.home_score !== null && snapshot?.away_score !== null && snapshot) {
+    return {
+      home: snapshot.home_score,
+      away: snapshot.away_score
+    };
+  }
+
+  if (match.final_home_score !== null && match.final_away_score !== null) {
+    return {
+      home: match.final_home_score,
+      away: match.final_away_score
+    };
+  }
+
+  return null;
 }
 
 function isValidScore(score: unknown): score is number {
