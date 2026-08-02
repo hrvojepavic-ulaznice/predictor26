@@ -3,8 +3,8 @@
 
   <header class="modal-header">
     <img class="modal-logo" src="icons/predictor26-icon.svg" alt="" width="48" height="53" aria-hidden="true" />
-    <p class="section-label">Competition complete</p>
-    <h2 id="final-results-title">Final rankings</h2>
+    <p class="section-label">{{ sectionLabel() }}</p>
+    <h2 id="final-results-title">{{ title() }}</h2>
     <p class="summary">
       {{ results().totalUsers }} players created a {{ poolLabel() }} prize pool.
     </p>

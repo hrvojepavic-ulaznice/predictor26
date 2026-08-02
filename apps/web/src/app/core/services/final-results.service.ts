@@ -12,6 +12,8 @@ export interface FinalResultsWinner {
 }
 
 export interface FinalResults {
+  readonly isCompetitionFinished: boolean;
+  readonly roundLabel: string | null;
   readonly totalUsers: number;
   readonly totalPrizePool: number;
   readonly winners: FinalResultsWinner[];
@@ -39,8 +41,9 @@ export class FinalResultsService {
   readonly results = computed<FinalResults | null>(() => {
     const leaderboard = this.leaderboardService.leaderboard();
     const matchDays = this.leaderboardService.matchDays();
+    const competition = this.appState.activeCompetition();
 
-    if (!leaderboard || !matchDays) {
+    if (!leaderboard || !matchDays || !competition) {
       return null;
     }
 
@@ -53,6 +56,8 @@ export class FinalResultsService {
     const totalPrizePool = leaderboard.totalUsers * buyInEur;
 
     return {
+      isCompetitionFinished: competition.isFinished,
+      roundLabel: getLatestRoundLabel(matches),
       totalUsers: leaderboard.totalUsers,
       totalPrizePool,
       pelinkovacUser: findPelinkovacUser(leaderboard.users),
@@ -82,7 +87,7 @@ export class FinalResultsService {
 
   constructor() {
     effect(() => {
-      if (this.available() && !this.hasSeenAutomaticModal()) {
+      if (this.results()?.isCompetitionFinished && !this.hasSeenAutomaticModal()) {
         this.modalOpenSignal.set(true);
       }
     });
@@ -125,4 +130,10 @@ function findPelinkovacUser(users: readonly LeaderboardUser[]): LeaderboardUser 
   }
 
   return null;
+}
+
+function getLatestRoundLabel(matches: ReadonlyArray<{ readonly kickoffAt: string; readonly roundLabel: string }>): string | null {
+  const latestMatch = [...matches].sort((firstMatch, secondMatch) => Date.parse(secondMatch.kickoffAt) - Date.parse(firstMatch.kickoffAt))[0];
+
+  return latestMatch?.roundLabel ?? null;
 }

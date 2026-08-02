@@ -22,6 +22,12 @@ export class FinalResultsModalComponent {
   });
 
   protected readonly poolLabel = computed(() => this.formatCurrency(this.results().totalPrizePool));
+  protected readonly sectionLabel = computed(() => (this.results().isCompetitionFinished ? 'Competition Complete' : 'As it stands'));
+  protected readonly title = computed(() => {
+    const results = this.results();
+
+    return results.isCompetitionFinished ? 'Final Rankings' : `Rankings After ${results.roundLabel ?? 'Current Week'}`;
+  });
 
   protected formatCurrency(value: number): string {
     return new Intl.NumberFormat('en', {

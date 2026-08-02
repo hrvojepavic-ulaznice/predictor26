@@ -385,6 +385,7 @@ function toDayMatchResponse(match: MatchRow, roundLocked: boolean, snapshot: Lat
   return {
     matchId: match.id,
     matchNumber: match.match_number,
+    roundLabel: getPredictionRound(match),
     kickoffAt: match.kickoff_at,
     status: getMatchStatus(match, snapshot),
     roundLocked,
