@@ -1,0 +1,220 @@
+:host {
+  display: block;
+}
+
+.admin-teams-page {
+  width: min(1120px, calc(100% - 32px));
+  margin: 32px auto 56px;
+}
+
+.page-header {
+  margin-bottom: 20px;
+}
+
+.section-label {
+  margin: 0 0 6px;
+  color: #4b5563;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.8rem;
+  line-height: 1.15;
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 10px;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  color: #111827;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.status-message {
+  margin: 16px 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.status-error {
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 12px 14px;
+}
+
+.teams-list {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.team-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) minmax(220px, 340px) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+}
+
+.team-row + .team-row {
+  border-top: 1px solid #e5e7eb;
+}
+
+.team-logo-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.team-logo {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.team-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.logo-edit-button {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  border: 0;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #374151;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  line-height: 1;
+  padding: 0;
+}
+
+.logo-edit-button:hover,
+.logo-edit-button:focus-visible {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.logo-edit-button:disabled {
+  cursor: default;
+  opacity: 0.66;
+}
+
+.team-main {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.team-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-name {
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.display-name-field {
+  display: grid;
+  gap: 6px;
+  color: #4b5563;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.display-name-field input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #111827;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 650;
+  padding: 0 11px;
+  text-transform: none;
+}
+
+.display-name-field input:focus {
+  border-color: #9ca3af;
+  outline: 2px solid #e5e7eb;
+}
+
+.save-button {
+  align-self: end;
+  justify-self: end;
+  min-height: 38px;
+  border: 1px solid #111827;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+  padding: 0 13px;
+}
+
+.save-button:disabled {
+  cursor: default;
+  opacity: 0.66;
+}
+
+@media (max-width: 680px) {
+  .admin-teams-page {
+    width: min(100% - 24px, 1120px);
+    margin-top: 24px;
+  }
+
+  .team-row {
+    grid-template-columns: 54px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .display-name-field,
+  .save-button {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
+
+  .display-name-field input,
+  .save-button {
+    width: 100%;
+  }
+}

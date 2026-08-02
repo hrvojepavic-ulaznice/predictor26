@@ -14,6 +14,8 @@ export interface MatchRow {
   readonly away_team_name: string;
   readonly home_team_flag: string | null;
   readonly away_team_flag: string | null;
+  readonly home_team_display_name: string | null;
+  readonly away_team_display_name: string | null;
   readonly home_mapped_team_name: string | null;
   readonly away_mapped_team_name: string | null;
   readonly home_mapped_team_flag: string | null;
@@ -107,6 +109,18 @@ export function listMatches(competitionId?: number): MatchRow[] {
             away_team_name,
             home_team_flag,
             away_team_flag,
+            (
+              SELECT NULLIF(competition_teams.display_name, '')
+              FROM competition_teams
+              WHERE competition_teams.competition_id = matches.competition_id
+                AND competition_teams.normalized_name = lower(trim(matches.home_team_name))
+            ) AS home_team_display_name,
+            (
+              SELECT NULLIF(competition_teams.display_name, '')
+              FROM competition_teams
+              WHERE competition_teams.competition_id = matches.competition_id
+                AND competition_teams.normalized_name = lower(trim(matches.away_team_name))
+            ) AS away_team_display_name,
             home_mapped_team_name,
             away_mapped_team_name,
             home_mapped_team_flag,
@@ -373,10 +387,10 @@ export function upsertCompetitionTeams(competitionId: number, teams: readonly Te
   try {
     const statement = db.prepare(
       `
-        INSERT INTO competition_teams (competition_id, normalized_name, display_name, logo_url, group_name)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO competition_teams (competition_id, normalized_name, name, display_name, logo_url, group_name)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(competition_id, normalized_name) DO UPDATE SET
-          display_name = excluded.display_name,
+          name = excluded.name,
           logo_url = CASE
             WHEN competition_teams.logo_url = '' THEN excluded.logo_url
             ELSE competition_teams.logo_url
@@ -393,7 +407,7 @@ export function upsertCompetitionTeams(competitionId: number, teams: readonly Te
           continue;
         }
 
-        statement.run(competitionId, normalizedName, team.name, team.logoUrl ?? '', team.groupName ?? null);
+        statement.run(competitionId, normalizedName, team.name, team.name, team.logoUrl ?? '', team.groupName ?? null);
       }
     });
 
@@ -418,10 +432,10 @@ export function insertManualMatch(competitionId: number, input: ManualMatchInput
 
       const upsertTeam = db.prepare(
         `
-          INSERT INTO competition_teams (competition_id, normalized_name, display_name, logo_url, group_name)
-          VALUES (?, ?, ?, ?, NULL)
+          INSERT INTO competition_teams (competition_id, normalized_name, name, display_name, logo_url, group_name)
+          VALUES (?, ?, ?, ?, ?, NULL)
           ON CONFLICT(competition_id, normalized_name) DO UPDATE SET
-            display_name = excluded.display_name,
+            name = excluded.name,
             logo_url = CASE
               WHEN competition_teams.logo_url = '' THEN excluded.logo_url
               ELSE competition_teams.logo_url
@@ -430,8 +444,8 @@ export function insertManualMatch(competitionId: number, input: ManualMatchInput
         `
       );
 
-      upsertTeam.run(competitionId, normalizeTeamName(input.homeTeamName), input.homeTeamName, input.homeTeamFlag ?? '');
-      upsertTeam.run(competitionId, normalizeTeamName(input.awayTeamName), input.awayTeamName, input.awayTeamFlag ?? '');
+      upsertTeam.run(competitionId, normalizeTeamName(input.homeTeamName), input.homeTeamName, input.homeTeamName, input.homeTeamFlag ?? '');
+      upsertTeam.run(competitionId, normalizeTeamName(input.awayTeamName), input.awayTeamName, input.awayTeamName, input.awayTeamFlag ?? '');
 
       const result = db
         .prepare(

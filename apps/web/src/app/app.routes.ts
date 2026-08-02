@@ -129,6 +129,12 @@ export const routes: Routes = [
       import('./features/admin/users/admin-users-page.component').then((component) => component.AdminUsersPageComponent)
   },
   {
+    path: 'admin/competition/:slug/teams',
+    canActivate: [adminGuard, adminCompetitionSlugGuard],
+    loadComponent: () =>
+      import('./features/admin/teams/admin-teams-page.component').then((component) => component.AdminTeamsPageComponent)
+  },
+  {
     path: 'admin/competition/:slug/matches',
     canActivate: [adminGuard, adminCompetitionSlugGuard],
     loadComponent: () =>
@@ -173,6 +179,11 @@ export const routes: Routes = [
   },
   {
     path: 'admin/users',
+    redirectTo: 'admin',
+    pathMatch: 'full'
+  },
+  {
+    path: 'admin/teams',
     redirectTo: 'admin',
     pathMatch: 'full'
   },

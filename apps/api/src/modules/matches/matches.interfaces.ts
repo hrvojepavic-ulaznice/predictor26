@@ -27,6 +27,7 @@ export interface MatchesResponse {
 
 export interface TeamSlotResponse {
   readonly name: string;
+  readonly displayName?: string;
   readonly flag: string | null;
   readonly placeholderName: string | null;
 }
