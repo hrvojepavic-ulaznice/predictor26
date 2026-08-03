@@ -20,7 +20,6 @@ export interface FinalResults {
   readonly pelinkovacUser: LeaderboardUser | null;
 }
 
-const buyInEur = 25;
 const prizeDistribution = [
   { place: 1, prizePercent: 60 },
   { place: 2, prizePercent: 30 },
@@ -53,7 +52,7 @@ export class FinalResultsService {
       return null;
     }
 
-    const totalPrizePool = leaderboard.totalUsers * buyInEur;
+    const totalPrizePool = leaderboard.totalUsers * competition.buyInEur;
 
     return {
       isCompetitionFinished: competition.isFinished,

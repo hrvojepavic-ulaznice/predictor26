@@ -426,9 +426,33 @@ function toCompetitionResponse(competition: {
     logoUrl: competition.logo_url || null,
     isFinished: competition.is_finished === 1,
     playoffsEnabled: competition.playoffs_enabled === 1,
+    buyInEur: getCompetitionBuyInEur(competition.id),
     isJoined: competition.is_joined === 1,
     tiebreakerName: competition.tiebreaker_name ?? null
   };
+}
+
+function getCompetitionBuyInEur(competitionId: number): number {
+  const buyInRule = findCompetitionRules(competitionId).find((rule) => rule.key === 'buy-in');
+  const parsedBuyIn = parseMoneyAmount(buyInRule?.value ?? buyInRule?.default_value ?? null);
+
+  return parsedBuyIn ?? 0;
+}
+
+function parseMoneyAmount(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const match = value.replace(',', '.').match(/\d+(?:\.\d+)?/);
+
+  if (!match) {
+    return null;
+  }
+
+  const amount = Number(match[0]);
+
+  return Number.isFinite(amount) && amount >= 0 ? amount : null;
 }
 
 function toAdminCompetitionSettingsResponse(competition: {
@@ -451,6 +475,7 @@ function toAdminCompetitionSettingsResponse(competition: {
     logoUrl: competition.logo_url || null,
     isFinished: competition.is_finished === 1,
     playoffsEnabled: competition.playoffs_enabled === 1,
+    buyInEur: getCompetitionBuyInEur(competition.id),
     passcodeSet: competition.passcode_hash !== null,
     scheduleSourceUrl: competition.schedule_source_url,
     oddsSourceUrl: competition.odds_source_url,

@@ -137,6 +137,7 @@ function normalizePersistedCompetition(value: unknown): Competition | null {
     typeof competition.slug === 'string' &&
     (typeof competition.logoUrl === 'string' || competition.logoUrl === null) &&
     typeof competition.isFinished === 'boolean' &&
+    typeof competition.buyInEur === 'number' &&
     typeof competition.isJoined === 'boolean' &&
     (typeof competition.tiebreakerName === 'string' || competition.tiebreakerName === null);
 
@@ -151,6 +152,7 @@ function normalizePersistedCompetition(value: unknown): Competition | null {
     logoUrl: competition.logoUrl,
     isFinished: competition.isFinished,
     playoffsEnabled: competition.playoffsEnabled === true || (competition.playoffsEnabled === undefined && competition.slug === 'world-cup-2026'),
+    buyInEur: competition.buyInEur,
     isJoined: competition.isJoined,
     tiebreakerName: competition.tiebreakerName
   };
