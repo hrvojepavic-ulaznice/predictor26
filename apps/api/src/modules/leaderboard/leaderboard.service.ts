@@ -326,7 +326,7 @@ function getLiveMatches(
   const now = Date.now();
 
   return matches
-    .filter((match) => Date.parse(match.kickoff_at) <= now && !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id)))
+    .filter((match) => Date.parse(match.kickoff_at) <= now && !hasFinalScore(match) && !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id)))
     .sort(sortMatchesByKickoff);
 }
 
@@ -737,7 +737,14 @@ function withLiveSnapshotScores(
   return predictions.map((prediction) => {
     const snapshot = latestSnapshotsByMatchId.get(prediction.match_id);
 
-    if (snapshot?.home_score === null || snapshot?.away_score === null || !snapshot || snapshot.status === 'scheduled') {
+    if (
+      prediction.final_home_score !== null ||
+      prediction.final_away_score !== null ||
+      snapshot?.home_score === null ||
+      snapshot?.away_score === null ||
+      !snapshot ||
+      snapshot.status === 'scheduled'
+    ) {
       return prediction;
     }
 
@@ -750,17 +757,17 @@ function withLiveSnapshotScores(
 }
 
 function getLiveScore(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined) {
+  if (hasFinalScore(match)) {
+    return {
+      home: match.final_home_score,
+      away: match.final_away_score
+    };
+  }
+
   if (snapshot?.home_score !== null && snapshot?.away_score !== null && snapshot) {
     return {
       home: snapshot.home_score,
       away: snapshot.away_score
-    };
-  }
-
-  if (match.final_home_score !== null && match.final_away_score !== null) {
-    return {
-      home: match.final_home_score,
-      away: match.final_away_score
     };
   }
 
@@ -958,7 +965,10 @@ function hiddenPredictionPoints(): LeaderboardPredictionPointsResponse {
 function getMatchStatus(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined): LeaderboardMatchStatusResponse {
   const now = Date.now();
   const kickoffTime = Date.parse(match.kickoff_at);
-  const hasFinalScore = match.final_home_score !== null && match.final_away_score !== null;
+
+  if (hasFinalScore(match)) {
+    return 'finished';
+  }
 
   if (isFinishedByProvider(snapshot)) {
     return 'finished';
@@ -966,10 +976,6 @@ function getMatchStatus(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | 
 
   if (snapshot?.status === 'live') {
     return 'live';
-  }
-
-  if (hasFinalScore) {
-    return 'finished';
   }
 
   if (kickoffTime <= now) {
@@ -981,6 +987,13 @@ function getMatchStatus(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | 
 
 function isFinishedByProvider(snapshot: LatestLiveScoreSnapshotRow | undefined): boolean {
   return snapshot?.status === 'finished' && snapshot.home_score !== null && snapshot.away_score !== null;
+}
+
+function hasFinalScore(match: Pick<MatchRow, 'final_home_score' | 'final_away_score'>): match is Pick<MatchRow, 'final_home_score' | 'final_away_score'> & {
+  readonly final_home_score: number;
+  readonly final_away_score: number;
+} {
+  return match.final_home_score !== null && match.final_away_score !== null;
 }
 
 function getLocalDateKey(kickoffAt: string): string {
