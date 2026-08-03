@@ -100,7 +100,8 @@ export class AdminCompetitionSetupPageComponent {
             slug: settings.slug,
             logoUrl: settings.logoUrl,
             isFinished: settings.isFinished,
-            playoffsEnabled: settings.playoffsEnabled
+            playoffsEnabled: settings.playoffsEnabled,
+            buyInEur: settings.buyInEur
           });
         }
 

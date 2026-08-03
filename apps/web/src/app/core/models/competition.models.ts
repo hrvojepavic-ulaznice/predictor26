@@ -5,6 +5,7 @@ export interface Competition {
   readonly logoUrl: string | null;
   readonly isFinished: boolean;
   readonly playoffsEnabled: boolean;
+  readonly buyInEur: number;
   readonly isJoined: boolean;
   readonly tiebreakerName: string | null;
 }
@@ -36,6 +37,7 @@ export interface AdminCompetitionSettings {
   readonly logoUrl: string | null;
   readonly isFinished: boolean;
   readonly playoffsEnabled: boolean;
+  readonly buyInEur: number;
   readonly passcodeSet: boolean;
   readonly scheduleSourceUrl: string;
   readonly oddsSourceUrl: string;

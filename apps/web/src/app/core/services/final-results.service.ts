@@ -20,7 +20,6 @@ export interface FinalResults {
   readonly pelinkovacUser: LeaderboardUser | null;
 }
 
-const buyInEur = 25;
 const prizeDistribution = [
   { place: 1, prizePercent: 60 },
   { place: 2, prizePercent: 30 },
@@ -53,7 +52,7 @@ export class FinalResultsService {
       return null;
     }
 
-    const totalPrizePool = leaderboard.totalUsers * buyInEur;
+    const totalPrizePool = leaderboard.totalUsers * competition.buyInEur;
 
     return {
       isCompetitionFinished: competition.isFinished,
@@ -81,8 +80,9 @@ export class FinalResultsService {
   readonly hasSeenAutomaticModal = computed(() => {
     this.seenVersionSignal();
     const userId = this.appState.currentUser()?.id;
+    const competitionId = this.appState.activeCompetition()?.id;
 
-    return userId ? localStorage.getItem(getSeenStorageKey(userId)) === '1' : true;
+    return userId && competitionId ? localStorage.getItem(getSeenStorageKey(userId, competitionId)) === '1' : true;
   });
 
   constructor() {
@@ -106,9 +106,11 @@ export class FinalResultsService {
 
   closeFinalResults(): void {
     const userId = this.appState.currentUser()?.id;
+    const competitionId = this.appState.activeCompetition()?.id;
+    const isCompetitionFinished = this.results()?.isCompetitionFinished ?? false;
 
-    if (userId) {
-      localStorage.setItem(getSeenStorageKey(userId), '1');
+    if (userId && competitionId && isCompetitionFinished) {
+      localStorage.setItem(getSeenStorageKey(userId, competitionId), '1');
       this.seenVersionSignal.update((version) => version + 1);
     }
 
@@ -116,8 +118,8 @@ export class FinalResultsService {
   }
 }
 
-function getSeenStorageKey(userId: number): string {
-  return `${seenStorageKeyPrefix}.${userId}`;
+function getSeenStorageKey(userId: number, competitionId: number): string {
+  return `${seenStorageKeyPrefix}.${competitionId}.${userId}`;
 }
 
 function findPelinkovacUser(users: readonly LeaderboardUser[]): LeaderboardUser | null {
