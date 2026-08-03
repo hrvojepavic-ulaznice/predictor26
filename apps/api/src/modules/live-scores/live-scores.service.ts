@@ -326,6 +326,10 @@ function getActiveMatches(
   const nowTime = now.getTime();
 
   return matches.filter((match) => {
+    if (hasFinalScore(match)) {
+      return false;
+    }
+
     if (isFinishedByProvider(latestSnapshotsByMatchId.get(match.id))) {
       return false;
     }
@@ -347,7 +351,7 @@ function calculateNextRunAt(
   }
 
   const nextKickoff = matches
-    .filter((match) => !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id)))
+    .filter((match) => !hasFinalScore(match) && !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id)))
     .map((match) => Date.parse(match.kickoff_at))
     .filter((kickoffTime) => Number.isFinite(kickoffTime))
     .sort((first, second) => first - second)[0];
@@ -367,6 +371,10 @@ function calculateNextRunAt(
 
 function isFinishedByProvider(snapshot: LatestLiveScoreSnapshotRow | undefined): boolean {
   return snapshot?.status === 'finished' && snapshot.home_score !== null && snapshot.away_score !== null;
+}
+
+function hasFinalScore(match: Pick<MatchRow, 'final_home_score' | 'final_away_score'>): boolean {
+  return match.final_home_score !== null && match.final_away_score !== null;
 }
 
 function shouldApplyProviderScore(
