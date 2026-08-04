@@ -43,6 +43,7 @@ export class AdminPageComponent {
     passcode: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(120)]],
     isFinished: [false],
     playoffsEnabled: [false],
+    importMatchesWithOddsEnabled: [false],
     oddsSourceUrl: ['', [Validators.required, Validators.maxLength(500)]],
     rules: this.formBuilder.array<
       ReturnType<AdminPageComponent['createRuleControl']>
@@ -153,6 +154,7 @@ export class AdminPageComponent {
         logoUrl: formValue.logoUrl,
         isFinished: formValue.isFinished,
         playoffsEnabled: formValue.playoffsEnabled,
+        importMatchesWithOddsEnabled: formValue.importMatchesWithOddsEnabled,
         oddsSourceUrl: formValue.oddsSourceUrl,
         rules,
         secretCode
@@ -166,6 +168,7 @@ export class AdminPageComponent {
             passcode: '',
             isFinished: false,
             playoffsEnabled: false,
+            importMatchesWithOddsEnabled: false,
             oddsSourceUrl: ''
           });
           this.createLogoPreview.set(null);

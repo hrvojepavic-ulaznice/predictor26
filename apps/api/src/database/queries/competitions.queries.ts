@@ -9,6 +9,11 @@ export interface CompetitionRow {
   readonly logo_url: string;
   readonly schedule_source_url: string;
   readonly odds_source_url: string;
+  readonly import_matches_with_odds_enabled: 0 | 1;
+  readonly auto_import_matches_enabled: 0 | 1;
+  readonly auto_import_matches_weekday: number;
+  readonly auto_import_matches_time: string;
+  readonly auto_import_matches_time_zone: string;
   readonly notification_reminders_enabled: 0 | 1;
   readonly live_score_sync_enabled: 0 | 1;
   readonly playoffs_enabled: 0 | 1;
@@ -51,6 +56,11 @@ export function listCompetitionsForUser(userId: number): CompetitionRow[] {
             competitions.logo_url,
             competitions.schedule_source_url,
             competitions.odds_source_url,
+            competitions.import_matches_with_odds_enabled,
+            competitions.auto_import_matches_enabled,
+            competitions.auto_import_matches_weekday,
+            competitions.auto_import_matches_time,
+            competitions.auto_import_matches_time_zone,
             competitions.notification_reminders_enabled,
             competitions.live_score_sync_enabled,
             competitions.playoffs_enabled,
@@ -94,6 +104,11 @@ export function listCompetitions(): CompetitionRow[] {
             logo_url,
             schedule_source_url,
             odds_source_url,
+            import_matches_with_odds_enabled,
+            auto_import_matches_enabled,
+            auto_import_matches_weekday,
+            auto_import_matches_time,
+            auto_import_matches_time_zone,
             notification_reminders_enabled,
             live_score_sync_enabled,
             playoffs_enabled,
@@ -127,6 +142,11 @@ export function listCompetitionsForAdminUser(userId: number): CompetitionRow[] {
             competitions.logo_url,
             competitions.schedule_source_url,
             competitions.odds_source_url,
+            competitions.import_matches_with_odds_enabled,
+            competitions.auto_import_matches_enabled,
+            competitions.auto_import_matches_weekday,
+            competitions.auto_import_matches_time,
+            competitions.auto_import_matches_time_zone,
             competitions.notification_reminders_enabled,
             competitions.live_score_sync_enabled,
             competitions.playoffs_enabled,
@@ -165,6 +185,11 @@ export function getCompetitionForAdminUser(userId: number, competitionId: number
             competitions.logo_url,
             competitions.schedule_source_url,
             competitions.odds_source_url,
+            competitions.import_matches_with_odds_enabled,
+            competitions.auto_import_matches_enabled,
+            competitions.auto_import_matches_weekday,
+            competitions.auto_import_matches_time,
+            competitions.auto_import_matches_time_zone,
             competitions.notification_reminders_enabled,
             competitions.live_score_sync_enabled,
             competitions.playoffs_enabled,
@@ -203,6 +228,11 @@ export function getCompetitionById(competitionId: number): CompetitionRow | unde
             logo_url,
             schedule_source_url,
             odds_source_url,
+            import_matches_with_odds_enabled,
+            auto_import_matches_enabled,
+            auto_import_matches_weekday,
+            auto_import_matches_time,
+            auto_import_matches_time_zone,
             notification_reminders_enabled,
             live_score_sync_enabled,
             playoffs_enabled,
@@ -236,6 +266,11 @@ export function getCompetitionForUser(userId: number, competitionId: number): Co
             competitions.logo_url,
             competitions.schedule_source_url,
             competitions.odds_source_url,
+            competitions.import_matches_with_odds_enabled,
+            competitions.auto_import_matches_enabled,
+            competitions.auto_import_matches_weekday,
+            competitions.auto_import_matches_time,
+            competitions.auto_import_matches_time_zone,
             competitions.notification_reminders_enabled,
             competitions.live_score_sync_enabled,
             competitions.playoffs_enabled,
@@ -273,6 +308,11 @@ export function getDefaultCompetition(): CompetitionRow | undefined {
             logo_url,
             schedule_source_url,
             odds_source_url,
+            import_matches_with_odds_enabled,
+            auto_import_matches_enabled,
+            auto_import_matches_weekday,
+            auto_import_matches_time,
+            auto_import_matches_time_zone,
             notification_reminders_enabled,
             live_score_sync_enabled,
             playoffs_enabled,
@@ -305,6 +345,11 @@ export function getDefaultCompetitionForUser(userId: number): CompetitionRow | u
             competitions.logo_url,
             competitions.schedule_source_url,
             competitions.odds_source_url,
+            competitions.import_matches_with_odds_enabled,
+            competitions.auto_import_matches_enabled,
+            competitions.auto_import_matches_weekday,
+            competitions.auto_import_matches_time,
+            competitions.auto_import_matches_time_zone,
             competitions.notification_reminders_enabled,
             competitions.live_score_sync_enabled,
             competitions.playoffs_enabled,
@@ -361,6 +406,11 @@ export function updateCompetitionTiebreaker(
             competitions.logo_url,
             competitions.schedule_source_url,
             competitions.odds_source_url,
+            competitions.import_matches_with_odds_enabled,
+            competitions.auto_import_matches_enabled,
+            competitions.auto_import_matches_weekday,
+            competitions.auto_import_matches_time,
+            competitions.auto_import_matches_time_zone,
             competitions.notification_reminders_enabled,
             competitions.live_score_sync_enabled,
             competitions.playoffs_enabled,
@@ -416,6 +466,11 @@ export function listCompetitionsWithLiveScoreSyncEnabled(): CompetitionRow[] {
             logo_url,
             schedule_source_url,
             odds_source_url,
+            import_matches_with_odds_enabled,
+            auto_import_matches_enabled,
+            auto_import_matches_weekday,
+            auto_import_matches_time,
+            auto_import_matches_time_zone,
             notification_reminders_enabled,
             live_score_sync_enabled,
             playoffs_enabled,
@@ -451,6 +506,11 @@ export function listCompetitionsWithNotificationRemindersEnabled(): CompetitionR
             logo_url,
             schedule_source_url,
             odds_source_url,
+            import_matches_with_odds_enabled,
+            auto_import_matches_enabled,
+            auto_import_matches_weekday,
+            auto_import_matches_time,
+            auto_import_matches_time_zone,
             notification_reminders_enabled,
             live_score_sync_enabled,
             playoffs_enabled,
@@ -471,11 +531,57 @@ export function listCompetitionsWithNotificationRemindersEnabled(): CompetitionR
   }
 }
 
+export function listCompetitionsWithAutoMatchImportEnabled(): CompetitionRow[] {
+  const db = openDatabase();
+
+  try {
+    return db
+      .prepare(
+        `
+          SELECT
+            id,
+            name,
+            slug,
+            passcode_hash,
+            logo_url,
+            schedule_source_url,
+            odds_source_url,
+            import_matches_with_odds_enabled,
+            auto_import_matches_enabled,
+            auto_import_matches_weekday,
+            auto_import_matches_time,
+            auto_import_matches_time_zone,
+            notification_reminders_enabled,
+            live_score_sync_enabled,
+            playoffs_enabled,
+            is_archived,
+            is_finished,
+            1 AS is_joined,
+            NULL AS tiebreaker_name
+          FROM competitions
+          WHERE is_archived = 0
+            AND is_finished = 0
+            AND auto_import_matches_enabled = 1
+            AND import_matches_with_odds_enabled = 1
+          ORDER BY id ASC
+        `
+      )
+      .all() as CompetitionRow[];
+  } finally {
+    db.close();
+  }
+}
+
 export function updateCompetitionJobSettings(
   competitionId: number,
   settings: {
     readonly scheduleSourceUrl?: string;
     readonly oddsSourceUrl?: string;
+    readonly importMatchesWithOddsEnabled?: boolean;
+    readonly autoImportMatchesEnabled?: boolean;
+    readonly autoImportMatchesWeekday?: number;
+    readonly autoImportMatchesTime?: string;
+    readonly autoImportMatchesTimeZone?: string;
     readonly notificationRemindersEnabled?: boolean;
     readonly liveScoreSyncEnabled?: boolean;
   }
@@ -512,6 +618,11 @@ export function updateCompetitionJobSettings(
         SET
           schedule_source_url = ?,
           odds_source_url = ?,
+          import_matches_with_odds_enabled = ?,
+          auto_import_matches_enabled = ?,
+          auto_import_matches_weekday = ?,
+          auto_import_matches_time = ?,
+          auto_import_matches_time_zone = ?,
           notification_reminders_enabled = ?,
           live_score_sync_enabled = ?,
           updated_at = CURRENT_TIMESTAMP
@@ -520,6 +631,15 @@ export function updateCompetitionJobSettings(
     ).run(
       settings.scheduleSourceUrl ?? existing.schedule_source_url,
       settings.oddsSourceUrl ?? existing.odds_source_url,
+      settings.importMatchesWithOddsEnabled === undefined
+        ? existing.import_matches_with_odds_enabled
+        : settings.importMatchesWithOddsEnabled
+          ? 1
+          : 0,
+      settings.autoImportMatchesEnabled === undefined ? existing.auto_import_matches_enabled : settings.autoImportMatchesEnabled ? 1 : 0,
+      settings.autoImportMatchesWeekday ?? existing.auto_import_matches_weekday,
+      settings.autoImportMatchesTime ?? existing.auto_import_matches_time,
+      settings.autoImportMatchesTimeZone ?? existing.auto_import_matches_time_zone,
       notificationRemindersEnabled,
       liveScoreSyncEnabled,
       competitionId
@@ -546,6 +666,11 @@ export function getCompetitionBySlug(slug: string): CompetitionRow | undefined {
             logo_url,
             schedule_source_url,
             odds_source_url,
+            import_matches_with_odds_enabled,
+            auto_import_matches_enabled,
+            auto_import_matches_weekday,
+            auto_import_matches_time,
+            auto_import_matches_time_zone,
             notification_reminders_enabled,
             live_score_sync_enabled,
             playoffs_enabled,
@@ -619,6 +744,27 @@ export function listCompetitionTeams(competitionId: number): CompetitionTeamRow[
   }
 }
 
+export function listCompetitionCanonicalTeamNames(competitionId: number): string[] {
+  const db = openDatabase();
+
+  try {
+    const rows = db
+      .prepare(
+        `
+          SELECT COALESCE(NULLIF(name, ''), NULLIF(display_name, ''), normalized_name) AS name
+          FROM competition_teams
+          WHERE competition_id = ?
+          ORDER BY name COLLATE NOCASE ASC
+        `
+      )
+      .all(competitionId) as Array<{ name: string }>;
+
+    return rows.map((row) => row.name);
+  } finally {
+    db.close();
+  }
+}
+
 export function createCompetition(input: {
   readonly name: string;
   readonly slug: string;
@@ -628,6 +774,11 @@ export function createCompetition(input: {
   readonly playoffsEnabled: boolean;
   readonly scheduleSourceUrl: string;
   readonly oddsSourceUrl: string;
+  readonly importMatchesWithOddsEnabled: boolean;
+  readonly autoImportMatchesEnabled: boolean;
+  readonly autoImportMatchesWeekday: number;
+  readonly autoImportMatchesTime: string;
+  readonly autoImportMatchesTimeZone: string;
   readonly rules: ReadonlyArray<{ readonly templateKey: string; readonly value: string | null; readonly sortOrder: number }>;
 }): CompetitionRow {
   const db = openDatabase();
@@ -645,11 +796,16 @@ export function createCompetition(input: {
               is_finished,
               schedule_source_url,
               odds_source_url,
+              import_matches_with_odds_enabled,
+              auto_import_matches_enabled,
+              auto_import_matches_weekday,
+              auto_import_matches_time,
+              auto_import_matches_time_zone,
               notification_reminders_enabled,
               live_score_sync_enabled,
               playoffs_enabled
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
           `
         )
         .run(
@@ -660,6 +816,11 @@ export function createCompetition(input: {
           input.isFinished ? 1 : 0,
           input.scheduleSourceUrl,
           input.oddsSourceUrl,
+          input.importMatchesWithOddsEnabled ? 1 : 0,
+          input.autoImportMatchesEnabled ? 1 : 0,
+          input.autoImportMatchesWeekday,
+          input.autoImportMatchesTime,
+          input.autoImportMatchesTimeZone,
           input.playoffsEnabled ? 1 : 0
         );
       const competitionId = Number(result.lastInsertRowid);
@@ -687,6 +848,11 @@ export function updateCompetitionManagementSettings(
     readonly playoffsEnabled: boolean;
     readonly scheduleSourceUrl: string;
     readonly oddsSourceUrl: string;
+    readonly importMatchesWithOddsEnabled: boolean;
+    readonly autoImportMatchesEnabled: boolean;
+    readonly autoImportMatchesWeekday: number;
+    readonly autoImportMatchesTime: string;
+    readonly autoImportMatchesTimeZone: string;
     readonly rules: ReadonlyArray<{ readonly templateKey: string; readonly value: string | null; readonly sortOrder: number }>;
   }
 ): CompetitionRow | undefined {
@@ -713,6 +879,11 @@ export function updateCompetitionManagementSettings(
               playoffs_enabled = ?,
               schedule_source_url = ?,
               odds_source_url = ?,
+              import_matches_with_odds_enabled = ?,
+              auto_import_matches_enabled = ?,
+              auto_import_matches_weekday = ?,
+              auto_import_matches_time = ?,
+              auto_import_matches_time_zone = ?,
               notification_reminders_enabled = ?,
               live_score_sync_enabled = ?,
               updated_at = CURRENT_TIMESTAMP
@@ -727,6 +898,11 @@ export function updateCompetitionManagementSettings(
           input.playoffsEnabled ? 1 : 0,
           input.scheduleSourceUrl,
           input.oddsSourceUrl,
+          input.importMatchesWithOddsEnabled ? 1 : 0,
+          input.autoImportMatchesEnabled ? 1 : 0,
+          input.autoImportMatchesWeekday,
+          input.autoImportMatchesTime,
+          input.autoImportMatchesTimeZone,
           input.isFinished ? 0 : existing.notification_reminders_enabled,
           input.isFinished ? 0 : existing.live_score_sync_enabled,
           competitionId
@@ -743,6 +919,11 @@ export function updateCompetitionManagementSettings(
               playoffs_enabled = ?,
               schedule_source_url = ?,
               odds_source_url = ?,
+              import_matches_with_odds_enabled = ?,
+              auto_import_matches_enabled = ?,
+              auto_import_matches_weekday = ?,
+              auto_import_matches_time = ?,
+              auto_import_matches_time_zone = ?,
               notification_reminders_enabled = ?,
               live_score_sync_enabled = ?,
               updated_at = CURRENT_TIMESTAMP
@@ -756,6 +937,11 @@ export function updateCompetitionManagementSettings(
           input.playoffsEnabled ? 1 : 0,
           input.scheduleSourceUrl,
           input.oddsSourceUrl,
+          input.importMatchesWithOddsEnabled ? 1 : 0,
+          input.autoImportMatchesEnabled ? 1 : 0,
+          input.autoImportMatchesWeekday,
+          input.autoImportMatchesTime,
+          input.autoImportMatchesTimeZone,
           input.isFinished ? 0 : existing.notification_reminders_enabled,
           input.isFinished ? 0 : existing.live_score_sync_enabled,
           competitionId

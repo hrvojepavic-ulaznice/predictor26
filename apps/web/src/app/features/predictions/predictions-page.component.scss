@@ -226,12 +226,29 @@ h2 {
   border-top: 1px solid #e5e7eb;
 }
 
+.match-row-postponed {
+  background: #f9fafb;
+  opacity: 0.72;
+}
+
 .match-meta {
   display: grid;
   gap: 4px;
   color: #6b7280;
   font-size: 0.82rem;
   font-weight: 650;
+}
+
+.postponed-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: #6b7280;
+  color: #ffffff;
+  padding: 3px 7px;
+  font-size: 0.72rem;
+  font-weight: 850;
 }
 
 .teams {
@@ -299,11 +316,28 @@ h2 {
 }
 
 .score-form {
+  position: relative;
+  display: grid;
+  align-items: center;
+  justify-self: end;
+  width: 176px;
+  min-width: 176px;
+  min-height: 40px;
+}
+
+.score-fields {
   display: grid;
   grid-template-columns: 48px auto 48px 52px;
   align-items: center;
   justify-content: end;
   gap: 8px;
+  opacity: 1;
+  transition: opacity 160ms ease;
+}
+
+.score-fields-hidden {
+  pointer-events: none;
+  opacity: 0;
 }
 
 .score-form input {
@@ -320,6 +354,38 @@ h2 {
 .score-form input:disabled {
   background: #f3f4f6;
   color: #111827;
+}
+
+.score-form input[readonly] {
+  background: #f3f4f6;
+  color: #111827;
+  cursor: pointer;
+}
+
+.score-form input[readonly]:focus {
+  border-color: #9ca3af;
+  outline: 2px solid #d1d5db;
+  outline-offset: 1px;
+}
+
+.score-form-notice {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-items: center;
+  margin: 0;
+  color: #374151;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.score-form-notice-visible {
+  opacity: 1;
 }
 
 .save-state {
@@ -368,8 +434,14 @@ h2 {
   }
 
   .score-form {
-    justify-content: center;
+    justify-self: center;
+    width: 176px;
+  }
+
+  .score-fields {
+    width: 100%;
     grid-template-columns: 48px auto 48px;
+    justify-content: center;
   }
 
   .save-state {

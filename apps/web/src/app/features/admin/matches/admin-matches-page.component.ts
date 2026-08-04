@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { Match } from '@models/match.models';
+import { Match, MatchImportValidation } from '@models/match.models';
 import { AdminMatchesApiProvider } from '@services/providers/admin-matches-api.provider';
 import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
 import { SecretCodeModalComponent } from '@shared/components/secret-code-modal/secret-code-modal.component';
@@ -15,11 +15,12 @@ import { AdminManualMatchModalComponent, ManualMatchConfirmation } from './admin
 
 interface MatchGroup {
   readonly label: string;
+  readonly releasedForPredictions: boolean;
   readonly matches: Match[];
 }
 
 type MatchFilter = 'active' | 'required' | 'inactive';
-type PendingSecretAction = 'schedule' | 'odds';
+type PendingSecretAction = 'schedule' | 'odds' | 'schedule-with-odds' | 'release-round' | 'postponed';
 
 @Component({
   selector: 'app-admin-matches-page',
@@ -44,6 +45,9 @@ export class AdminMatchesPageComponent {
   protected readonly loading = signal(true);
   protected readonly importing = signal(false);
   protected readonly syncingOdds = signal(false);
+  protected readonly importingWithOdds = signal(false);
+  protected readonly releasingRound = signal(false);
+  protected readonly importMatchesWithOddsEnabled = signal(false);
   protected readonly addingMatch = signal(false);
   protected readonly addMatchModalOpen = signal(false);
   protected readonly addMatchErrorMessage = signal<string | null>(null);
@@ -54,6 +58,8 @@ export class AdminMatchesPageComponent {
   protected readonly importMessage = signal<string | null>(null);
   protected readonly secretCodeErrorMessage = signal<string | null>(null);
   protected readonly pendingSecretAction = signal<PendingSecretAction | null>(null);
+  protected readonly pendingReleaseRoundLabel = signal<string | null>(null);
+  protected readonly pendingPostponedMatch = signal<Match | null>(null);
   protected readonly selectedFilter = signal<MatchFilter>('active');
   protected readonly requiredActionCount = computed(() => this.matches().filter((match) => isRequiredAction(match)).length);
   protected readonly filteredMatches = computed(() => filterMatches(this.matches(), this.selectedFilter()));
@@ -69,6 +75,15 @@ export class AdminMatchesPageComponent {
         : 'Import fixtures'
   );
   protected readonly oddsActionLabel = computed(() => (this.syncingOdds() ? 'Syncing odds...' : 'Sync odds'));
+  protected readonly combinedImportActionLabel = computed(() =>
+    this.importingWithOdds()
+      ? this.matches().length > 0
+        ? 'Syncing...'
+        : 'Importing...'
+      : this.matches().length > 0
+        ? 'Sync fixtures and odds'
+        : 'Import fixtures and odds'
+  );
   private readonly saveTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
   constructor() {
@@ -95,6 +110,41 @@ export class AdminMatchesPageComponent {
     this.importMessage.set(null);
     this.secretCodeErrorMessage.set(null);
     this.pendingSecretAction.set('odds');
+  }
+
+  protected requestImportMatchesWithOdds(): void {
+    if (this.importingWithOdds()) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.importMessage.set(null);
+    this.secretCodeErrorMessage.set(null);
+    this.pendingSecretAction.set('schedule-with-odds');
+  }
+
+  protected requestReleaseRound(roundLabel: string): void {
+    if (this.isPendingSecretActionSubmitting()) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.importMessage.set(null);
+    this.secretCodeErrorMessage.set(null);
+    this.pendingReleaseRoundLabel.set(roundLabel);
+    this.pendingSecretAction.set('release-round');
+  }
+
+  protected requestPostponedToggle(match: Match): void {
+    if (this.isPendingSecretActionSubmitting() || this.savingIds().has(match.id)) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.importMessage.set(null);
+    this.secretCodeErrorMessage.set(null);
+    this.pendingPostponedMatch.set(match);
+    this.pendingSecretAction.set('postponed');
   }
 
   protected openAddMatchModal(): void {
@@ -218,6 +268,8 @@ export class AdminMatchesPageComponent {
   protected cancelSecretAction(): void {
     if (!this.isPendingSecretActionSubmitting()) {
       this.pendingSecretAction.set(null);
+      this.pendingReleaseRoundLabel.set(null);
+      this.pendingPostponedMatch.set(null);
       this.secretCodeErrorMessage.set(null);
     }
   }
@@ -230,6 +282,21 @@ export class AdminMatchesPageComponent {
       return;
     }
 
+    if (pendingAction === 'schedule-with-odds') {
+      this.importMatchesWithOdds(secretCode);
+      return;
+    }
+
+    if (pendingAction === 'release-round') {
+      this.releaseRound(secretCode);
+      return;
+    }
+
+    if (pendingAction === 'postponed') {
+      this.updatePostponed(secretCode);
+      return;
+    }
+
     if (pendingAction === 'odds') {
       this.syncOdds(secretCode);
     }
@@ -238,11 +305,49 @@ export class AdminMatchesPageComponent {
   protected isPendingSecretActionSubmitting(): boolean {
     const pendingAction = this.pendingSecretAction();
 
-    return (pendingAction === 'schedule' && this.importing()) || (pendingAction === 'odds' && this.syncingOdds());
+    return (
+      (pendingAction === 'schedule' && this.importing()) ||
+      (pendingAction === 'odds' && this.syncingOdds()) ||
+      (pendingAction === 'schedule-with-odds' && this.importingWithOdds()) ||
+      (pendingAction === 'release-round' && this.releasingRound()) ||
+      (pendingAction === 'postponed' && this.pendingPostponedMatch() !== null && this.savingIds().has(this.pendingPostponedMatch()!.id))
+    );
   }
 
   protected secretActionTitle(): string {
-    return this.pendingSecretAction() === 'odds' ? 'Confirm odds sync' : 'Confirm schedule sync';
+    const pendingAction = this.pendingSecretAction();
+
+    if (pendingAction === 'odds') {
+      return 'Confirm odds sync';
+    }
+
+    if (pendingAction === 'schedule-with-odds') {
+      return 'Confirm fixture and odds sync';
+    }
+
+    if (pendingAction === 'release-round') {
+      return 'Confirm week release';
+    }
+
+    if (pendingAction === 'postponed') {
+      return this.pendingPostponedMatch()?.isPostponed ? 'Confirm match restore' : 'Confirm match postponement';
+    }
+
+    return 'Confirm schedule sync';
+  }
+
+  protected secretActionConfirmLabel(): string {
+    const pendingAction = this.pendingSecretAction();
+
+    if (pendingAction === 'postponed') {
+      return this.pendingPostponedMatch()?.isPostponed ? 'Restore match' : 'Mark postponed';
+    }
+
+    if (pendingAction === 'release-round') {
+      return 'Release week';
+    }
+
+    return 'Start sync';
   }
 
   private importMatches(secretCode: string): void {
@@ -256,9 +361,9 @@ export class AdminMatchesPageComponent {
     this.secretCodeErrorMessage.set(null);
 
     this.adminMatchesApi.importMatches({ secretCode }).subscribe({
-      next: ({ imported, matches }) => {
+      next: ({ imported, validation, matches }) => {
         this.setMatches(matches);
-        this.importMessage.set(`${imported} matches imported.`);
+        this.importMessage.set([`${imported} matches imported.`, validation ? validationMessage(validation) : null].filter(Boolean).join(' '));
         this.pendingSecretAction.set(null);
         this.importing.set(false);
       },
@@ -303,7 +408,134 @@ export class AdminMatchesPageComponent {
     });
   }
 
+  private importMatchesWithOdds(secretCode: string): void {
+    if (this.importingWithOdds()) {
+      return;
+    }
+
+    this.importingWithOdds.set(true);
+    this.errorMessage.set(null);
+    this.importMessage.set(null);
+    this.secretCodeErrorMessage.set(null);
+
+    this.adminMatchesApi.importMatchesWithOdds({ secretCode }).subscribe({
+      next: ({ imported, odds, validation, matches }) => {
+        this.setMatches(matches);
+        this.importMessage.set(
+          [
+            `${imported} matches imported.`,
+            `${odds.synced} new match odds synced.`,
+            odds.skippedExisting > 0 ? `${odds.skippedExisting} skipped because odds already exist.` : null,
+            odds.skippedFinished > 0 ? `${odds.skippedFinished} skipped because matches are finished.` : null,
+            odds.skippedUnresolved > 0 ? `${odds.skippedUnresolved} skipped because teams are still placeholders.` : null,
+            odds.unmatched > 0 ? `${odds.unmatched} eligible matches were not found in the odds source.` : null,
+            validationMessage(validation)
+          ]
+            .filter((message): message is string => message !== null)
+            .join(' ')
+        );
+        this.pendingSecretAction.set(null);
+        this.importingWithOdds.set(false);
+      },
+      error: (error: unknown) => {
+        this.handleSecretActionError(error, 'Matches and odds could not be synced from Game-365.');
+        this.importingWithOdds.set(false);
+      }
+    });
+  }
+
+  private releaseRound(secretCode: string): void {
+    const roundLabel = this.pendingReleaseRoundLabel();
+
+    if (!roundLabel) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.importMessage.set(null);
+    this.secretCodeErrorMessage.set(null);
+    this.releasingRound.set(true);
+
+    this.adminMatchesApi.releaseRound({ roundLabel, secretCode }).subscribe({
+      next: ({ released, validation, matches }) => {
+        this.setMatches(matches);
+        this.importMessage.set(`${released} matches released for predictions. ${validationMessage(validation)}`);
+        this.pendingSecretAction.set(null);
+        this.pendingReleaseRoundLabel.set(null);
+        this.releasingRound.set(false);
+      },
+      error: (error: unknown) => {
+        const message =
+          error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+            ? error.error.message
+            : 'Week could not be released.';
+
+        if (error instanceof HttpErrorResponse && error.status === 403) {
+          this.secretCodeErrorMessage.set(message);
+          this.releasingRound.set(false);
+          return;
+        }
+
+        if (error instanceof HttpErrorResponse && error.status === 409 && error.error?.validation) {
+          this.errorMessage.set(`${message} ${validationMessage(error.error.validation as MatchImportValidation)}`);
+        } else {
+          this.errorMessage.set(message);
+        }
+
+        this.pendingSecretAction.set(null);
+        this.pendingReleaseRoundLabel.set(null);
+        this.releasingRound.set(false);
+      }
+    });
+  }
+
+  private updatePostponed(secretCode: string): void {
+    const match = this.pendingPostponedMatch();
+
+    if (!match) {
+      return;
+    }
+
+    this.setSaving(match.id, true);
+    this.errorMessage.set(null);
+    this.importMessage.set(null);
+    this.secretCodeErrorMessage.set(null);
+
+    this.adminMatchesApi.updatePostponed(match.id, { isPostponed: !match.isPostponed, secretCode }).subscribe({
+      next: ({ match: updatedMatch }) => {
+        this.matches.update((matches) => matches.map((currentMatch) => (currentMatch.id === updatedMatch.id ? updatedMatch : currentMatch)));
+        this.importMessage.set(`Match ${updatedMatch.matchNumber} ${updatedMatch.isPostponed ? 'marked as postponed' : 'restored'}.`);
+        this.pendingSecretAction.set(null);
+        this.pendingPostponedMatch.set(null);
+        this.ensureSelectedFilterHasResults();
+        this.setSaving(match.id, false);
+      },
+      error: (error: unknown) => {
+        const message =
+          error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+            ? error.error.message
+            : 'Match postponed status could not be updated.';
+
+        if (error instanceof HttpErrorResponse && error.status === 403) {
+          this.secretCodeErrorMessage.set(message);
+        } else {
+          this.errorMessage.set(message);
+          this.pendingSecretAction.set(null);
+          this.pendingPostponedMatch.set(null);
+        }
+
+        this.setSaving(match.id, false);
+      }
+    });
+  }
+
   protected updateDraft(matchId: number, side: keyof ScoreDraft, value: string): void {
+    const match = this.matches().find((currentMatch) => currentMatch.id === matchId);
+
+    if (match?.isPostponed) {
+      return;
+    }
+
     this.drafts.update((drafts) => updateScoreDraft(drafts, matchId, side, value));
     this.queueSave(matchId);
   }
@@ -320,7 +552,7 @@ export class AdminMatchesPageComponent {
     const match = this.matches().find((currentMatch) => currentMatch.id === matchId);
     const draft = this.drafts()[matchId];
 
-    if (!match || !isValidScore(draft?.home) || !isValidScore(draft?.away)) {
+    if (!match || match.isPostponed || !isValidScore(draft?.home) || !isValidScore(draft?.away)) {
       return;
     }
 
@@ -370,7 +602,8 @@ export class AdminMatchesPageComponent {
     this.importMessage.set(null);
 
     this.adminMatchesApi.getMatches().subscribe({
-      next: ({ matches }) => {
+      next: ({ matches, importMatchesWithOddsEnabled }) => {
+        this.importMatchesWithOddsEnabled.set(importMatchesWithOddsEnabled);
         this.setMatches(matches);
         this.loading.set(false);
       },
@@ -429,6 +662,8 @@ export class AdminMatchesPageComponent {
 
     this.errorMessage.set(message);
     this.pendingSecretAction.set(null);
+    this.pendingReleaseRoundLabel.set(null);
+    this.pendingPostponedMatch.set(null);
   }
 }
 
@@ -442,8 +677,25 @@ function groupMatches(matches: readonly Match[]): MatchGroup[] {
 
   return Array.from(groups, ([label, groupedMatches]) => ({
     label,
+    releasedForPredictions: groupedMatches.every((match) => match.releasedForPredictions),
     matches: groupedMatches
   }));
+}
+
+function validationMessage(validation: MatchImportValidation): string {
+  if (validation.complete && validation.released) {
+    return `${validation.roundLabel} is complete and released.`;
+  }
+
+  const issues = [
+    validation.incompleteMatchNumbers.length > 0 ? `Incomplete matches: ${validation.incompleteMatchNumbers.join(', ')}.` : null,
+    validation.missingOddsMatchNumbers.length > 0 ? `Missing odds: ${validation.missingOddsMatchNumbers.join(', ')}.` : null,
+    validation.missingTeamNames.length > 0 ? `Missing teams: ${validation.missingTeamNames.join(', ')}.` : null
+  ].filter((message): message is string => message !== null);
+
+  return issues.length > 0
+    ? `${validation.roundLabel} is not released. ${issues.join(' ')}`
+    : `${validation.roundLabel} is ready to release.`;
 }
 
 function getExistingTeamNames(matches: readonly Match[]): string[] {
@@ -472,7 +724,7 @@ function filterMatches(matches: readonly Match[], filter: MatchFilter): Match[] 
 function isRequiredAction(match: Match): boolean {
   const matchSettlementWindowMs = (2 * 60 + 15) * 60 * 1_000;
 
-  return match.finalScore === null && Date.now() - Date.parse(match.kickoffAt) >= matchSettlementWindowMs;
+  return !match.isPostponed && match.finalScore === null && Date.now() - Date.parse(match.kickoffAt) >= matchSettlementWindowMs;
 }
 
 function isInactive(match: Match): boolean {

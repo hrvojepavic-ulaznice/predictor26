@@ -99,6 +99,8 @@ Backend conventions:
 - Interfaces/DTOs live beside the feature when feature-specific, or in `shared/interfaces` when reused.
 - SQL and SQLite-specific details stay in `database/queries` or repositories, never in controllers.
 - Keep endpoint response interfaces explicit so the Angular API providers can import or mirror stable contracts later.
+- Imported match batches use `matches.released_for_predictions` as the curation gate. User-facing match endpoints must only expose released matches, and prediction saves must reject unreleased matches. Admin match endpoints can see unreleased matches so admins can complete missing data and release a round.
+- Competition-level auto match import is configured on competition settings and runs server-side from the admin matches service scheduler. It imports fixtures and odds together, validates the imported round, and only releases it automatically when all required teams are present, match details are complete, and odds exist for every match.
 
 ## Current Boundary
 

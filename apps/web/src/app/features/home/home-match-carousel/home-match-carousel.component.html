@@ -42,6 +42,7 @@
           [class.match-card-live]="match.status === 'live'"
           [class.match-card-finished]="match.status === 'finished'"
           [class.match-card-undecided]="match.status === 'undecided'"
+          [class.match-card-postponed]="match.status === 'postponed'"
           [disabled]="!match.canOpenDetails || openingMatchId() !== null"
           (click)="openMatch(match)"
         >
@@ -52,6 +53,7 @@
               [class.status-pill-live]="match.status === 'live'"
               [class.status-pill-finished]="match.status === 'finished'"
               [class.status-pill-undecided]="match.status === 'undecided'"
+              [class.status-pill-postponed]="match.status === 'postponed'"
             >
               {{ match.statusLabel }}
             </span>

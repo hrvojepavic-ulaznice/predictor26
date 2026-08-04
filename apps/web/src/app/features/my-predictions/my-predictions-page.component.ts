@@ -64,7 +64,7 @@ export class MyPredictionsPageComponent {
       return '#111827';
     }
 
-    return getPredictionPointsStateColor(calculatePredictionPoints(match.prediction, match.finalScore).state) ?? '#111827';
+    return getPredictionPointsStateColor(calculatePredictionPoints(match.prediction, match.finalScore, match.isPostponed).state) ?? '#111827';
   }
 
   private loadMatches(): void {

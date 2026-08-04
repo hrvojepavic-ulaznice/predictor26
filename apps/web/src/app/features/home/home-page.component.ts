@@ -58,7 +58,9 @@ export class HomePageComponent {
       return 0;
     }
 
-    return this.matches().filter((match) => match.predictionRound === nextGroup.label && match.prediction === null).length;
+    return this.matches().filter(
+      (match) => match.predictionRound === nextGroup.label && !match.isPostponed && match.prediction === null
+    ).length;
   });
 
   constructor() {
@@ -106,6 +108,10 @@ function getPredictionGroups(
   const groups = new Map<string, string>();
 
   for (const match of matches) {
+    if (match.isPostponed) {
+      continue;
+    }
+
     const currentDeadline = groups.get(match.predictionRound);
 
     if (!currentDeadline || Date.parse(match.predictionDeadlineAt) < Date.parse(currentDeadline)) {

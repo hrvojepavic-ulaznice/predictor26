@@ -5,11 +5,15 @@
     [attr.title]="title()"
     [style.color]="color()"
   >
-    @if (result.earned === null) {
+    @if (result.state === 'void') {
+      VOID
+    } @else if (result.earned === null) {
       ?
     } @else {
       {{ result.earned | number: '1.0-2' }}
     }
-    / {{ result.available | number: '1.0-2' }}
+    @if (result.available !== null) {
+      / {{ result.available | number: '1.0-2' }}
+    }
   </span>
 }

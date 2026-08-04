@@ -1,6 +1,6 @@
 import { MatchOdds, MatchPrediction, MatchScore, MatchTeam } from './match.models';
 
-export type LeaderboardPredictionPointsState = 'pending' | 'miss' | 'outcome' | 'exact';
+export type LeaderboardPredictionPointsState = 'pending' | 'void' | 'miss' | 'outcome' | 'exact';
 
 export interface LeaderboardRoundMetadata {
   readonly label: string;
@@ -15,6 +15,7 @@ export interface LeaderboardLiveMatch {
   readonly homeTeam: MatchTeam;
   readonly awayTeam: MatchTeam;
   readonly finalScore: MatchScore | null;
+  readonly isPostponed: boolean;
 }
 
 export interface LeaderboardLivePrediction {
@@ -28,6 +29,7 @@ export interface LeaderboardComingUpMatch {
   readonly kickoffAt: string;
   readonly homeTeam: MatchTeam;
   readonly awayTeam: MatchTeam;
+  readonly isPostponed: boolean;
 }
 
 export interface LeaderboardComingUpPrediction {
@@ -50,6 +52,7 @@ export interface LeaderboardRoundMatch {
   readonly prediction: MatchPrediction | null;
   readonly predictionHidden: boolean;
   readonly finalScore: MatchScore | null;
+  readonly isPostponed: boolean;
   readonly points: LeaderboardPredictionPoints;
 }
 
@@ -89,7 +92,7 @@ export interface LeaderboardUserRoundDetailsResponse {
   readonly round: LeaderboardRoundDetails;
 }
 
-export type LeaderboardMatchStatus = 'finished' | 'live' | 'coming_up' | 'undecided';
+export type LeaderboardMatchStatus = 'postponed' | 'finished' | 'live' | 'coming_up' | 'undecided';
 
 export interface LeaderboardMatchDay {
   readonly date: string;
@@ -107,6 +110,7 @@ export interface LeaderboardDayMatch {
   readonly awayTeam: MatchTeam;
   readonly odds: MatchOdds | null;
   readonly finalScore: MatchScore | null;
+  readonly isPostponed: boolean;
 }
 
 export interface LeaderboardMatchPredictionUser {
@@ -149,6 +153,7 @@ export interface LeaderboardStatsExactScoreLeader {
 
 export interface LeaderboardStatsExactScoreMatch {
   readonly matchNumber: number;
+  readonly kickoffAt: string;
   readonly homeTeam: MatchTeam;
   readonly awayTeam: MatchTeam;
   readonly finalScore: MatchScore;
@@ -163,6 +168,7 @@ export interface LeaderboardStatsOutcomeLeader {
 
 export interface LeaderboardStatsOutcomeMatch {
   readonly matchNumber: number;
+  readonly kickoffAt: string;
   readonly homeTeam: MatchTeam;
   readonly awayTeam: MatchTeam;
   readonly outcome: '1' | 'X' | '2';
@@ -174,6 +180,7 @@ export interface LeaderboardStatsBiggestOddsWin {
   readonly odds: number;
   readonly outcome: '1' | 'X' | '2';
   readonly matchNumber: number;
+  readonly kickoffAt: string;
   readonly homeTeam: MatchTeam;
   readonly awayTeam: MatchTeam;
 }

@@ -189,6 +189,7 @@ export async function getLeaderboardStats(competitionId: number): Promise<Leader
           ...currentLeader.matches,
           {
             matchNumber: match.match_number,
+            kickoffAt: match.kickoff_at,
             homeTeam: toHomeTeamResponse(match),
             awayTeam: toAwayTeamResponse(match),
             finalScore: {
@@ -216,6 +217,7 @@ export async function getLeaderboardStats(competitionId: number): Promise<Leader
               ...currentLeader.matches,
               {
                 matchNumber: match.match_number,
+                kickoffAt: match.kickoff_at,
                 homeTeam: toHomeTeamResponse(match),
                 awayTeam: toAwayTeamResponse(match),
                 outcome: prediction.prediction_odds_outcome
@@ -233,6 +235,7 @@ export async function getLeaderboardStats(competitionId: number): Promise<Leader
           odds,
           outcome: prediction.prediction_odds_outcome,
           matchNumber: match.match_number,
+          kickoffAt: match.kickoff_at,
           homeTeam: toHomeTeamResponse(match),
           awayTeam: toAwayTeamResponse(match)
         };
@@ -252,14 +255,14 @@ export async function getLeaderboardStats(competitionId: number): Promise<Leader
     exactScoreLeaders: Array.from(exactScoresByUserId.values())
       .map((leader) => ({
         ...leader,
-        matches: [...leader.matches].sort((firstMatch, secondMatch) => firstMatch.matchNumber - secondMatch.matchNumber)
+        matches: [...leader.matches].sort(sortStatsMatchesByKickoff)
       }))
       .sort(sortExactScoreLeaders)
       .slice(0, 5),
     outcomeLeaders: Array.from(outcomesByUserId.values())
       .map((leader) => ({
         ...leader,
-        matches: [...leader.matches].sort((firstMatch, secondMatch) => firstMatch.matchNumber - secondMatch.matchNumber)
+        matches: [...leader.matches].sort(sortStatsMatchesByKickoff)
       }))
       .sort(sortOutcomeLeaders)
       .slice(0, 5),
@@ -282,7 +285,7 @@ export async function getLeaderboardMatchPredictions(
   );
   const match = matches.find((currentMatch) => currentMatch.id === matchId);
 
-  if (!match) {
+  if (!match || match.is_postponed === 1) {
     return null;
   }
 
@@ -326,7 +329,13 @@ function getLiveMatches(
   const now = Date.now();
 
   return matches
-    .filter((match) => Date.parse(match.kickoff_at) <= now && !hasFinalScore(match) && !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id)))
+    .filter(
+      (match) =>
+        match.is_postponed !== 1 &&
+        Date.parse(match.kickoff_at) <= now &&
+        !hasFinalScore(match) &&
+        !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id))
+    )
     .sort(sortMatchesByKickoff);
 }
 
@@ -335,7 +344,7 @@ function getComingUpMatches(rounds: readonly RoundSummary[], liveMatches: readon
   const eligibleMatches = rounds
     .filter((round) => round.locked)
     .flatMap((round) => round.matches)
-    .filter((match) => Date.parse(match.kickoff_at) > now);
+    .filter((match) => match.is_postponed !== 1 && Date.parse(match.kickoff_at) > now);
 
   const nextKickoffAt = eligibleMatches.reduce<string | null>((nextKickoff, match) => {
     if (!nextKickoff || Date.parse(match.kickoff_at) < Date.parse(nextKickoff)) {
@@ -365,7 +374,8 @@ function toLiveMatchResponse(match: MatchRow, snapshot: LatestLiveScoreSnapshotR
     kickoffAt: match.kickoff_at,
     homeTeam: toHomeTeamResponse(match),
     awayTeam: toAwayTeamResponse(match),
-    finalScore: score
+    finalScore: score,
+    isPostponed: match.is_postponed === 1
   };
 }
 
@@ -375,7 +385,8 @@ function toComingUpMatchResponse(match: MatchRow): LeaderboardComingUpMatchRespo
     matchNumber: match.match_number,
     kickoffAt: match.kickoff_at,
     homeTeam: toHomeTeamResponse(match),
-    awayTeam: toAwayTeamResponse(match)
+    awayTeam: toAwayTeamResponse(match),
+    isPostponed: match.is_postponed === 1
   };
 }
 
@@ -400,7 +411,8 @@ function toDayMatchResponse(match: MatchRow, roundLocked: boolean, snapshot: Lat
             awayWin: match.away_win_odds,
             syncedAt: match.odds_synced_at
           },
-    finalScore: score
+    finalScore: score,
+    isPostponed: match.is_postponed === 1
   };
 }
 
@@ -552,7 +564,7 @@ function getRoundSummaries(matches: readonly MatchRow[]): RoundSummary[] {
 
   const roundSummaries = Array.from(rounds, ([label, roundMatches]) => ({
     label,
-    expectedCount: roundMatches.length,
+    expectedCount: roundMatches.filter((match) => match.is_postponed !== 1).length,
     locked: isRoundLocked(roundMatches),
     matches: [...roundMatches].sort(sortMatchesByKickoff)
   }));
@@ -575,6 +587,12 @@ function orderLeaderboardRounds(rounds: readonly RoundSummary[]): RoundSummary[]
 }
 
 function findFocusedRoundIndex(rounds: readonly RoundSummary[]): number {
+  const activeRoundIndex = rounds.findIndex((round) => round.viewable && !round.locked);
+
+  if (activeRoundIndex >= 0) {
+    return activeRoundIndex;
+  }
+
   for (let index = rounds.length - 1; index >= 0; index -= 1) {
     if (rounds[index].locked) {
       return index;
@@ -593,7 +611,7 @@ function getUserRoundSummary(
 
   return {
     label: round.label,
-    submittedCount: roundPredictions.length,
+    submittedCount: roundPredictions.filter((prediction) => prediction.is_postponed !== 1).length,
     expectedCount: round.expectedCount,
     points: roundPoints(roundMatches.reduce((total, match) => total + (match.points.earned ?? 0), 0)),
     locked: round.locked,
@@ -619,21 +637,24 @@ function getRoundMatchesForVisibility(
 }
 
 function getHiddenLeaderboardRoundMatches(round: RoundSummary): LeaderboardRoundMatchResponse[] {
-  return round.matches.map((match) => ({
-    matchId: match.id,
-    matchNumber: match.match_number,
-    kickoffAt: match.kickoff_at,
-    homeTeam: toHomeTeamDisplayResponse(match),
-    awayTeam: toAwayTeamDisplayResponse(match),
-    prediction: null,
-    predictionHidden: true,
-    finalScore: null,
-    points: {
-      earned: null,
-      available: null,
-      state: 'pending'
-    }
-  }));
+  return round.matches
+    .filter((match) => match.is_postponed !== 1)
+    .map((match) => ({
+      matchId: match.id,
+      matchNumber: match.match_number,
+      kickoffAt: match.kickoff_at,
+      homeTeam: toHomeTeamDisplayResponse(match),
+      awayTeam: toAwayTeamDisplayResponse(match),
+      prediction: null,
+      predictionHidden: true,
+      finalScore: null,
+      isPostponed: false,
+      points: {
+        earned: null,
+        available: null,
+        state: 'pending'
+      }
+    }));
 }
 
 function getViewerOpenRoundMatches(
@@ -642,7 +663,7 @@ function getViewerOpenRoundMatches(
 ): LeaderboardRoundMatchResponse[] {
   const predictionsByMatchId = new Map(predictions.map((prediction) => [prediction.match_id, prediction]));
 
-  return round.matches.map((match) => {
+  return round.matches.filter((match) => match.is_postponed !== 1).map((match) => {
     const prediction = predictionsByMatchId.get(match.id);
 
     return {
@@ -654,6 +675,7 @@ function getViewerOpenRoundMatches(
       prediction: prediction ? toPredictionResponse(prediction) : null,
       predictionHidden: false,
       finalScore: null,
+      isPostponed: false,
       points: prediction
         ? calculatePredictionPoints(prediction)
         : {
@@ -673,6 +695,10 @@ function getLeaderboardRoundMatches(
   const matches: LeaderboardRoundMatchResponse[] = [];
 
   for (const match of round.matches) {
+    if (match.is_postponed === 1) {
+      continue;
+    }
+
     const prediction = predictionsByMatchId.get(match.id);
 
     if (!prediction) {
@@ -696,6 +722,7 @@ function getLeaderboardRoundMatches(
       prediction: toPredictionResponse(prediction),
       predictionHidden: false,
       finalScore,
+      isPostponed: false,
       points: calculatePredictionPoints(prediction)
     });
   }
@@ -738,6 +765,7 @@ function withLiveSnapshotScores(
     const snapshot = latestSnapshotsByMatchId.get(prediction.match_id);
 
     if (
+      prediction.is_postponed === 1 ||
       prediction.final_home_score !== null ||
       prediction.final_away_score !== null ||
       snapshot?.home_score === null ||
@@ -757,6 +785,10 @@ function withLiveSnapshotScores(
 }
 
 function getLiveScore(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined) {
+  if (match.is_postponed === 1) {
+    return null;
+  }
+
   if (hasFinalScore(match)) {
     return {
       home: match.final_home_score,
@@ -883,17 +915,30 @@ function sortBiggestOddsWins(
     return oddsComparison;
   }
 
-  const matchComparison = firstWin.matchNumber - secondWin.matchNumber;
+  const matchComparison = sortStatsMatchesByKickoff(firstWin, secondWin);
 
   return matchComparison !== 0
     ? matchComparison
     : firstWin.username.localeCompare(secondWin.username, undefined, { sensitivity: 'base' });
 }
 
+function sortStatsMatchesByKickoff(
+  firstMatch: { readonly kickoffAt: string; readonly matchNumber: number },
+  secondMatch: { readonly kickoffAt: string; readonly matchNumber: number }
+): number {
+  const kickoffComparison = Date.parse(firstMatch.kickoffAt) - Date.parse(secondMatch.kickoffAt);
+
+  if (kickoffComparison !== 0) {
+    return kickoffComparison;
+  }
+
+  return firstMatch.matchNumber - secondMatch.matchNumber;
+}
+
 function isPredictionSettled(
   prediction: LeaderboardPredictionRow
 ): prediction is LeaderboardPredictionRow & { readonly final_home_score: number; readonly final_away_score: number } {
-  return prediction.final_home_score !== null && prediction.final_away_score !== null;
+  return prediction.is_postponed !== 1 && prediction.final_home_score !== null && prediction.final_away_score !== null;
 }
 
 function sortMatchPredictionUsers(
@@ -914,6 +959,14 @@ function getSortableMatchPoints(user: LeaderboardMatchPredictionsResponse['users
 }
 
 function calculatePredictionPoints(prediction: LeaderboardPredictionRow): LeaderboardPredictionPointsResponse {
+  if (prediction.is_postponed === 1) {
+    return {
+      earned: 0,
+      available: null,
+      state: 'void'
+    };
+  }
+
   const outcomePoints = prediction.prediction_odds_value ?? 0;
   const available = roundPoints(outcomePoints + 1);
 
@@ -965,6 +1018,10 @@ function hiddenPredictionPoints(): LeaderboardPredictionPointsResponse {
 function getMatchStatus(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined): LeaderboardMatchStatusResponse {
   const now = Date.now();
   const kickoffTime = Date.parse(match.kickoff_at);
+
+  if (match.is_postponed === 1) {
+    return 'postponed';
+  }
 
   if (hasFinalScore(match)) {
     return 'finished';
@@ -1048,7 +1105,7 @@ function isWeekRoundLabel(label: string): boolean {
 }
 
 function isRoundLocked(matches: readonly MatchRow[]): boolean {
-  const deadline = matches.reduce<string | null>((currentDeadline, match) => {
+  const deadline = matches.filter((match) => match.is_postponed !== 1).reduce<string | null>((currentDeadline, match) => {
     if (!currentDeadline || Date.parse(match.kickoff_at) < Date.parse(currentDeadline)) {
       return match.kickoff_at;
     }

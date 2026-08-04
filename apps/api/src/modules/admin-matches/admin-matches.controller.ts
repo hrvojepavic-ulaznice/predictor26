@@ -3,17 +3,22 @@ import { NextFunction, Request, Response } from 'express';
 import {
   AdminActionSecretRequest,
   CreateManualMatchRequest,
+  ReleaseMatchRoundRequest,
   UpdateFinalScoreRequest,
   UpdateKickoffRequest,
+  UpdatePostponedRequest,
   UpdatePlayoffMappingRequest
 } from './admin-matches.interfaces.js';
 import {
   changeFinalScore,
   changeKickoff,
+  changePostponed,
   changePlayoffMapping,
   createManualMatch,
   getAdminMatches,
   importSchedule,
+  importScheduleWithOdds,
+  releaseMatchRound,
   syncOdds
 } from './admin-matches.service.js';
 import { resolveCompetitionIdForAdmin } from '../competitions/competitions.service.js';
@@ -130,6 +135,68 @@ export async function syncMatchOddsController(
   }
 }
 
+export async function importMatchesWithOddsController(
+  req: Request<object, object, AdminActionSecretRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const result = await importScheduleWithOdds(competitionId, req.body);
+
+    if (result.status === 'invalid') {
+      res.status(400).json({ message: 'Secret code is required.' });
+      return;
+    }
+
+    if (result.status === 'invalid_secret') {
+      res.status(403).json({ message: 'Secret code is incorrect.' });
+      return;
+    }
+
+    res.json(result.response);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function releaseMatchRoundController(
+  req: Request<object, object, ReleaseMatchRoundRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const result = await releaseMatchRound(competitionId, req.body);
+
+    if (result.status === 'invalid') {
+      res.status(400).json({ message: 'Please select a valid week and enter the secret code.' });
+      return;
+    }
+
+    if (result.status === 'invalid_secret') {
+      res.status(403).json({ message: 'Secret code is incorrect.' });
+      return;
+    }
+
+    res.json(result.response);
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function updateFinalScoreController(
   req: Request<MatchIdParams, object, UpdateFinalScoreRequest>,
   res: Response,
@@ -197,6 +264,42 @@ export async function updateKickoffController(
     res.json({
       match: result.match
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updatePostponedController(
+  req: Request<MatchIdParams, object, UpdatePostponedRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const competitionId = await resolveRequestedCompetitionId(req);
+
+    if (competitionId === null) {
+      res.status(403).json({ message: 'Competition access is required.' });
+      return;
+    }
+
+    const result = await changePostponed(competitionId, Number(req.params['matchId']), req.body);
+
+    if (result.status === 'invalid') {
+      res.status(400).json({ message: 'Please enter a valid postponed setting and secret code.' });
+      return;
+    }
+
+    if (result.status === 'invalid_secret') {
+      res.status(403).json({ message: 'Secret code is incorrect.' });
+      return;
+    }
+
+    if (result.status === 'not_found') {
+      res.status(404).json({ message: 'Match could not be found.' });
+      return;
+    }
+
+    res.json(result.response);
   } catch (error) {
     next(error);
   }

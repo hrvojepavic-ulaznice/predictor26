@@ -13,9 +13,12 @@ import {
   upsertCompetitionTeams,
   updateFinalScore,
   updateMatchKickoff,
+  updateMatchPostponed,
   updateMatchOdds,
   updatePlayoffTeamMapping,
-  upsertImportedMatches
+  upsertImportedMatches,
+  releaseMatchesByIds,
+  releaseMatchesForRound
 } from '../../database/queries/matches.queries.js';
 import { getAppMetadataValue, setAppMetadataValue } from '../../database/queries/app-metadata.queries.js';
 import { getSuperAdminUser } from '../../database/queries/users.queries.js';
@@ -72,6 +75,10 @@ export function setKickoff(competitionId: number, matchId: number, kickoffAt: st
   return updateMatchKickoff(competitionId, matchId, kickoffAt, city, venue);
 }
 
+export function setPostponed(competitionId: number, matchId: number, isPostponed: boolean) {
+  return updateMatchPostponed(competitionId, matchId, isPostponed);
+}
+
 export function setPlayoffTeamMapping(
   competitionId: number,
   matchId: number,
@@ -88,4 +95,12 @@ export function setMatchOdds(odds: readonly MatchOddsInput[]) {
 
 export function backfillPredictionOdds(competitionId: number) {
   return backfillMissingPredictionOdds(competitionId);
+}
+
+export function releaseRoundMatches(competitionId: number, roundLabel: string) {
+  return releaseMatchesForRound(competitionId, roundLabel);
+}
+
+export function releaseImportedMatches(competitionId: number, matchIds: readonly number[]) {
+  return releaseMatchesByIds(competitionId, matchIds);
 }

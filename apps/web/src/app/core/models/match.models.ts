@@ -43,6 +43,8 @@ export interface Match {
   readonly venue: string;
   readonly city: string;
   readonly odds: MatchOdds | null;
+  readonly releasedForPredictions: boolean;
+  readonly isPostponed: boolean;
   readonly finalScore: MatchScore | null;
 }
 
@@ -56,16 +58,14 @@ export interface MatchesResponse {
 
 export interface AdminMatchesResponse {
   readonly matches: Match[];
+  readonly importMatchesWithOddsEnabled: boolean;
 }
 
 export interface AdminActionSecretRequest {
   readonly secretCode: string;
 }
 
-export type ManualMatchWeekMode = 'current' | 'next';
-
 export interface CreateManualMatchRequest extends AdminActionSecretRequest {
-  readonly weekMode: ManualMatchWeekMode;
   readonly kickoffAt: string;
   readonly city: string;
   readonly venue: string;
@@ -85,6 +85,7 @@ export interface CreateManualMatchResponse {
 
 export interface ImportMatchesResponse {
   readonly imported: number;
+  readonly validation: MatchImportValidation | null;
   readonly matches: Match[];
 }
 
@@ -96,6 +97,33 @@ export interface SyncMatchOddsResponse {
   readonly skippedUnresolved: number;
   readonly unmatched: number;
   readonly backfilled: number;
+  readonly matches: Match[];
+}
+
+export interface ImportMatchesWithOddsResponse {
+  readonly imported: number;
+  readonly odds: Omit<SyncMatchOddsResponse, 'matches'>;
+  readonly validation: MatchImportValidation;
+  readonly matches: Match[];
+}
+
+export interface MatchImportValidation {
+  readonly roundLabel: string;
+  readonly complete: boolean;
+  readonly released: boolean;
+  readonly matchCount: number;
+  readonly missingOddsMatchNumbers: number[];
+  readonly incompleteMatchNumbers: number[];
+  readonly missingTeamNames: string[];
+}
+
+export interface ReleaseMatchRoundRequest extends AdminActionSecretRequest {
+  readonly roundLabel: string;
+}
+
+export interface ReleaseMatchRoundResponse {
+  readonly validation: MatchImportValidation;
+  readonly released: number;
   readonly matches: Match[];
 }
 
@@ -126,6 +154,14 @@ export interface UpdateKickoffRequest {
 }
 
 export interface UpdateKickoffResponse {
+  readonly match: Match;
+}
+
+export interface UpdatePostponedRequest extends AdminActionSecretRequest {
+  readonly isPostponed: boolean;
+}
+
+export interface UpdatePostponedResponse {
   readonly match: Match;
 }
 

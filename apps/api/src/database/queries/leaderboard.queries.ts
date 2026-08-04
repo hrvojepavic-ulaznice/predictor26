@@ -13,6 +13,7 @@ export interface LeaderboardPredictionRow {
   readonly match_number: number;
   readonly group_name: string | null;
   readonly round_label: string;
+  readonly is_postponed: 0 | 1;
   readonly final_home_score: number | null;
   readonly final_away_score: number | null;
   readonly prediction_home_score: number;
@@ -55,6 +56,7 @@ export function listLeaderboardPredictions(competitionId: number): LeaderboardPr
             matches.match_number,
             matches.group_name,
             matches.round_label,
+            matches.is_postponed,
             matches.final_home_score,
             matches.final_away_score,
             predictions.home_score AS prediction_home_score,
@@ -68,7 +70,7 @@ export function listLeaderboardPredictions(competitionId: number): LeaderboardPr
             AND competition_users.competition_id = matches.competition_id
           WHERE users.role != 'super_admin'
             AND matches.competition_id = ?
-          ORDER BY matches.match_number ASC
+          ORDER BY matches.kickoff_at ASC, matches.match_number ASC
         `
       )
       .all(competitionId) as LeaderboardPredictionRow[];

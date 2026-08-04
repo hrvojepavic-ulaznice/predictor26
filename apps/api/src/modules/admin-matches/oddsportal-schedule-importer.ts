@@ -283,7 +283,8 @@ function normalizeLogoUrl(value: unknown, sourceUrl: string): string | null {
 
 function nextTuesdayEndInCroatia(now: Date): Date {
   const parts = zonedDateParts(now, croatiaTimeZone);
-  const daysUntilTuesday = (2 - weekdayByName[parts.weekday] + 7) % 7 || 7;
+  const calendarDaysUntilTuesday = (2 - weekdayByName[parts.weekday] + 7) % 7 || 7;
+  const daysUntilTuesday = calendarDaysUntilTuesday <= 1 ? calendarDaysUntilTuesday + 7 : calendarDaysUntilTuesday;
   const localAsUtc = Date.UTC(parts.year, parts.month - 1, parts.day + daysUntilTuesday, 23, 59, 59, 999);
 
   return zonedLocalTimeToUtc(localAsUtc, croatiaTimeZone);

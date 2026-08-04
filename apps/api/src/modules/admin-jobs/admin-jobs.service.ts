@@ -3,17 +3,25 @@ import {
   sendDuePredictionRemindersForCompetition
 } from '../notifications/notifications.service.js';
 import { getLiveScoreJobSnapshot, runLiveScoreSyncNow, setLiveScoreSyncEnabled } from '../live-scores/live-scores.service.js';
+import {
+  getAutoMatchImportJobSnapshot,
+  runAutoMatchImportNow,
+  updateAutoMatchImportJobSettings
+} from '../admin-matches/admin-matches.service.js';
 import { getSuperAdminUser } from '../../database/queries/users.queries.js';
 import { verifyPassword } from '../../shared/utils/password.js';
 import {
   AdminJobDetailsResponse,
   AdminJobsResponse,
+  AdminAutoMatchImportJobDetailsResponse,
   AdminNotificationReminderJobDetailsResponse,
-  RunAdminJobResponse
+  RunAdminJobResponse,
+  UpdateAutoMatchImportJobSettingsRequest
 } from './admin-jobs.interfaces.js';
 
 const notificationReminderJobId = 'prediction-reminders';
 const liveScoreSyncJobId = 'live-score-sync';
+const autoMatchImportJobId = 'auto-match-import';
 const secretCodeMaxLength = 128;
 
 export type RunAdminJobResult =
@@ -46,9 +54,25 @@ export type UpdateAdminJobEnabledResult =
       readonly status: 'invalid_secret';
     };
 
+export type UpdateAutoMatchImportJobSettingsResult =
+  | {
+      readonly status: 'updated';
+      readonly response: AdminJobDetailsResponse;
+    }
+  | {
+      readonly status: 'not_found';
+    }
+  | {
+      readonly status: 'invalid';
+    }
+  | {
+      readonly status: 'invalid_secret';
+    };
+
 export async function getAdminJobs(competitionId: number): Promise<AdminJobsResponse> {
   const notificationJob = await getNotificationReminderJobDetails(competitionId);
   const liveScoreJob = await getLiveScoreJobDetails(competitionId);
+  const autoMatchImportJob = await getAutoMatchImportJobDetails(competitionId);
 
   return {
     jobs: [
@@ -67,6 +91,14 @@ export async function getAdminJobs(competitionId: number): Promise<AdminJobsResp
         enabled: liveScoreJob.enabled,
         intervalMs: liveScoreJob.intervalMs,
         lastRun: liveScoreJob.lastRun
+      },
+      {
+        id: autoMatchImportJob.id,
+        name: autoMatchImportJob.name,
+        description: autoMatchImportJob.description,
+        enabled: autoMatchImportJob.enabled,
+        intervalMs: autoMatchImportJob.intervalMs,
+        lastRun: autoMatchImportJob.lastRun
       }
     ]
   };
@@ -85,6 +117,12 @@ export async function getAdminJob(competitionId: number, jobId: string): Promise
     };
   }
 
+  if (jobId === autoMatchImportJobId) {
+    return {
+      job: await getAutoMatchImportJobDetails(competitionId)
+    };
+  }
+
   return null;
 }
 
@@ -93,7 +131,7 @@ export async function runAdminJob(
   jobId: string,
   input: { readonly secretCode?: unknown } | undefined
 ): Promise<RunAdminJobResult> {
-  if (jobId !== notificationReminderJobId && jobId !== liveScoreSyncJobId) {
+  if (jobId !== notificationReminderJobId && jobId !== liveScoreSyncJobId && jobId !== autoMatchImportJobId) {
     return { status: 'not_found' };
   }
 
@@ -121,6 +159,18 @@ export async function runAdminJob(
     };
   }
 
+  if (jobId === autoMatchImportJobId) {
+    const autoRun = await runAutoMatchImportNow(competitionId);
+
+    return {
+      status: 'ran',
+      response: {
+        run: autoRun,
+        job: await getAutoMatchImportJobDetails(competitionId)
+      }
+    };
+  }
+
   const run = await runLiveScoreSyncNow(competitionId);
 
   return {
@@ -137,7 +187,7 @@ export async function updateAdminJobEnabled(
   jobId: string,
   input: { readonly enabled?: unknown; readonly secretCode?: unknown } | undefined
 ): Promise<UpdateAdminJobEnabledResult> {
-  if (jobId !== liveScoreSyncJobId) {
+  if (jobId !== liveScoreSyncJobId && jobId !== autoMatchImportJobId) {
     return { status: 'not_found' };
   }
 
@@ -154,12 +204,77 @@ export async function updateAdminJobEnabled(
     return { status: 'invalid_secret' };
   }
 
+  if (jobId === autoMatchImportJobId) {
+    const current = await getAutoMatchImportJobSnapshot(competitionId);
+    const snapshot = await updateAutoMatchImportJobSettings(competitionId, {
+      enabled: input.enabled,
+      weekday: current.weekday,
+      time: current.time,
+      timeZone: current.timeZone
+    });
+
+    if (!snapshot) {
+      return { status: 'invalid' };
+    }
+
+    return {
+      status: 'updated',
+      response: {
+        job: await getAutoMatchImportJobDetails(competitionId)
+      }
+    };
+  }
+
   setLiveScoreSyncEnabled(competitionId, input.enabled);
 
   return {
     status: 'updated',
     response: {
       job: await getLiveScoreJobDetails(competitionId)
+    }
+  };
+}
+
+export async function updateAutoMatchImportJob(
+  competitionId: number,
+  jobId: string,
+  input: Partial<UpdateAutoMatchImportJobSettingsRequest> | undefined
+): Promise<UpdateAutoMatchImportJobSettingsResult> {
+  if (jobId !== autoMatchImportJobId) {
+    return { status: 'not_found' };
+  }
+
+  if (
+    typeof input?.enabled !== 'boolean' ||
+    typeof input.weekday !== 'number' ||
+    typeof input.time !== 'string' ||
+    typeof input.timeZone !== 'string' ||
+    typeof input.secretCode !== 'string' ||
+    input.secretCode.length < 1 ||
+    input.secretCode.length > secretCodeMaxLength
+  ) {
+    return { status: 'invalid' };
+  }
+
+  if (!(await isValidSecretCode(input.secretCode))) {
+    return { status: 'invalid_secret' };
+  }
+
+  const snapshot = await updateAutoMatchImportJobSettings(competitionId, {
+    enabled: input.enabled,
+    weekday: input.weekday,
+    time: input.time,
+    timeZone: input.timeZone
+  });
+
+  if (!snapshot) {
+    return { status: 'invalid' };
+  }
+
+  return {
+    status: 'updated',
+    response: {
+      job: await getAutoMatchImportJobDetails(competitionId)
     }
   };
 }
@@ -196,6 +311,23 @@ async function getLiveScoreJobDetails(competitionId: number) {
     activeMatches: snapshot.activeMatches,
     recentRuns: snapshot.recentRuns,
     recentUpdates: snapshot.recentUpdates
+  };
+}
+
+async function getAutoMatchImportJobDetails(competitionId: number): Promise<AdminAutoMatchImportJobDetailsResponse> {
+  const snapshot = await getAutoMatchImportJobSnapshot(competitionId);
+
+  return {
+    id: autoMatchImportJobId,
+    name: 'Match and odds import',
+    description: 'Imports upcoming fixtures and odds on the configured weekly local schedule, then releases complete weeks for predictions.',
+    enabled: snapshot.enabled,
+    intervalMs: 7 * 24 * 60 * 60 * 1_000,
+    lastRun: snapshot.lastRun,
+    weekday: snapshot.weekday,
+    time: snapshot.time,
+    timeZone: snapshot.timeZone,
+    nextRunAt: snapshot.nextRunAt
   };
 }
 

@@ -6,7 +6,8 @@ import {
   AdminJobsResponse,
   RunAdminJobRequest,
   RunAdminJobResponse,
-  UpdateAdminJobEnabledRequest
+  UpdateAdminJobEnabledRequest,
+  UpdateAutoMatchImportJobSettingsRequest
 } from '@models/admin-job.models';
 
 @Injectable({
@@ -29,5 +30,9 @@ export class AdminJobsApiProvider {
 
   updateJobEnabled(jobId: string, request: UpdateAdminJobEnabledRequest) {
     return this.http.patch<AdminJobDetailsResponse>(`/api/admin/jobs/${encodeURIComponent(jobId)}/enabled`, request);
+  }
+
+  updateAutoMatchImportJob(jobId: string, request: UpdateAutoMatchImportJobSettingsRequest) {
+    return this.http.patch<AdminJobDetailsResponse>(`/api/admin/jobs/${encodeURIComponent(jobId)}/auto-match-import`, request);
   }
 }

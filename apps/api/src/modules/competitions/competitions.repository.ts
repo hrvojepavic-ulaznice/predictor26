@@ -8,10 +8,12 @@ import {
   insertCompetitionUser,
   getCompetitionForAdminUser,
   listCompetitionsForAdminUser,
+  listCompetitionCanonicalTeamNames,
   listCompetitionTeams,
   listCompetitionRules,
   listCompetitionsWithLiveScoreSyncEnabled,
   listCompetitionsWithNotificationRemindersEnabled,
+  listCompetitionsWithAutoMatchImportEnabled,
   listCompetitions,
   listCompetitionsForUser,
   listRuleTemplates,
@@ -42,6 +44,10 @@ export function findCompetitionsWithLiveScoreSyncEnabled() {
 
 export function findCompetitionsWithNotificationRemindersEnabled() {
   return listCompetitionsWithNotificationRemindersEnabled();
+}
+
+export function findCompetitionsWithAutoMatchImportEnabled() {
+  return listCompetitionsWithAutoMatchImportEnabled();
 }
 
 export function findCompetitionForAdmin(competitionId: number) {
@@ -77,6 +83,11 @@ export function setCompetitionJobSettings(
   settings: {
     readonly scheduleSourceUrl?: string;
     readonly oddsSourceUrl?: string;
+    readonly importMatchesWithOddsEnabled?: boolean;
+    readonly autoImportMatchesEnabled?: boolean;
+    readonly autoImportMatchesWeekday?: number;
+    readonly autoImportMatchesTime?: string;
+    readonly autoImportMatchesTimeZone?: string;
     readonly notificationRemindersEnabled?: boolean;
     readonly liveScoreSyncEnabled?: boolean;
   }
@@ -94,6 +105,10 @@ export function findCompetitionRules(competitionId: number) {
 
 export function findCompetitionTeams(competitionId: number) {
   return listCompetitionTeams(competitionId);
+}
+
+export function findCompetitionCanonicalTeamNames(competitionId: number) {
+  return listCompetitionCanonicalTeamNames(competitionId);
 }
 
 export function addCompetition(input: Parameters<typeof createCompetition>[0]) {

@@ -14,12 +14,17 @@ import { calculatePredictionPoints, getPredictionPointsStateColor } from '@share
 export class PredictionPointsComponent {
   readonly prediction = input.required<MatchPrediction>();
   readonly finalScore = input<MatchScore | null>(null);
+  readonly isPostponed = input(false);
 
-  protected readonly points = computed(() => calculatePredictionPoints(this.prediction(), this.finalScore()));
+  protected readonly points = computed(() => calculatePredictionPoints(this.prediction(), this.finalScore(), this.isPostponed()));
   protected readonly color = computed(() => getPredictionPointsStateColor(this.points().state));
   protected readonly title = computed(() => {
     const points = this.points();
 
-    return `Correct outcome ${formatFixedNumber(points.outcomePoints)} + Correct score ${formatFixedNumber(points.exactScorePoints)} = ${formatFixedNumber(points.available)}`;
+    if (points.state === 'void') {
+      return 'Postponed match. Prediction is void.';
+    }
+
+    return `Correct outcome ${formatFixedNumber(points.outcomePoints)} + Correct score ${formatFixedNumber(points.exactScorePoints)} = ${formatFixedNumber(points.available ?? 0)}`;
   });
 }

@@ -75,7 +75,11 @@ export async function submitPrediction(
     return { status: 'not_found' };
   }
 
-  if (match.predictionLocked) {
+  if (match.released_for_predictions !== 1) {
+    return { status: 'not_found' };
+  }
+
+  if (match.is_postponed === 1 || match.predictionLocked) {
     return { status: 'locked' };
   }
 
@@ -156,12 +160,18 @@ function toMatchResponse(
             draw: match.draw_odds,
             awayWin: match.away_win_odds,
             syncedAt: match.odds_synced_at
-          },
+    },
+    releasedForPredictions: match.released_for_predictions === 1,
+    isPostponed: match.is_postponed === 1,
     finalScore: score
   };
 }
 
 function getLiveScore(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined): ScoreResponse | null {
+  if (match.is_postponed === 1) {
+    return null;
+  }
+
   if (snapshot?.home_score !== null && snapshot?.away_score !== null && snapshot) {
     return {
       home: snapshot.home_score,
@@ -215,6 +225,10 @@ function withPredictionLockData<T extends MatchRow>(matches: readonly T[]): Arra
   const deadlines = new Map<string, string>();
 
   for (const match of matches) {
+    if (match.is_postponed === 1) {
+      continue;
+    }
+
     const predictionRound = getPredictionRound(match);
     const currentDeadline = deadlines.get(predictionRound);
 
@@ -231,7 +245,7 @@ function withPredictionLockData<T extends MatchRow>(matches: readonly T[]): Arra
       ...match,
       predictionRound,
       predictionDeadlineAt,
-      predictionLocked: Date.now() >= Date.parse(predictionDeadlineAt)
+      predictionLocked: match.is_postponed === 1 || Date.now() >= Date.parse(predictionDeadlineAt)
     };
   });
 }

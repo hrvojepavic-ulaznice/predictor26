@@ -26,6 +26,8 @@ export interface MatchRow {
   readonly draw_odds: number | null;
   readonly away_win_odds: number | null;
   readonly odds_synced_at: string | null;
+  readonly released_for_predictions: 0 | 1;
+  readonly is_postponed: 0 | 1;
   readonly final_home_score: number | null;
   readonly final_away_score: number | null;
 }
@@ -131,11 +133,13 @@ export function listMatches(competitionId?: number): MatchRow[] {
             draw_odds,
             away_win_odds,
             odds_synced_at,
+            released_for_predictions,
+            is_postponed,
             final_home_score,
             final_away_score
           FROM matches
           WHERE competition_id = ?
-          ORDER BY match_number ASC
+          ORDER BY kickoff_at ASC, match_number ASC
         `
       )
       .all(resolvedCompetitionId) as MatchRow[];
@@ -246,6 +250,8 @@ export function listMatchesWithPredictions(userId: number, competitionId: number
             matches.draw_odds,
             matches.away_win_odds,
             matches.odds_synced_at,
+            matches.released_for_predictions,
+            matches.is_postponed,
             matches.final_home_score,
             matches.final_away_score,
             predictions.home_score AS prediction_home_score,
@@ -258,7 +264,8 @@ export function listMatchesWithPredictions(userId: number, competitionId: number
             ON predictions.match_id = matches.id
             AND predictions.user_id = ?
           WHERE matches.competition_id = ?
-          ORDER BY matches.match_number ASC
+            AND matches.released_for_predictions = 1
+          ORDER BY matches.kickoff_at ASC, matches.match_number ASC
         `
       )
       .all(userId, competitionId) as Array<MatchRow & PredictionRowNullable>;
@@ -309,6 +316,8 @@ export function listPredictedMatchesWithPredictions(userId: number, competitionI
             matches.draw_odds,
             matches.away_win_odds,
             matches.odds_synced_at,
+            matches.released_for_predictions,
+            matches.is_postponed,
             matches.final_home_score,
             matches.final_away_score,
             predictions.home_score AS prediction_home_score,
@@ -321,7 +330,8 @@ export function listPredictedMatchesWithPredictions(userId: number, competitionI
             ON predictions.match_id = matches.id
             AND predictions.user_id = ?
           WHERE matches.competition_id = ?
-          ORDER BY matches.match_number ASC
+            AND matches.released_for_predictions = 1
+          ORDER BY matches.kickoff_at ASC, matches.match_number ASC
         `
       )
       .all(userId, competitionId) as Array<MatchRow & PredictionRowNullable>;
@@ -357,9 +367,10 @@ export function upsertImportedMatches(matches: readonly MatchImportInput[], comp
           home_team_flag,
           away_team_flag,
           venue,
-          city
+          city,
+          released_for_predictions
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
         ON CONFLICT(competition_id, match_number) DO UPDATE SET
           stage = excluded.stage,
           group_name = excluded.group_name,
@@ -491,9 +502,22 @@ export function insertManualMatch(competitionId: number, input: ManualMatchInput
               home_win_odds,
               draw_odds,
               away_win_odds,
-              odds_synced_at
+              odds_synced_at,
+              released_for_predictions
             )
-            VALUES (?, ?, 'League', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            VALUES (
+              ?, ?, 'League', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP,
+              CASE
+                WHEN EXISTS (
+                  SELECT 1
+                  FROM matches
+                  WHERE competition_id = ?
+                    AND round_label = ?
+                    AND released_for_predictions = 0
+                ) THEN 0
+                ELSE 1
+              END
+            )
           `
         )
         .run(
@@ -510,7 +534,9 @@ export function insertManualMatch(competitionId: number, input: ManualMatchInput
           input.city,
           input.homeWinOdds,
           input.drawOdds,
-          input.awayWinOdds
+          input.awayWinOdds,
+          competitionId,
+          input.roundLabel
         );
 
       return Number(result.lastInsertRowid);
@@ -544,6 +570,8 @@ export function insertManualMatch(competitionId: number, input: ManualMatchInput
             draw_odds,
             away_win_odds,
             odds_synced_at,
+            released_for_predictions,
+            is_postponed,
             final_home_score,
             final_away_score
           FROM matches
@@ -619,6 +647,61 @@ export function deleteMatchesAfterMatchNumber(matchNumber: number, competitionId
   }
 }
 
+export function releaseMatchesForRound(competitionId: number, roundLabel: string): number {
+  const db = openDatabase();
+
+  try {
+    const result = db
+      .prepare(
+        `
+          UPDATE matches
+          SET released_for_predictions = 1,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE competition_id = ?
+            AND round_label = ?
+        `
+      )
+      .run(competitionId, roundLabel);
+
+    return result.changes;
+  } finally {
+    db.close();
+  }
+}
+
+export function releaseMatchesByIds(competitionId: number, matchIds: readonly number[]): number {
+  if (matchIds.length === 0) {
+    return 0;
+  }
+
+  const db = openDatabase();
+
+  try {
+    const update = db.prepare(
+      `
+        UPDATE matches
+        SET released_for_predictions = 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE competition_id = ?
+          AND id = ?
+      `
+    );
+    const transaction = db.transaction((ids: readonly number[]) => {
+      let changes = 0;
+
+      for (const matchId of ids) {
+        changes += update.run(competitionId, matchId).changes;
+      }
+
+      return changes;
+    });
+
+    return transaction(matchIds) as number;
+  } finally {
+    db.close();
+  }
+}
+
 export function updateFinalScore(
   competitionId: number,
   matchId: number,
@@ -631,10 +714,14 @@ export function updateFinalScore(
     db.prepare(
       `
         UPDATE matches
-        SET final_home_score = ?, final_away_score = ?, updated_at = CURRENT_TIMESTAMP
+        SET
+          final_home_score = ?,
+          final_away_score = ?,
+          is_postponed = CASE WHEN ? IS NULL OR ? IS NULL THEN is_postponed ELSE 0 END,
+          updated_at = CURRENT_TIMESTAMP
         WHERE id = ? AND competition_id = ?
       `
-    ).run(finalHomeScore, finalAwayScore, matchId, competitionId);
+    ).run(finalHomeScore, finalAwayScore, finalHomeScore, finalAwayScore, matchId, competitionId);
 
     return db
       .prepare(
@@ -661,6 +748,8 @@ export function updateFinalScore(
             draw_odds,
             away_win_odds,
             odds_synced_at,
+            released_for_predictions,
+            is_postponed,
             final_home_score,
             final_away_score
           FROM matches
@@ -686,9 +775,14 @@ export function updateFinalScoreIfChanged(
       .prepare(
         `
           UPDATE matches
-          SET final_home_score = ?, final_away_score = ?, updated_at = CURRENT_TIMESTAMP
+          SET
+            final_home_score = ?,
+            final_away_score = ?,
+            is_postponed = 0,
+            updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
             AND competition_id = ?
+            AND is_postponed = 0
             AND (
               final_home_score IS NULL
               OR final_away_score IS NULL
@@ -700,6 +794,61 @@ export function updateFinalScoreIfChanged(
       .run(finalHomeScore, finalAwayScore, matchId, competitionId, finalHomeScore, finalAwayScore);
 
     return result.changes > 0;
+  } finally {
+    db.close();
+  }
+}
+
+export function updateMatchPostponed(competitionId: number, matchId: number, isPostponed: boolean): MatchRow | undefined {
+  const db = openDatabase();
+
+  try {
+    db.prepare(
+      `
+        UPDATE matches
+        SET
+          is_postponed = ?,
+          final_home_score = CASE WHEN ? = 1 THEN NULL ELSE final_home_score END,
+          final_away_score = CASE WHEN ? = 1 THEN NULL ELSE final_away_score END,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND competition_id = ?
+      `
+    ).run(isPostponed ? 1 : 0, isPostponed ? 1 : 0, isPostponed ? 1 : 0, matchId, competitionId);
+
+    return db
+      .prepare(
+        `
+          SELECT
+            id,
+            match_number,
+            stage,
+            group_name,
+            round_label,
+            kickoff_at,
+            source_time_zone,
+            home_team_name,
+            away_team_name,
+            home_team_flag,
+            away_team_flag,
+            home_mapped_team_name,
+            away_mapped_team_name,
+            home_mapped_team_flag,
+            away_mapped_team_flag,
+            venue,
+            city,
+            home_win_odds,
+            draw_odds,
+            away_win_odds,
+            odds_synced_at,
+            released_for_predictions,
+            is_postponed,
+            final_home_score,
+            final_away_score
+          FROM matches
+          WHERE id = ? AND competition_id = ?
+        `
+      )
+      .get(matchId, competitionId) as MatchRow | undefined;
   } finally {
     db.close();
   }
@@ -748,6 +897,8 @@ export function updateMatchKickoff(
             draw_odds,
             away_win_odds,
             odds_synced_at,
+            released_for_predictions,
+            is_postponed,
             final_home_score,
             final_away_score
           FROM matches
@@ -805,6 +956,8 @@ export function updatePlayoffTeamMapping(
             draw_odds,
             away_win_odds,
             odds_synced_at,
+            released_for_predictions,
+            is_postponed,
             final_home_score,
             final_away_score
           FROM matches
