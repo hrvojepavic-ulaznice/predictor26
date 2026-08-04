@@ -159,7 +159,7 @@ export class HomeLeaderboardComponent {
     return {
       ...leaderboard,
       liveMovementMatchId: leaderboard.liveMatches.find((match) => match.finalScore)?.matchId ?? null,
-      showWinnerColumn: leaderboard.rounds[0]?.locked === true,
+      showWinnerColumn: leaderboard.rounds.some((round) => round.locked),
       showInterimTotalColumn: leaderboard.rounds.length > 1,
       liveMatches: leaderboard.liveMatches.map((match) => ({
         ...match,

@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
-import { CreateManualMatchRequest, ManualMatchWeekMode } from '@models/match.models';
+import { CreateManualMatchRequest } from '@models/match.models';
 import { FormFieldStateDirective } from '@shared/directives/form-field-state.directive';
 
 export type ManualMatchConfirmation = CreateManualMatchRequest;
@@ -31,7 +31,6 @@ export class AdminManualMatchModalComponent {
     [...this.existingTeamNames()].sort((first, second) => first.localeCompare(second))
   );
   protected readonly matchForm = this.formBuilder.nonNullable.group({
-    weekMode: ['current' as ManualMatchWeekMode, Validators.required],
     kickoffAt: ['', Validators.required],
     city: ['', [Validators.required, Validators.maxLength(80)]],
     venue: ['', [Validators.required, Validators.maxLength(120)]],
@@ -95,7 +94,6 @@ export class AdminManualMatchModalComponent {
     }
 
     this.confirmManualMatch.emit({
-      weekMode: value.weekMode,
       kickoffAt: kickoffDate.toISOString(),
       city: value.city.trim(),
       venue: value.venue.trim(),

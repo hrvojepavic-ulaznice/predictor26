@@ -18,6 +18,7 @@ import { matchesRoutes } from './modules/matches/matches.routes.js';
 import { notificationsRoutes } from './modules/notifications/notifications.routes.js';
 import { startNotificationReminderScheduler } from './modules/notifications/notifications.service.js';
 import { startLiveScoreScheduler } from './modules/live-scores/live-scores.service.js';
+import { startAutoMatchImportScheduler } from './modules/admin-matches/admin-matches.service.js';
 import { paymentsRoutes } from './modules/payments/payments.routes.js';
 
 const app = express();
@@ -46,3 +47,4 @@ app.listen(config.port, () => {
 
 startNotificationReminderScheduler();
 startLiveScoreScheduler();
+startAutoMatchImportScheduler();

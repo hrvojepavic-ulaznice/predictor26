@@ -62,6 +62,9 @@
                         @if (match.finalScore; as finalScore) {
                           <span class="result-label">Final</span>
                           <span class="result-score">{{ finalScore.home }}:{{ finalScore.away }}</span>
+                        } @else if (match.isPostponed) {
+                          <span class="result-label">Status</span>
+                          <span class="result-score">Postponed</span>
                         } @else {
                           <span class="result-label">Kickoff</span>
                           <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'MMM d, HH:mm' : '+0200' }}</time>
@@ -72,6 +75,7 @@
                         class="points-column"
                         [prediction]="prediction"
                         [finalScore]="match.finalScore"
+                        [isPostponed]="match.isPostponed"
                       />
                     </article>
                   }

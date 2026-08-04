@@ -2,16 +2,14 @@ import { MatchResponse, ScoreResponse } from '../matches/matches.interfaces.js';
 
 export interface AdminMatchesResponse {
   readonly matches: MatchResponse[];
+  readonly importMatchesWithOddsEnabled: boolean;
 }
 
 export interface AdminActionSecretRequest {
   readonly secretCode: string;
 }
 
-export type ManualMatchWeekMode = 'current' | 'next';
-
 export interface CreateManualMatchRequest extends AdminActionSecretRequest {
-  readonly weekMode: ManualMatchWeekMode;
   readonly kickoffAt: string;
   readonly city: string;
   readonly venue: string;
@@ -31,6 +29,7 @@ export interface CreateManualMatchResponse {
 
 export interface ImportMatchesResponse {
   readonly imported: number;
+  readonly validation: MatchImportValidationResponse | null;
   readonly matches: MatchResponse[];
 }
 
@@ -42,6 +41,33 @@ export interface SyncMatchOddsResponse {
   readonly skippedUnresolved: number;
   readonly unmatched: number;
   readonly backfilled: number;
+  readonly matches: MatchResponse[];
+}
+
+export interface ImportMatchesWithOddsResponse {
+  readonly imported: number;
+  readonly odds: Omit<SyncMatchOddsResponse, 'matches'>;
+  readonly validation: MatchImportValidationResponse;
+  readonly matches: MatchResponse[];
+}
+
+export interface MatchImportValidationResponse {
+  readonly roundLabel: string;
+  readonly complete: boolean;
+  readonly released: boolean;
+  readonly matchCount: number;
+  readonly missingOddsMatchNumbers: number[];
+  readonly incompleteMatchNumbers: number[];
+  readonly missingTeamNames: string[];
+}
+
+export interface ReleaseMatchRoundRequest extends AdminActionSecretRequest {
+  readonly roundLabel: string;
+}
+
+export interface ReleaseMatchRoundResponse {
+  readonly validation: MatchImportValidationResponse;
+  readonly released: number;
   readonly matches: MatchResponse[];
 }
 
@@ -63,6 +89,14 @@ export interface UpdateKickoffRequest {
 }
 
 export interface UpdateKickoffResponse {
+  readonly match: MatchResponse;
+}
+
+export interface UpdatePostponedRequest extends AdminActionSecretRequest {
+  readonly isPostponed: boolean;
+}
+
+export interface UpdatePostponedResponse {
   readonly match: MatchResponse;
 }
 

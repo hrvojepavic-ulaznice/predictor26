@@ -326,6 +326,10 @@ function getActiveMatches(
   const nowTime = now.getTime();
 
   return matches.filter((match) => {
+    if (match.is_postponed === 1) {
+      return false;
+    }
+
     if (hasFinalScore(match)) {
       return false;
     }
@@ -351,7 +355,7 @@ function calculateNextRunAt(
   }
 
   const nextKickoff = matches
-    .filter((match) => !hasFinalScore(match) && !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id)))
+    .filter((match) => match.is_postponed !== 1 && !hasFinalScore(match) && !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id)))
     .map((match) => Date.parse(match.kickoff_at))
     .filter((kickoffTime) => Number.isFinite(kickoffTime))
     .sort((first, second) => first - second)[0];

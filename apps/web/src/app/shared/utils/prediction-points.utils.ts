@@ -1,8 +1,9 @@
 import { MatchPrediction, MatchScore } from '@models/match.models';
 
-export type PredictionPointsState = 'pending' | 'miss' | 'outcome' | 'exact';
+export type PredictionPointsState = 'pending' | 'void' | 'miss' | 'outcome' | 'exact';
 
 const predictionPointsStateColors: Readonly<Record<Exclude<PredictionPointsState, 'pending'>, string>> = {
+  void: '#6b7280',
   miss: '#b91c1c',
   outcome: '#ea580c',
   exact: '#166534'
@@ -10,7 +11,7 @@ const predictionPointsStateColors: Readonly<Record<Exclude<PredictionPointsState
 
 export interface PredictionPointsResult {
   readonly earned: number | null;
-  readonly available: number;
+  readonly available: number | null;
   readonly outcomePoints: number;
   readonly exactScorePoints: number;
   readonly state: PredictionPointsState;
@@ -26,11 +27,22 @@ export function getPredictionPointsStateColor(state: PredictionPointsState | nul
 
 export function calculatePredictionPoints(
   prediction: MatchPrediction,
-  finalScore: MatchScore | null
+  finalScore: MatchScore | null,
+  isPostponed = false
 ): PredictionPointsResult {
   const outcomePoints = prediction.odds?.value ?? 0;
   const exactScorePoints = 1;
   const available = roundPoints(outcomePoints + exactScorePoints);
+
+  if (isPostponed) {
+    return {
+      earned: 0,
+      available: null,
+      outcomePoints,
+      exactScorePoints,
+      state: 'void'
+    };
+  }
 
   if (!finalScore) {
     return {

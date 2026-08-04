@@ -65,6 +65,7 @@ function initializeDatabase(db: Database.Database) {
   ensureCompetitionSchema(db);
   ensureSuperAdminCompetitionMembershipBlocked(db);
   ensureMatchesTableSupportsOdds(db);
+  ensureMatchesTableSupportsPostponed(db);
   ensureMatchesTableSupportsPlayoffMappings(db);
   ensureFinishedCompetitionsHaveJobsDisabled(db);
 
@@ -111,6 +112,8 @@ function initializeDatabase(db: Database.Database) {
       draw_odds REAL CHECK(draw_odds IS NULL OR draw_odds > 1),
       away_win_odds REAL CHECK(away_win_odds IS NULL OR away_win_odds > 1),
       odds_synced_at TEXT,
+      released_for_predictions INTEGER NOT NULL DEFAULT 1 CHECK(released_for_predictions IN (0, 1)),
+      is_postponed INTEGER NOT NULL DEFAULT 0 CHECK(is_postponed IN (0, 1)),
       final_home_score INTEGER CHECK(final_home_score IS NULL OR final_home_score >= 0),
       final_away_score INTEGER CHECK(final_away_score IS NULL OR final_away_score >= 0),
       imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -230,6 +233,11 @@ function ensureCompetitionSchema(db: Database.Database) {
       logo_url TEXT NOT NULL DEFAULT '' CHECK(length(logo_url) <= 200000),
       schedule_source_url TEXT NOT NULL DEFAULT '' CHECK(length(schedule_source_url) <= 500),
       odds_source_url TEXT NOT NULL DEFAULT '' CHECK(length(odds_source_url) <= 500),
+      import_matches_with_odds_enabled INTEGER NOT NULL DEFAULT 0 CHECK(import_matches_with_odds_enabled IN (0, 1)),
+      auto_import_matches_enabled INTEGER NOT NULL DEFAULT 0 CHECK(auto_import_matches_enabled IN (0, 1)),
+      auto_import_matches_weekday INTEGER NOT NULL DEFAULT 2 CHECK(auto_import_matches_weekday BETWEEN 0 AND 6),
+      auto_import_matches_time TEXT NOT NULL DEFAULT '08:00' CHECK(length(auto_import_matches_time) = 5),
+      auto_import_matches_time_zone TEXT NOT NULL DEFAULT 'Europe/Zagreb' CHECK(length(auto_import_matches_time_zone) BETWEEN 1 AND 80),
       notification_reminders_enabled INTEGER NOT NULL DEFAULT 0 CHECK(notification_reminders_enabled IN (0, 1)),
       live_score_sync_enabled INTEGER NOT NULL DEFAULT 0 CHECK(live_score_sync_enabled IN (0, 1)),
       playoffs_enabled INTEGER NOT NULL DEFAULT 0 CHECK(playoffs_enabled IN (0, 1)),
@@ -468,6 +476,39 @@ function ensureCompetitionTableSupportsManagementFields(db: Database.Database) {
 
   if (!columnNames.has('playoffs_enabled')) {
     db.exec('ALTER TABLE competitions ADD COLUMN playoffs_enabled INTEGER NOT NULL DEFAULT 0 CHECK(playoffs_enabled IN (0, 1))');
+  }
+
+  if (!columnNames.has('import_matches_with_odds_enabled')) {
+    db.exec(
+      'ALTER TABLE competitions ADD COLUMN import_matches_with_odds_enabled INTEGER NOT NULL DEFAULT 0 CHECK(import_matches_with_odds_enabled IN (0, 1))'
+    );
+    // PRODUCTION ONE-OFF BACKFILL:
+    // Enables the combined import mode for already-active competitions when this column first ships.
+    // Safe to remove after production has booted once with this release.
+    db.exec(`
+      UPDATE competitions
+      SET import_matches_with_odds_enabled = 1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE is_finished = 0
+    `);
+  }
+
+  if (!columnNames.has('auto_import_matches_enabled')) {
+    db.exec('ALTER TABLE competitions ADD COLUMN auto_import_matches_enabled INTEGER NOT NULL DEFAULT 0 CHECK(auto_import_matches_enabled IN (0, 1))');
+  }
+
+  if (!columnNames.has('auto_import_matches_weekday')) {
+    db.exec('ALTER TABLE competitions ADD COLUMN auto_import_matches_weekday INTEGER NOT NULL DEFAULT 2 CHECK(auto_import_matches_weekday BETWEEN 0 AND 6)');
+  }
+
+  if (!columnNames.has('auto_import_matches_time')) {
+    db.exec("ALTER TABLE competitions ADD COLUMN auto_import_matches_time TEXT NOT NULL DEFAULT '08:00' CHECK(length(auto_import_matches_time) = 5)");
+  }
+
+  if (!columnNames.has('auto_import_matches_time_zone')) {
+    db.exec(
+      "ALTER TABLE competitions ADD COLUMN auto_import_matches_time_zone TEXT NOT NULL DEFAULT 'Europe/Zagreb' CHECK(length(auto_import_matches_time_zone) BETWEEN 1 AND 80)"
+    );
   }
 }
 
@@ -769,6 +810,21 @@ function ensureMatchesTableSupportsOdds(db: Database.Database) {
   if (!columnNames.has('odds_synced_at')) {
     db.exec('ALTER TABLE matches ADD COLUMN odds_synced_at TEXT');
   }
+
+  if (!columnNames.has('released_for_predictions')) {
+    db.exec('ALTER TABLE matches ADD COLUMN released_for_predictions INTEGER NOT NULL DEFAULT 1 CHECK(released_for_predictions IN (0, 1))');
+  }
+}
+
+function ensureMatchesTableSupportsPostponed(db: Database.Database) {
+  const columns = db.prepare('PRAGMA table_info(matches)').all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columns.length === 0 || columnNames.has('is_postponed')) {
+    return;
+  }
+
+  db.exec('ALTER TABLE matches ADD COLUMN is_postponed INTEGER NOT NULL DEFAULT 0 CHECK(is_postponed IN (0, 1))');
 }
 
 function ensureMatchesTableSupportsPlayoffMappings(db: Database.Database) {

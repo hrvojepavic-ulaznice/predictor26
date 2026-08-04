@@ -1,10 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
-import { AdminJob, AdminLiveScoreJob, AdminNotificationReminderJob } from '@models/admin-job.models';
+import { AdminAutoMatchImportJob, AdminJob, AdminLiveScoreJob, AdminNotificationReminderJob } from '@models/admin-job.models';
 import { AdminJobsApiProvider } from '@services/providers/admin-jobs-api.provider';
 import { ModalShellComponent } from '@shared/components/modal-shell/modal-shell.component';
 import { SecretCodeModalComponent } from '@shared/components/secret-code-modal/secret-code-modal.component';
@@ -18,14 +19,16 @@ const liveScoreRunColors = ['#eff6ff', '#f0fdf4', '#fff7ed', '#fdf2f8', '#f5f3ff
 
 @Component({
   selector: 'app-admin-jobs-page',
-  imports: [DatePipe, DecimalPipe, ModalShellComponent, RouterLink, SecretCodeModalComponent],
+  imports: [DatePipe, DecimalPipe, ModalShellComponent, ReactiveFormsModule, RouterLink, SecretCodeModalComponent],
   templateUrl: './admin-jobs-page.component.html',
   styleUrl: './admin-jobs-page.component.scss'
 })
 export class AdminJobsPageComponent {
   private readonly adminJobsApi = inject(AdminJobsApiProvider);
+  private readonly formBuilder = inject(FormBuilder);
   private readonly notificationReminderJobId = 'prediction-reminders' as const;
   private readonly liveScoreJobId = 'live-score-sync' as const;
+  private readonly autoMatchImportJobId = 'auto-match-import' as const;
   protected readonly adminTimeZone = 'Europe/Zagreb';
 
   protected readonly loading = signal(true);
@@ -36,8 +39,16 @@ export class AdminJobsPageComponent {
   protected readonly secretCodeErrorMessage = signal<string | null>(null);
   protected readonly confirmingRunJobId = signal<string | null>(null);
   protected readonly confirmingToggleJob = signal<{ readonly jobId: string; readonly enabled: boolean } | null>(null);
+  protected readonly confirmingAutoImportSettings = signal(false);
   protected readonly notificationJob = computed(() => this.jobs().find(isNotificationJob) ?? null);
   protected readonly liveScoreJob = computed(() => this.jobs().find(isLiveScoreJob) ?? null);
+  protected readonly autoMatchImportJob = computed(() => this.jobs().find(isAutoMatchImportJob) ?? null);
+  protected readonly autoImportForm = this.formBuilder.nonNullable.group({
+    enabled: [false],
+    weekday: [2, [Validators.required]],
+    time: ['08:00', [Validators.required, Validators.pattern(/^\d{2}:\d{2}$/)]],
+    timeZone: ['Europe/Zagreb', [Validators.required, Validators.maxLength(80)]]
+  });
   protected readonly liveScoreJobView = computed<LiveScoreJobView | null>(() => {
     const job = this.liveScoreJob();
 
@@ -94,6 +105,8 @@ export class AdminJobsPageComponent {
     return job ? job.intervalMs / 60_000 : null;
   });
 
+  protected readonly autoImportWeekdayLabel = computed(() => weekdayLabel(this.autoMatchImportJob()?.weekday ?? 2));
+
   constructor() {
     this.loadJob();
   }
@@ -113,8 +126,20 @@ export class AdminJobsPageComponent {
     if (!this.runningJobId()) {
       this.confirmingRunJobId.set(null);
       this.confirmingToggleJob.set(null);
+      this.confirmingAutoImportSettings.set(false);
       this.secretCodeErrorMessage.set(null);
     }
+  }
+
+  protected saveAutoImportSettings(): void {
+    if (this.runningJobId() || this.autoImportForm.invalid) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.secretCodeErrorMessage.set(null);
+    this.confirmingAutoImportSettings.set(true);
   }
 
   protected toggleJobEnabled(jobId: string, enabled: boolean): void {
@@ -202,16 +227,54 @@ export class AdminJobsPageComponent {
     });
   }
 
+  protected confirmAutoImportSettings(secretCode: string): void {
+    if (this.runningJobId() || this.autoImportForm.invalid) {
+      return;
+    }
+
+    this.runningJobId.set(this.autoMatchImportJobId);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.secretCodeErrorMessage.set(null);
+
+    this.adminJobsApi.updateAutoMatchImportJob(this.autoMatchImportJobId, { ...this.autoImportForm.getRawValue(), secretCode }).subscribe({
+      next: ({ job }) => {
+        this.upsertJob(job);
+        this.patchAutoImportForm(job);
+        this.successMessage.set(`${job.name} settings saved.`);
+        this.confirmingAutoImportSettings.set(false);
+        this.runningJobId.set(null);
+      },
+      error: (error: unknown) => {
+        const message =
+          error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+            ? error.error.message
+            : 'Auto import settings could not be saved.';
+
+        if (error instanceof HttpErrorResponse && error.status === 403) {
+          this.secretCodeErrorMessage.set(message);
+        } else {
+          this.errorMessage.set(message);
+          this.confirmingAutoImportSettings.set(false);
+        }
+
+        this.runningJobId.set(null);
+      }
+    });
+  }
+
   private loadJob(): void {
     this.loading.set(true);
     this.errorMessage.set(null);
 
     forkJoin([
       this.adminJobsApi.getJob(this.notificationReminderJobId),
-      this.adminJobsApi.getJob(this.liveScoreJobId)
+      this.adminJobsApi.getJob(this.liveScoreJobId),
+      this.adminJobsApi.getJob(this.autoMatchImportJobId)
     ]).subscribe({
-      next: ([notificationResponse, liveScoreResponse]) => {
-        this.jobs.set([notificationResponse.job, liveScoreResponse.job]);
+      next: ([notificationResponse, liveScoreResponse, autoImportResponse]) => {
+        this.jobs.set([notificationResponse.job, liveScoreResponse.job, autoImportResponse.job]);
+        this.patchAutoImportForm(autoImportResponse.job);
         this.loading.set(false);
       },
       error: () => {
@@ -237,7 +300,24 @@ export class AdminJobsPageComponent {
       return `Live score sync finished. Checked ${run.checkedMatches}, updated ${run.updatedMatches}.`;
     }
 
+    if (isAutoMatchImportJob(job) && isAutoMatchImportRun(run)) {
+      return `Match import finished with ${run.status}. Imported ${run.imported}, synced odds for ${run.oddsSynced}.`;
+    }
+
     return 'Scheduled job finished.';
+  }
+
+  private patchAutoImportForm(job: AdminJob): void {
+    if (!isAutoMatchImportJob(job)) {
+      return;
+    }
+
+    this.autoImportForm.patchValue({
+      enabled: job.enabled,
+      weekday: job.weekday,
+      time: job.time,
+      timeZone: job.timeZone
+    });
   }
 }
 
@@ -249,10 +329,22 @@ function isLiveScoreJob(job: AdminJob): job is AdminLiveScoreJob {
   return job.id === 'live-score-sync';
 }
 
+function isAutoMatchImportJob(job: AdminJob): job is AdminAutoMatchImportJob {
+  return job.id === 'auto-match-import';
+}
+
 function isNotificationRun(run: unknown): run is AdminNotificationReminderJob['lastRun'] & object {
   return typeof run === 'object' && run !== null && 'sentCount' in run && 'candidateCount' in run;
 }
 
 function isLiveScoreRun(run: unknown): run is AdminLiveScoreJob['lastRun'] & object {
   return typeof run === 'object' && run !== null && 'checkedMatches' in run && 'updatedMatches' in run;
+}
+
+function isAutoMatchImportRun(run: unknown): run is AdminAutoMatchImportJob['lastRun'] & object {
+  return typeof run === 'object' && run !== null && 'imported' in run && 'oddsSynced' in run;
+}
+
+function weekdayLabel(weekday: number): string {
+  return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][weekday] ?? 'Tuesday';
 }

@@ -10,12 +10,18 @@
       <button class="import-button" type="button" [disabled]="addingMatch()" (click)="openAddMatchModal()">
         {{ addingMatch() ? 'Adding...' : 'Add match' }}
       </button>
-      <button class="import-button" type="button" [disabled]="importing()" (click)="requestImportMatches()">
-        {{ scheduleActionLabel() }}
-      </button>
-      <button class="import-button" type="button" [disabled]="syncingOdds() || matches().length === 0" (click)="requestSyncOdds()">
-        {{ oddsActionLabel() }}
-      </button>
+      @if (importMatchesWithOddsEnabled()) {
+        <button class="import-button" type="button" [disabled]="importingWithOdds()" (click)="requestImportMatchesWithOdds()">
+          {{ combinedImportActionLabel() }}
+        </button>
+      } @else {
+        <button class="import-button" type="button" [disabled]="importing()" (click)="requestImportMatches()">
+          {{ scheduleActionLabel() }}
+        </button>
+        <button class="import-button" type="button" [disabled]="syncingOdds() || matches().length === 0" (click)="requestSyncOdds()">
+          {{ oddsActionLabel() }}
+        </button>
+      }
     </div>
   </header>
 
@@ -65,14 +71,25 @@
     <div class="match-groups">
       @for (group of groupedMatches(); track group.label) {
         <section class="match-group" [attr.aria-labelledby]="'admin-group-' + group.label">
-          <h2 [id]="'admin-group-' + group.label">{{ group.label }}</h2>
+          <div class="match-group-heading">
+            <h2 [id]="'admin-group-' + group.label">{{ group.label }}</h2>
+            @if (!group.releasedForPredictions) {
+              <button class="import-button" type="button" (click)="requestReleaseRound(group.label)">Release week</button>
+            }
+          </div>
 
           <div class="match-list">
             @for (match of group.matches; track match.id) {
-              <article class="match-row" [class.match-row-required]="isRequiredAction(match)">
+              <article class="match-row" [class.match-row-required]="isRequiredAction(match)" [class.match-row-postponed]="match.isPostponed">
                 <div class="match-meta">
                   <span>
                     Match {{ match.matchNumber }}
+                    @if (match.isPostponed) {
+                      <span class="postponed-badge">Postponed</span>
+                    }
+                    @if (!match.releasedForPredictions) {
+                      <span class="required-badge" aria-label="Not released for predictions">!</span>
+                    }
                     @if (isRequiredAction(match)) {
                       <span class="required-badge" aria-label="Requires action">!</span>
                     }
@@ -87,6 +104,15 @@
                       (click)="editKickoff(match)"
                     >
                       <span aria-hidden="true">&#9998;</span>
+                    </button>
+                    <button
+                      class="postponed-toggle-button"
+                      type="button"
+                      [disabled]="savingIds().has(match.id)"
+                      [attr.aria-label]="(match.isPostponed ? 'Restore match ' : 'Mark postponed match ') + match.matchNumber"
+                      (click)="requestPostponedToggle(match)"
+                    >
+                      {{ match.isPostponed ? 'Restore' : 'Postpone' }}
                     </button>
                   </span>
                   <span>{{ match.city }} · {{ match.venue }}</span>
@@ -115,6 +141,7 @@
                     pattern="[0-9]*"
                     inputmode="numeric"
                     aria-label="Home final score"
+                    [disabled]="match.isPostponed"
                     [value]="drafts()[match.id]?.home ?? ''"
                     (input)="updateDraft(match.id, 'home', $any($event.target).value)"
                   />
@@ -125,10 +152,11 @@
                     pattern="[0-9]*"
                     inputmode="numeric"
                     aria-label="Away final score"
+                    [disabled]="match.isPostponed"
                     [value]="drafts()[match.id]?.away ?? ''"
                     (input)="updateDraft(match.id, 'away', $any($event.target).value)"
                   />
-                  <span class="save-state">{{ savingIds().has(match.id) ? 'Saving' : match.finalScore ? 'Saved' : '' }}</span>
+                  <span class="save-state">{{ savingIds().has(match.id) ? 'Saving' : match.isPostponed ? 'Void' : match.finalScore ? 'Saved' : '' }}</span>
                 </div>
               </article>
             }
@@ -152,7 +180,7 @@
       <app-secret-code-modal
         [title]="secretActionTitle()"
         label="What is the secret code?"
-        confirmLabel="Start sync"
+        [confirmLabel]="secretActionConfirmLabel()"
         [errorMessage]="secretCodeErrorMessage()"
         [isSubmitting]="isPendingSecretActionSubmitting()"
         (confirmSecretCode)="confirmSecretAction($event)"

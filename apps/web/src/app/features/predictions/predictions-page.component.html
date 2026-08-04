@@ -95,9 +95,17 @@
                 }
 
                 @for (match of section.matches; track match.id) {
-                  <article class="match-row">
+                  <article
+                    class="match-row"
+                    [class.match-row-postponed]="match.isPostponed"
+                  >
                     <div class="match-meta">
-                      <span>Match {{ match.matchNumber }}</span>
+                      <span>
+                        Match {{ match.matchNumber }}
+                        @if (match.isPostponed) {
+                          <span class="postponed-badge">Postponed</span>
+                        }
+                      </span>
                       <time [dateTime]="match.kickoffAt">{{ match.kickoffAt | date: 'EEE, MMM d, HH:mm' : '+0200' }}</time>
                       <span>{{ match.city }} · {{ match.venue }}</span>
                     </div>
@@ -144,42 +152,57 @@
                       </div>
                     </div>
 
-                    <div class="score-form" aria-label="Prediction score">
-                      <input
-                        type="text"
-                        maxlength="2"
-                        pattern="[0-9]*"
-                        inputmode="numeric"
-                        aria-label="Home team score"
-                        [disabled]="!canPostPredictions() || match.predictionLocked"
-                        [value]="drafts()[match.id]?.home ?? ''"
-                        [style.border-color]="predictionStateColor(match)"
-                        [style.color]="predictionStateColor(match)"
-                        (input)="updateDraft(match.id, 'home', $any($event.target).value)"
-                      />
-                      <span>:</span>
-                      <input
-                        type="text"
-                        maxlength="2"
-                        pattern="[0-9]*"
-                        inputmode="numeric"
-                        aria-label="Away team score"
-                        [disabled]="!canPostPredictions() || match.predictionLocked"
-                        [value]="drafts()[match.id]?.away ?? ''"
-                        [style.border-color]="predictionStateColor(match)"
-                        [style.color]="predictionStateColor(match)"
-                        (input)="updateDraft(match.id, 'away', $any($event.target).value)"
-                      />
-                      <span class="save-state">{{ savingIds().has(match.id) ? 'Saving' : match.prediction ? 'Saved' : '' }}</span>
+                    <div
+                      class="score-form"
+                      aria-label="Prediction score"
+                      (click)="showPostponedNotice(match)"
+                      (focusin)="showPostponedNotice(match)"
+                    >
+                      <div class="score-fields" [class.score-fields-hidden]="postponedNoticeMatchId() === match.id">
+                        <input
+                          type="text"
+                          maxlength="2"
+                          pattern="[0-9]*"
+                          inputmode="numeric"
+                          aria-label="Home team score"
+                          [attr.aria-disabled]="match.isPostponed ? 'true' : null"
+                          [readonly]="match.isPostponed"
+                          [disabled]="!canPostPredictions() || (match.predictionLocked && !match.isPostponed)"
+                          [value]="drafts()[match.id]?.home ?? ''"
+                          [style.border-color]="predictionStateColor(match)"
+                          [style.color]="predictionStateColor(match)"
+                          (input)="updateDraft(match.id, 'home', $any($event.target).value)"
+                        />
+                        <span>:</span>
+                        <input
+                          type="text"
+                          maxlength="2"
+                          pattern="[0-9]*"
+                          inputmode="numeric"
+                          aria-label="Away team score"
+                          [attr.aria-disabled]="match.isPostponed ? 'true' : null"
+                          [readonly]="match.isPostponed"
+                          [disabled]="!canPostPredictions() || (match.predictionLocked && !match.isPostponed)"
+                          [value]="drafts()[match.id]?.away ?? ''"
+                          [style.border-color]="predictionStateColor(match)"
+                          [style.color]="predictionStateColor(match)"
+                          (input)="updateDraft(match.id, 'away', $any($event.target).value)"
+                        />
+                        <span class="save-state">{{ savingIds().has(match.id) ? 'Saving' : match.prediction ? 'Saved' : '' }}</span>
+                      </div>
+                      <p class="score-form-notice" [class.score-form-notice-visible]="postponedNoticeMatchId() === match.id">
+                        This match is postponed. Post your other tips.
+                      </p>
                     </div>
 
                     <div class="points-column">
                       @if (match.prediction; as prediction) {
-                        <app-prediction-points [prediction]="prediction" [finalScore]="match.finalScore" />
+                        <app-prediction-points [prediction]="prediction" [finalScore]="match.finalScore" [isPostponed]="match.isPostponed" />
                       } @else {
                         <span class="points-empty">-</span>
                       }
                     </div>
+
                   </article>
                 }
               </div>

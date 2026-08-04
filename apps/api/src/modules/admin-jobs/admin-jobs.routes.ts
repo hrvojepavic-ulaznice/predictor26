@@ -5,7 +5,8 @@ import {
   getAdminJobController,
   getAdminJobsController,
   runAdminJobController,
-  updateAdminJobEnabledController
+  updateAdminJobEnabledController,
+  updateAutoMatchImportJobController
 } from './admin-jobs.controller.js';
 
 export const adminJobsRoutes = Router();
@@ -14,4 +15,5 @@ adminJobsRoutes.use('/admin/jobs', requireAuth);
 adminJobsRoutes.get('/admin/jobs', getAdminJobsController);
 adminJobsRoutes.get('/admin/jobs/:jobId', getAdminJobController);
 adminJobsRoutes.patch('/admin/jobs/:jobId/enabled', updateAdminJobEnabledController);
+adminJobsRoutes.patch('/admin/jobs/:jobId/auto-match-import', updateAutoMatchImportJobController);
 adminJobsRoutes.post('/admin/jobs/:jobId/run', runAdminJobController);

@@ -36,6 +36,7 @@ export class AdminCompetitionSetupPageComponent {
     passcode: ['', [Validators.maxLength(120)]],
     isFinished: [false],
     playoffsEnabled: [false],
+    importMatchesWithOddsEnabled: [false],
     oddsSourceUrl: ['', [Validators.required, Validators.maxLength(500)]],
     rules: this.formBuilder.array<ReturnType<AdminCompetitionSetupPageComponent['createRuleControl']>>([])
   });
@@ -111,6 +112,7 @@ export class AdminCompetitionSetupPageComponent {
           passcode: '',
           isFinished: settings.isFinished,
           playoffsEnabled: settings.playoffsEnabled,
+          importMatchesWithOddsEnabled: settings.importMatchesWithOddsEnabled,
           oddsSourceUrl: settings.oddsSourceUrl,
           rules: this.sourceForm.controls.rules.getRawValue()
         });
@@ -160,6 +162,7 @@ export class AdminCompetitionSetupPageComponent {
           passcode: '',
           isFinished: settings.isFinished,
           playoffsEnabled: settings.playoffsEnabled,
+          importMatchesWithOddsEnabled: settings.importMatchesWithOddsEnabled,
           oddsSourceUrl: settings.oddsSourceUrl
         });
         this.logoPreview.set(settings.logoUrl);

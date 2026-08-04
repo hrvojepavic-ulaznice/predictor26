@@ -14,6 +14,8 @@ export interface MatchResponse {
   readonly venue: string;
   readonly city: string;
   readonly odds: MatchOddsResponse | null;
+  readonly releasedForPredictions: boolean;
+  readonly isPostponed: boolean;
   readonly finalScore: ScoreResponse | null;
 }
 

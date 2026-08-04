@@ -60,6 +60,7 @@ export class PredictionsPageComponent {
   protected readonly savingIds = signal<ReadonlySet<number>>(new Set<number>());
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly lastSavedMessage = signal<string | null>(null);
+  protected readonly postponedNoticeMatchId = signal<number | null>(null);
   protected readonly activeProgressLabel = signal<string | null>(null);
   protected readonly now = signal(Date.now());
   protected readonly openMatches = computed(() =>
@@ -87,6 +88,7 @@ export class PredictionsPageComponent {
     };
   });
   private readonly saveTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  private postponedNoticeTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     effect(() => {
@@ -149,6 +151,24 @@ export class PredictionsPageComponent {
     this.queueSave(matchId);
   }
 
+  protected showPostponedNotice(match: MatchWithPrediction): void {
+    if (!match.isPostponed) {
+      return;
+    }
+
+    this.postponedNoticeMatchId.set(match.id);
+
+    if (this.postponedNoticeTimer) {
+      clearTimeout(this.postponedNoticeTimer);
+    }
+
+    this.postponedNoticeTimer = setTimeout(() => {
+      if (this.postponedNoticeMatchId() === match.id) {
+        this.postponedNoticeMatchId.set(null);
+      }
+    }, 3500);
+  }
+
   protected timeRemaining(deadlineAt: string): string {
     const remainingMs = Date.parse(deadlineAt) - this.now();
 
@@ -181,7 +201,7 @@ export class PredictionsPageComponent {
       return null;
     }
 
-    return calculatePredictionPoints(match.prediction, match.finalScore).state;
+    return calculatePredictionPoints(match.prediction, match.finalScore, match.isPostponed).state;
   }
 
   protected predictionStateColor(match: MatchWithPrediction): string | null {
@@ -263,7 +283,7 @@ export class PredictionsPageComponent {
     const match = this.matches().find((currentMatch) => currentMatch.id === matchId);
     const draft = this.drafts()[matchId];
 
-    if (!match || match.predictionLocked || !isValidScore(draft?.home) || !isValidScore(draft?.away)) {
+    if (!match || match.isPostponed || match.predictionLocked || !isValidScore(draft?.home) || !isValidScore(draft?.away)) {
       return;
     }
 
@@ -316,7 +336,7 @@ function groupMatches(matches: readonly MatchWithPrediction[], sortMode: MatchSo
 }
 
 function isPredictionOpen(match: MatchWithPrediction, now: number): boolean {
-  return !match.predictionLocked && Date.parse(match.predictionDeadlineAt) > now;
+  return match.isPostponed || (!match.predictionLocked && Date.parse(match.predictionDeadlineAt) > now);
 }
 
 function isPredictionGroupClosed(group: MatchGroup, now: number): boolean {
@@ -331,14 +351,19 @@ function groupMatchesByRounds(matches: readonly MatchWithPrediction[]): MatchGro
     groups.set(label, [...(groups.get(label) ?? []), match]);
   }
 
-  return Array.from(groups, ([label, groupedMatches]) => ({
-    label,
-    deadlineAt: groupedMatches[0].predictionDeadlineAt,
-    locked: groupedMatches[0].predictionLocked,
-    savedCount: groupedMatches.filter((match) => match.prediction !== null).length,
-    totalCount: groupedMatches.length,
-    sections: groupRoundSections(groupedMatches)
-  }));
+  return Array.from(groups, ([label, groupedMatches]) => {
+    const activeMatches = groupedMatches.filter((match) => !match.isPostponed);
+    const deadlineMatch = activeMatches[0] ?? groupedMatches[0];
+
+    return {
+      label,
+      deadlineAt: deadlineMatch.predictionDeadlineAt,
+      locked: activeMatches.length > 0 ? deadlineMatch.predictionLocked : false,
+      savedCount: activeMatches.filter((match) => match.prediction !== null).length,
+      totalCount: activeMatches.length,
+      sections: groupRoundSections(groupedMatches)
+    };
+  });
 }
 
 function groupRoundSections(matches: readonly MatchWithPrediction[]): MatchSection[] {
@@ -363,14 +388,18 @@ function groupMatchesByGroups(matches: readonly MatchWithPrediction[]): MatchGro
     groups.set(label, [...(groups.get(label) ?? []), match]);
   }
 
-  return Array.from(groups, ([label, groupedMatches]) => ({
-    label,
-    deadlineAt: null,
-    locked: null,
-    savedCount: groupedMatches.filter((match) => match.prediction !== null).length,
-    totalCount: groupedMatches.length,
-    sections: groupPredictionRoundSections(groupedMatches)
-  }));
+  return Array.from(groups, ([label, groupedMatches]) => {
+    const activeMatches = groupedMatches.filter((match) => !match.isPostponed);
+
+    return {
+      label,
+      deadlineAt: null,
+      locked: null,
+      savedCount: activeMatches.filter((match) => match.prediction !== null).length,
+      totalCount: activeMatches.length,
+      sections: groupPredictionRoundSections(groupedMatches)
+    };
+  });
 }
 
 function groupPredictionRoundSections(matches: readonly MatchWithPrediction[]): MatchSection[] {

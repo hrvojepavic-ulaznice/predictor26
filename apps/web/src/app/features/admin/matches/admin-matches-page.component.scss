@@ -131,6 +131,18 @@ h2 {
   gap: 20px;
 }
 
+.match-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.match-group-heading h2 {
+  margin: 0;
+}
+
 .match-list {
   display: grid;
   overflow: hidden;
@@ -156,6 +168,12 @@ h2 {
   background: #fff7f7;
 }
 
+.match-row-postponed {
+  background: #f9fafb;
+  color: #6b7280;
+  opacity: 0.72;
+}
+
 .required-badge {
   display: inline-grid;
   width: 18px;
@@ -168,6 +186,18 @@ h2 {
   font-size: 0.76rem;
   font-weight: 900;
   line-height: 1;
+}
+
+.postponed-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: #6b7280;
+  color: #ffffff;
+  padding: 3px 7px;
+  font-size: 0.72rem;
+  font-weight: 850;
 }
 
 .match-meta {
@@ -188,6 +218,24 @@ h2 {
   color: #374151;
   cursor: pointer;
   font: inherit;
+}
+
+.postponed-toggle-button {
+  margin-left: 6px;
+  border: 0;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #374151;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 5px 7px;
+}
+
+.postponed-toggle-button:hover,
+.postponed-toggle-button:focus-visible {
+  background: #e5e7eb;
 }
 
 .kickoff-edit-button:hover,

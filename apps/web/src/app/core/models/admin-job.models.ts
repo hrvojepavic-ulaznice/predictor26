@@ -25,13 +25,27 @@ export interface LiveScoreJobRunReport {
   readonly errorMessage: string | null;
 }
 
+export interface AutoMatchImportRunReport {
+  readonly competitionId: number;
+  readonly startedAt: string;
+  readonly finishedAt: string;
+  readonly enabled: boolean;
+  readonly status: 'success' | 'skipped' | 'failed';
+  readonly imported: number;
+  readonly oddsSynced: number;
+  readonly roundLabel: string | null;
+  readonly released: boolean;
+  readonly nextRunAt: string | null;
+  readonly errorMessage: string | null;
+}
+
 export interface AdminJobSummary {
   readonly id: string;
   readonly name: string;
   readonly description: string;
   readonly enabled: boolean;
   readonly intervalMs: number;
-  readonly lastRun: AdminJobRunReport | LiveScoreJobRunReport | null;
+  readonly lastRun: AdminJobRunReport | LiveScoreJobRunReport | AutoMatchImportRunReport | null;
 }
 
 export interface AdminNotificationReminderJob extends AdminJobSummary {
@@ -107,7 +121,16 @@ export interface AdminLiveScoreJob extends AdminJobSummary {
   }>;
 }
 
-export type AdminJob = AdminNotificationReminderJob | AdminLiveScoreJob;
+export interface AdminAutoMatchImportJob extends AdminJobSummary {
+  readonly id: 'auto-match-import';
+  readonly lastRun: AutoMatchImportRunReport | null;
+  readonly weekday: number;
+  readonly time: string;
+  readonly timeZone: string;
+  readonly nextRunAt: string | null;
+}
+
+export type AdminJob = AdminNotificationReminderJob | AdminLiveScoreJob | AdminAutoMatchImportJob;
 
 export interface AdminJobsResponse {
   readonly jobs: AdminJobSummary[];
@@ -119,7 +142,7 @@ export interface AdminJobDetailsResponse {
 
 export interface RunAdminJobResponse {
   readonly job: AdminJob;
-  readonly run: AdminJobRunReport | LiveScoreJobRunReport;
+  readonly run: AdminJobRunReport | LiveScoreJobRunReport | AutoMatchImportRunReport;
 }
 
 export interface RunAdminJobRequest {
@@ -129,4 +152,10 @@ export interface RunAdminJobRequest {
 export interface UpdateAdminJobEnabledRequest {
   readonly enabled: boolean;
   readonly secretCode: string;
+}
+
+export interface UpdateAutoMatchImportJobSettingsRequest extends UpdateAdminJobEnabledRequest {
+  readonly weekday: number;
+  readonly time: string;
+  readonly timeZone: string;
 }

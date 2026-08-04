@@ -18,6 +18,114 @@
   @if (loading()) {
     <p class="status-message">Loading scheduled job details...</p>
   } @else {
+    @if (autoMatchImportJob(); as autoJob) {
+      <section class="job-panel" aria-labelledby="auto-match-import-title">
+        <div class="job-heading">
+          <div>
+            <p class="job-kicker">Competition job</p>
+            <h2 id="auto-match-import-title">{{ autoJob.name }}</h2>
+            <p>{{ autoJob.description }}</p>
+          </div>
+
+          <div class="job-actions">
+            <span class="status-pill" [class.status-pill-on]="autoJob.enabled">
+              {{ autoJob.enabled ? 'Enabled' : 'Disabled' }}
+            </span>
+            <button class="primary-button" type="button" [disabled]="runningJobId()" (click)="runNow(autoJob.id)">
+              {{ runningJobId() === autoJob.id ? 'Running...' : 'Run now' }}
+            </button>
+          </div>
+        </div>
+
+        <form class="job-settings-form" [formGroup]="autoImportForm" (ngSubmit)="saveAutoImportSettings()">
+          <label class="toggle-row">
+            <input type="checkbox" formControlName="enabled" />
+            <span>Enabled</span>
+          </label>
+
+          <div class="settings-grid">
+            <label>
+              <span>Weekday</span>
+              <select formControlName="weekday">
+                <option [ngValue]="1">Monday</option>
+                <option [ngValue]="2">Tuesday</option>
+                <option [ngValue]="3">Wednesday</option>
+                <option [ngValue]="4">Thursday</option>
+                <option [ngValue]="5">Friday</option>
+                <option [ngValue]="6">Saturday</option>
+                <option [ngValue]="0">Sunday</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Local time</span>
+              <input type="time" formControlName="time" />
+            </label>
+
+            <label>
+              <span>Time zone</span>
+              <select formControlName="timeZone">
+                <option value="Europe/Zagreb">Europe/Zagreb</option>
+                <option value="Europe/Belgrade">Europe/Belgrade</option>
+              </select>
+            </label>
+          </div>
+
+          <button class="secondary-button" type="submit" [disabled]="runningJobId() || autoImportForm.invalid">Save schedule</button>
+        </form>
+
+        <div class="metrics-grid" aria-label="Match import job summary">
+          <div class="metric">
+            <span class="metric-label">Schedule</span>
+            <strong>{{ autoImportWeekdayLabel() }} {{ autoJob.time }} {{ autoJob.timeZone }}</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Next run</span>
+            <strong>{{ autoJob.nextRunAt ? (autoJob.nextRunAt | date: 'medium' : adminTimeZone) : 'None' }}</strong>
+          </div>
+        </div>
+
+        <section class="details-section" aria-labelledby="auto-import-last-run-title">
+          <h3 id="auto-import-last-run-title">Last run</h3>
+
+          @if (autoJob.lastRun; as lastRun) {
+            <dl class="run-details">
+              <div>
+                <dt>Started</dt>
+                <dd>{{ lastRun.startedAt | date: 'medium' : adminTimeZone }}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{{ lastRun.status }}</dd>
+              </div>
+              <div>
+                <dt>Imported</dt>
+                <dd>{{ lastRun.imported }}</dd>
+              </div>
+              <div>
+                <dt>Odds synced</dt>
+                <dd>{{ lastRun.oddsSynced }}</dd>
+              </div>
+              <div>
+                <dt>Round</dt>
+                <dd>{{ lastRun.roundLabel || '-' }}</dd>
+              </div>
+              <div>
+                <dt>Released</dt>
+                <dd>{{ lastRun.released ? 'Yes' : 'No' }}</dd>
+              </div>
+            </dl>
+
+            @if (lastRun.errorMessage) {
+              <p class="status-message status-error">{{ lastRun.errorMessage }}</p>
+            }
+          } @else {
+            <p class="empty-message">This job has not recorded a run yet.</p>
+          }
+        </section>
+      </section>
+    }
+
     @if (notificationJob(); as notificationJob) {
     <section class="job-panel" aria-labelledby="notification-reminders-title">
       <div class="job-heading">
@@ -398,6 +506,27 @@
         [errorMessage]="secretCodeErrorMessage()"
         [isSubmitting]="runningJobId() !== null"
         (confirmSecretCode)="confirmToggle($event)"
+        (cancelModal)="cancelRunNow()"
+      />
+    </app-modal-shell>
+  }
+
+  @if (confirmingAutoImportSettings()) {
+    <app-modal-shell
+      labelledBy="secret-code-title"
+      panelWidth="420px"
+      [closeOnBackdrop]="true"
+      animate.enter="modal-enter"
+      animate.leave="modal-leave"
+      (closeModal)="cancelRunNow()"
+    >
+      <app-secret-code-modal
+        title="Save match import schedule"
+        label="What is the secret code?"
+        confirmLabel="Save schedule"
+        [errorMessage]="secretCodeErrorMessage()"
+        [isSubmitting]="runningJobId() !== null"
+        (confirmSecretCode)="confirmAutoImportSettings($event)"
         (cancelModal)="cancelRunNow()"
       />
     </app-modal-shell>

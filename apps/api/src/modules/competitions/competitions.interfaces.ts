@@ -41,6 +41,11 @@ export interface AdminCompetitionSettingsResponse {
   readonly passcodeSet: boolean;
   readonly scheduleSourceUrl: string;
   readonly oddsSourceUrl: string;
+  readonly importMatchesWithOddsEnabled: boolean;
+  readonly autoImportMatchesEnabled: boolean;
+  readonly autoImportMatchesWeekday: number;
+  readonly autoImportMatchesTime: string;
+  readonly autoImportMatchesTimeZone: string;
   readonly notificationRemindersEnabled: boolean;
   readonly liveScoreSyncEnabled: boolean;
   readonly rules: AdminCompetitionRuleResponse[];
@@ -54,6 +59,11 @@ export interface UpdateAdminCompetitionSettingsRequest {
   readonly playoffsEnabled: boolean;
   readonly scheduleSourceUrl?: string;
   readonly oddsSourceUrl: string;
+  readonly importMatchesWithOddsEnabled?: boolean;
+  readonly autoImportMatchesEnabled?: boolean;
+  readonly autoImportMatchesWeekday?: number;
+  readonly autoImportMatchesTime?: string;
+  readonly autoImportMatchesTimeZone?: string;
   readonly secretCode: string;
   readonly rules: AdminCompetitionRuleRequest[];
 }
@@ -66,6 +76,11 @@ export interface CreateAdminCompetitionRequest {
   readonly playoffsEnabled?: boolean;
   readonly scheduleSourceUrl?: string;
   readonly oddsSourceUrl: string;
+  readonly importMatchesWithOddsEnabled?: boolean;
+  readonly autoImportMatchesEnabled?: boolean;
+  readonly autoImportMatchesWeekday?: number;
+  readonly autoImportMatchesTime?: string;
+  readonly autoImportMatchesTimeZone?: string;
   readonly secretCode: string;
   readonly rules: AdminCompetitionRuleRequest[];
 }

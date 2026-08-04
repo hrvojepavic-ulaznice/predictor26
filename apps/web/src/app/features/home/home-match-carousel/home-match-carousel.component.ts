@@ -60,7 +60,7 @@ export class HomeMatchCarouselComponent {
         ...match,
         statusLabel: getStatusLabel(match.status),
         winningOutcome: match.finalScore ? getScoreOutcome(match.finalScore.home, match.finalScore.away) : null,
-        canOpenDetails: this.isLoggedIn() && match.roundLocked
+        canOpenDetails: this.isLoggedIn() && match.roundLocked && !match.isPostponed
       }))
       .sort(sortLiveMatchesFirst)
   );
@@ -84,7 +84,7 @@ export class HomeMatchCarouselComponent {
   }
 
   protected openMatch(match: LeaderboardDayMatch): void {
-    if (!this.isLoggedIn() || !match.roundLocked || this.openingMatchId()) {
+    if (!this.isLoggedIn() || !match.roundLocked || match.isPostponed || this.openingMatchId()) {
       return;
     }
 
@@ -186,6 +186,7 @@ function getLocalDateKey(date: Date): string {
 
 function getStatusLabel(status: LeaderboardMatchStatus): string {
   const labels: Record<LeaderboardMatchStatus, string> = {
+    postponed: 'Postponed',
     finished: 'Finished',
     live: 'Live',
     coming_up: 'Coming up',

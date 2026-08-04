@@ -34,6 +34,7 @@ import {
   setCompetitionManagementSettings,
   setCompetitionTiebreaker
 } from './competitions.repository.js';
+import { rescheduleAutoMatchImportScheduler } from '../admin-matches/admin-matches.service.js';
 
 export type UpdateCompetitionTiebreakerResult =
   | {
@@ -365,8 +366,14 @@ export async function createAdminCompetition(
     playoffsEnabled: parsed.playoffsEnabled,
     scheduleSourceUrl: parsed.scheduleSourceUrl,
     oddsSourceUrl: parsed.oddsSourceUrl,
+    importMatchesWithOddsEnabled: parsed.importMatchesWithOddsEnabled,
+    autoImportMatchesEnabled: parsed.autoImportMatchesEnabled,
+    autoImportMatchesWeekday: parsed.autoImportMatchesWeekday,
+    autoImportMatchesTime: parsed.autoImportMatchesTime,
+    autoImportMatchesTimeZone: parsed.autoImportMatchesTimeZone,
     rules: parsed.rules
   });
+  rescheduleAutoMatchImportScheduler();
 
   return {
     status: 'created',
@@ -400,8 +407,14 @@ export async function updateAdminCompetitionSettings(
     playoffsEnabled: parsed.playoffsEnabled,
     scheduleSourceUrl: parsed.scheduleSourceUrl,
     oddsSourceUrl: parsed.oddsSourceUrl,
+    importMatchesWithOddsEnabled: parsed.importMatchesWithOddsEnabled,
+    autoImportMatchesEnabled: existing.auto_import_matches_enabled === 1,
+    autoImportMatchesWeekday: existing.auto_import_matches_weekday,
+    autoImportMatchesTime: existing.auto_import_matches_time,
+    autoImportMatchesTimeZone: existing.auto_import_matches_time_zone,
     rules: parsed.rules
   });
+  rescheduleAutoMatchImportScheduler();
 
   return {
     status: 'updated',
@@ -463,6 +476,11 @@ function toAdminCompetitionSettingsResponse(competition: {
   readonly passcode_hash: string | null;
   readonly schedule_source_url: string;
   readonly odds_source_url: string;
+  readonly import_matches_with_odds_enabled: 0 | 1;
+  readonly auto_import_matches_enabled: 0 | 1;
+  readonly auto_import_matches_weekday: number;
+  readonly auto_import_matches_time: string;
+  readonly auto_import_matches_time_zone: string;
   readonly notification_reminders_enabled: 0 | 1;
   readonly live_score_sync_enabled: 0 | 1;
   readonly is_finished: 0 | 1;
@@ -479,6 +497,11 @@ function toAdminCompetitionSettingsResponse(competition: {
     passcodeSet: competition.passcode_hash !== null,
     scheduleSourceUrl: competition.schedule_source_url,
     oddsSourceUrl: competition.odds_source_url,
+    importMatchesWithOddsEnabled: competition.import_matches_with_odds_enabled === 1,
+    autoImportMatchesEnabled: competition.auto_import_matches_enabled === 1,
+    autoImportMatchesWeekday: competition.auto_import_matches_weekday,
+    autoImportMatchesTime: competition.auto_import_matches_time,
+    autoImportMatchesTimeZone: competition.auto_import_matches_time_zone,
     notificationRemindersEnabled: competition.notification_reminders_enabled === 1,
     liveScoreSyncEnabled: competition.live_score_sync_enabled === 1,
     rules: findCompetitionRules(competition.id).map((rule) => ({
@@ -552,6 +575,11 @@ async function parseAdminCompetitionInput(
       readonly playoffsEnabled: boolean;
       readonly scheduleSourceUrl: string;
       readonly oddsSourceUrl: string;
+      readonly importMatchesWithOddsEnabled: boolean;
+      readonly autoImportMatchesEnabled: boolean;
+      readonly autoImportMatchesWeekday: number;
+      readonly autoImportMatchesTime: string;
+      readonly autoImportMatchesTimeZone: string;
       readonly rules: ReadonlyArray<{ readonly templateKey: string; readonly value: string | null; readonly sortOrder: number }>;
     }
   | { readonly status: 'invalid' }
@@ -573,6 +601,12 @@ async function parseAdminCompetitionInput(
   const logoUrl = typeof input.logoUrl === 'string' ? input.logoUrl.trim() : '';
   const passcode = typeof input.passcode === 'string' ? input.passcode.trim() : null;
   const playoffsEnabled = typeof input.playoffsEnabled === 'boolean' ? input.playoffsEnabled : false;
+  const importMatchesWithOddsEnabled = typeof input.importMatchesWithOddsEnabled === 'boolean' ? input.importMatchesWithOddsEnabled : false;
+  const autoImportMatchesEnabled = typeof input.autoImportMatchesEnabled === 'boolean' ? input.autoImportMatchesEnabled : false;
+  const autoImportMatchesWeekday = typeof input.autoImportMatchesWeekday === 'number' ? input.autoImportMatchesWeekday : 2;
+  const autoImportMatchesTime = typeof input.autoImportMatchesTime === 'string' ? input.autoImportMatchesTime.trim() : '08:00';
+  const autoImportMatchesTimeZone =
+    typeof input.autoImportMatchesTimeZone === 'string' ? input.autoImportMatchesTimeZone.trim() : 'Europe/Zagreb';
   const scheduleSourceUrl = typeof input.scheduleSourceUrl === 'string' ? input.scheduleSourceUrl.trim() : '';
   const oddsSourceUrl = input.oddsSourceUrl.trim();
 
@@ -584,7 +618,17 @@ async function parseAdminCompetitionInput(
     (passcode !== null && passcode.length > 120) ||
     !isValidSourceUrl(scheduleSourceUrl) ||
     oddsSourceUrl.length < 1 ||
-    !isValidSourceUrl(oddsSourceUrl)
+    !isValidSourceUrl(oddsSourceUrl) ||
+    !Number.isInteger(autoImportMatchesWeekday) ||
+    autoImportMatchesWeekday < 0 ||
+    autoImportMatchesWeekday > 6 ||
+    !/^\d{2}:\d{2}$/.test(autoImportMatchesTime) ||
+    Number(autoImportMatchesTime.slice(0, 2)) > 23 ||
+    Number(autoImportMatchesTime.slice(3, 5)) > 59 ||
+    autoImportMatchesTimeZone.length < 1 ||
+    autoImportMatchesTimeZone.length > 80 ||
+    !isValidTimeZone(autoImportMatchesTimeZone) ||
+    (autoImportMatchesEnabled && !importMatchesWithOddsEnabled)
   ) {
     return { status: 'invalid' };
   }
@@ -636,8 +680,22 @@ async function parseAdminCompetitionInput(
     playoffsEnabled,
     scheduleSourceUrl,
     oddsSourceUrl,
+    importMatchesWithOddsEnabled,
+    autoImportMatchesEnabled,
+    autoImportMatchesWeekday,
+    autoImportMatchesTime,
+    autoImportMatchesTimeZone,
     rules
   };
+}
+
+function isValidTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function renderRule(rule: { readonly text_template: string; readonly value: string | null }): string {

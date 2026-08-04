@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
 
-import { RunAdminJobRequest, UpdateAdminJobEnabledRequest } from './admin-jobs.interfaces.js';
-import { getAdminJob, getAdminJobs, runAdminJob, updateAdminJobEnabled } from './admin-jobs.service.js';
+import {
+  RunAdminJobRequest,
+  UpdateAdminJobEnabledRequest,
+  UpdateAutoMatchImportJobSettingsRequest
+} from './admin-jobs.interfaces.js';
+import { getAdminJob, getAdminJobs, runAdminJob, updateAdminJobEnabled, updateAutoMatchImportJob } from './admin-jobs.service.js';
 import { resolveCompetitionIdForAdmin } from '../competitions/competitions.service.js';
 
 interface JobParams extends Record<string, string> {
@@ -85,6 +89,37 @@ export async function updateAdminJobEnabledController(
 
   if (result.status === 'invalid') {
     res.status(400).json({ message: 'Please enter a valid job setting and secret code.' });
+    return;
+  }
+
+  if (result.status === 'invalid_secret') {
+    res.status(403).json({ message: 'Secret code is incorrect.' });
+    return;
+  }
+
+  res.json(result.response);
+}
+
+export async function updateAutoMatchImportJobController(
+  req: Request<JobParams, object, UpdateAutoMatchImportJobSettingsRequest>,
+  res: Response
+): Promise<void> {
+  const competitionId = await resolveRequestedCompetitionId(req);
+
+  if (competitionId === null) {
+    res.status(403).json({ message: 'Competition access is required.' });
+    return;
+  }
+
+  const result = await updateAutoMatchImportJob(competitionId, req.params.jobId, req.body);
+
+  if (result.status === 'not_found') {
+    res.status(404).json({ message: 'Scheduled job could not be found.' });
+    return;
+  }
+
+  if (result.status === 'invalid') {
+    res.status(400).json({ message: 'Please enter valid auto import settings and secret code.' });
     return;
   }
 
