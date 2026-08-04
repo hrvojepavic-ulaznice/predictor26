@@ -4,7 +4,6 @@ import { join } from 'node:path';
 
 import { MatchOddsInput, MatchRow } from '../../database/queries/matches.queries.js';
 import { config } from '../../config/index.js';
-import { defaultCompetitionSlug } from '../../shared/constants/default-competition.constants.js';
 import { verifyPassword } from '../../shared/utils/password.js';
 import { MatchResponse } from '../matches/matches.interfaces.js';
 import {
@@ -26,8 +25,6 @@ import {
 } from './admin-matches.interfaces.js';
 import {
   backfillPredictionOdds,
-  clearPendingFinalScores,
-  clearPendingPredictions,
   findAdminMatches,
   findSuperAdminForSecretCode,
   getMetadataValue,
@@ -56,8 +53,6 @@ import {
   setCompetitionJobSettings
 } from '../competitions/competitions.repository.js';
 
-const worldCupPendingDataCleanupMetadataKey = 'admin_matches_world_cup_pending_data_cleanup';
-const worldCupPendingDataCleanupVersion = '1';
 const autoMatchImportRunMetadataPrefix = 'auto_match_import_last_run';
 const autoMatchImportLastReportMetadataPrefix = 'auto_match_import_last_report';
 const schedulerMinimumDelayMs = 5_000;
@@ -748,29 +743,6 @@ function weekdayNumber(value: string): number {
   return weekdays[value] ?? 0;
 }
 
-async function clearCompetitionPendingData(competitionId: number): Promise<void> {
-  const competition = findCompetitionForAdmin(competitionId);
-
-  if (competition?.slug !== defaultCompetitionSlug) {
-    return;
-  }
-
-  // PRODUCTION ONE-OFF CLEANUP:
-  // Removes accidental future pending World Cup predictions/scores the first time import runs.
-  // Safe to remove after production app_metadata has admin_matches_world_cup_pending_data_cleanup:<id> = 1.
-  const cleanupKey = `${worldCupPendingDataCleanupMetadataKey}:${competitionId}`;
-  const cleanupVersion = await getMetadataValue(cleanupKey);
-
-  if (cleanupVersion === worldCupPendingDataCleanupVersion) {
-    return;
-  }
-
-  const nowIso = new Date().toISOString();
-  clearPendingFinalScores(competitionId, nowIso);
-  clearPendingPredictions(competitionId, nowIso);
-  setMetadataValue(cleanupKey, worldCupPendingDataCleanupVersion);
-}
-
 async function importScheduleForCompetition(
   competitionId: number,
   sourceUrl: string
@@ -782,7 +754,6 @@ async function importScheduleForCompetition(
   applyTeamLogosToMatches(competitionId);
   const imported = importMatches(importedSchedule.matches, competitionId);
   applyTeamLogosToMatches(competitionId);
-  await clearCompetitionPendingData(competitionId);
   const matchesAfterImport = findAdminMatches(competitionId);
 
   return {

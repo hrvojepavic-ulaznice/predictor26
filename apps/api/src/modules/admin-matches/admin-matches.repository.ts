@@ -1,8 +1,6 @@
 import {
   backfillMissingPredictionOdds,
-  clearFinalScoresBeforeKickoff,
   deleteMatchesAfterMatchNumber,
-  deletePredictionsBeforeKickoff,
   listMatches,
   insertManualMatch,
   ManualMatchInput,
@@ -57,14 +55,6 @@ export async function getMetadataValue(key: string) {
 
 export function setMetadataValue(key: string, value: string) {
   setAppMetadataValue(key, value);
-}
-
-export function clearPendingFinalScores(competitionId: number, nowIso: string) {
-  return clearFinalScoresBeforeKickoff(competitionId, nowIso);
-}
-
-export function clearPendingPredictions(competitionId: number, nowIso: string) {
-  return deletePredictionsBeforeKickoff(competitionId, nowIso);
 }
 
 export function setFinalScore(competitionId: number, matchId: number, homeScore: number | null, awayScore: number | null) {

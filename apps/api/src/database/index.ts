@@ -482,15 +482,6 @@ function ensureCompetitionTableSupportsManagementFields(db: Database.Database) {
     db.exec(
       'ALTER TABLE competitions ADD COLUMN import_matches_with_odds_enabled INTEGER NOT NULL DEFAULT 0 CHECK(import_matches_with_odds_enabled IN (0, 1))'
     );
-    // PRODUCTION ONE-OFF BACKFILL:
-    // Enables the combined import mode for already-active competitions when this column first ships.
-    // Safe to remove after production has booted once with this release.
-    db.exec(`
-      UPDATE competitions
-      SET import_matches_with_odds_enabled = 1,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE is_finished = 0
-    `);
   }
 
   if (!columnNames.has('auto_import_matches_enabled')) {

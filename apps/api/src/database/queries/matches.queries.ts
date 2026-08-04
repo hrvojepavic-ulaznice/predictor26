@@ -970,56 +970,6 @@ export function updatePlayoffTeamMapping(
   }
 }
 
-export function clearFinalScoresBeforeKickoff(competitionId: number, nowIso: string): number {
-  const db = openDatabase();
-
-  try {
-    const result = db
-      .prepare(
-        `
-          UPDATE matches
-          SET
-            final_home_score = NULL,
-            final_away_score = NULL,
-            updated_at = CURRENT_TIMESTAMP
-          WHERE competition_id = ?
-            AND kickoff_at > ?
-            AND (final_home_score IS NOT NULL OR final_away_score IS NOT NULL)
-        `
-      )
-      .run(competitionId, nowIso);
-
-    return result.changes;
-  } finally {
-    db.close();
-  }
-}
-
-export function deletePredictionsBeforeKickoff(competitionId: number, nowIso: string): number {
-  const db = openDatabase();
-
-  try {
-    const result = db
-      .prepare(
-        `
-          DELETE FROM predictions
-          WHERE EXISTS (
-            SELECT 1
-            FROM matches
-            WHERE matches.id = predictions.match_id
-              AND matches.competition_id = ?
-              AND matches.kickoff_at > ?
-          )
-        `
-      )
-      .run(competitionId, nowIso);
-
-    return result.changes;
-  } finally {
-    db.close();
-  }
-}
-
 export function updateMatchOdds(odds: readonly MatchOddsInput[]): number {
   const db = openDatabase();
 
