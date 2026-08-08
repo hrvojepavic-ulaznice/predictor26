@@ -210,6 +210,7 @@ function initializeDatabase(db: Database.Database) {
   `);
 
   ensureSuperAdminPredictionsBlocked(db);
+  ensureFinishedCompetitionLiveSnapshotsClosed(db);
   seedRuleTemplates(db);
   seedMissingCompetitionRules(db);
   ensureCompetitionScopedIndexes(db);
@@ -527,6 +528,37 @@ function ensureFinishedCompetitionsHaveJobsDisabled(db: Database.Database) {
         AND (
           notification_reminders_enabled = 1
           OR live_score_sync_enabled = 1
+        )
+    `
+  ).run();
+}
+
+function ensureFinishedCompetitionLiveSnapshotsClosed(db: Database.Database) {
+  const tableNames = new Set(
+    (
+      db
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('competitions', 'matches', 'live_score_snapshots')")
+        .all() as Array<{ name: string }>
+    ).map((table) => table.name)
+  );
+
+  if (!tableNames.has('competitions') || !tableNames.has('matches') || !tableNames.has('live_score_snapshots')) {
+    return;
+  }
+
+  db.prepare(
+    `
+      UPDATE live_score_snapshots
+      SET status = 'finished'
+      WHERE status = 'live'
+        AND home_score IS NOT NULL
+        AND away_score IS NOT NULL
+        AND EXISTS (
+          SELECT 1
+          FROM matches
+          INNER JOIN competitions ON competitions.id = matches.competition_id
+          WHERE matches.id = live_score_snapshots.match_id
+            AND competitions.is_finished = 1
         )
     `
   ).run();
