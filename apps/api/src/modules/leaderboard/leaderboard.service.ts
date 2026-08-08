@@ -333,7 +333,7 @@ function getLiveMatches(
       (match) =>
         match.is_postponed !== 1 &&
         Date.parse(match.kickoff_at) <= now &&
-        !hasFinalScore(match) &&
+        (!hasFinalScore(match) || isLiveByProvider(latestSnapshotsByMatchId.get(match.id))) &&
         !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id))
     )
     .sort(sortMatchesByKickoff);
@@ -1023,16 +1023,16 @@ function getMatchStatus(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | 
     return 'postponed';
   }
 
-  if (hasFinalScore(match)) {
-    return 'finished';
-  }
-
   if (isFinishedByProvider(snapshot)) {
     return 'finished';
   }
 
   if (snapshot?.status === 'live') {
     return 'live';
+  }
+
+  if (hasFinalScore(match)) {
+    return 'finished';
   }
 
   if (kickoffTime <= now) {
@@ -1044,6 +1044,10 @@ function getMatchStatus(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | 
 
 function isFinishedByProvider(snapshot: LatestLiveScoreSnapshotRow | undefined): boolean {
   return snapshot?.status === 'finished' && snapshot.home_score !== null && snapshot.away_score !== null;
+}
+
+function isLiveByProvider(snapshot: LatestLiveScoreSnapshotRow | undefined): boolean {
+  return snapshot?.status === 'live';
 }
 
 function hasFinalScore(match: Pick<MatchRow, 'final_home_score' | 'final_away_score'>): match is Pick<MatchRow, 'final_home_score' | 'final_away_score'> & {
