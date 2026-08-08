@@ -330,7 +330,7 @@ function getActiveMatches(
       return false;
     }
 
-    if (hasFinalScore(match)) {
+    if (hasFinalScore(match) && !isLiveByProvider(latestSnapshotsByMatchId.get(match.id))) {
       return false;
     }
 
@@ -355,7 +355,15 @@ function calculateNextRunAt(
   }
 
   const nextKickoff = matches
-    .filter((match) => match.is_postponed !== 1 && !hasFinalScore(match) && !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id)))
+    .filter((match) => {
+      const latestSnapshot = latestSnapshotsByMatchId.get(match.id);
+
+      return (
+        match.is_postponed !== 1 &&
+        (!hasFinalScore(match) || isLiveByProvider(latestSnapshot)) &&
+        !isFinishedByProvider(latestSnapshot)
+      );
+    })
     .map((match) => Date.parse(match.kickoff_at))
     .filter((kickoffTime) => Number.isFinite(kickoffTime))
     .sort((first, second) => first - second)[0];
@@ -375,6 +383,10 @@ function calculateNextRunAt(
 
 function isFinishedByProvider(snapshot: LatestLiveScoreSnapshotRow | undefined): boolean {
   return snapshot?.status === 'finished' && snapshot.home_score !== null && snapshot.away_score !== null;
+}
+
+function isLiveByProvider(snapshot: LatestLiveScoreSnapshotRow | undefined): boolean {
+  return snapshot?.status === 'live';
 }
 
 function hasFinalScore(match: Pick<MatchRow, 'final_home_score' | 'final_away_score'>): boolean {
