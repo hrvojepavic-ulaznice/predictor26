@@ -21,6 +21,7 @@ import {
 } from './leaderboard.interfaces.js';
 import { findLeaderboardMatches, findLeaderboardPredictions, findLeaderboardUsers } from './leaderboard.repository.js';
 import { findLatestLiveScoreSnapshotsForCompetition } from '../live-scores/live-scores.repository.js';
+import { findCompetitionForAdmin } from '../competitions/competitions.repository.js';
 
 interface RoundSummary {
   readonly label: string;
@@ -33,6 +34,7 @@ interface RoundSummary {
 const matchDayTimeZone = 'Europe/Zagreb';
 
 export async function getLeaderboard(competitionId: number): Promise<LeaderboardResponse> {
+  const liveSnapshotsEnabled = areLiveSnapshotsEnabled(competitionId);
   const matches = findLeaderboardMatches(competitionId);
   const winnerTeamsByName = getWinnerTeamsByName(matches);
   const latestSnapshotsByMatchId = new Map(
@@ -40,11 +42,11 @@ export async function getLeaderboard(competitionId: number): Promise<Leaderboard
   );
   const roundSummaries = getRoundSummaries(matches);
   const leaderboardRoundSummaries = orderLeaderboardRounds(roundSummaries);
-  const liveMatches = getLiveMatches(matches, latestSnapshotsByMatchId);
+  const liveMatches = getLiveMatches(matches, latestSnapshotsByMatchId, liveSnapshotsEnabled);
   const comingUpMatches = getComingUpMatches(roundSummaries, liveMatches);
   const users = findLeaderboardUsers(competitionId);
   const predictionsByUser = groupPredictionsByUser(
-    withLiveSnapshotScores(findLeaderboardPredictions(competitionId), latestSnapshotsByMatchId)
+    withLiveSnapshotScores(findLeaderboardPredictions(competitionId), latestSnapshotsByMatchId, liveSnapshotsEnabled)
   );
   const liveMatchIds = new Set(liveMatches.map((match) => match.id));
   const leaderboardUsers = users.map<LeaderboardUserResponse>((user) => {
@@ -89,7 +91,7 @@ export async function getLeaderboard(competitionId: number): Promise<Leaderboard
       locked: round.locked,
       viewable: round.viewable
     })),
-    liveMatches: liveMatches.map((match) => toLiveMatchResponse(match, latestSnapshotsByMatchId.get(match.id))),
+    liveMatches: liveMatches.map((match) => toLiveMatchResponse(match, latestSnapshotsByMatchId.get(match.id), liveSnapshotsEnabled)),
     comingUpMatches: comingUpMatches.map(toComingUpMatchResponse),
     totalUsers: users.length,
     users: leaderboardUsers
@@ -110,6 +112,7 @@ export async function getLeaderboard(competitionId: number): Promise<Leaderboard
 }
 
 export async function getLeaderboardMatchDays(competitionId: number): Promise<LeaderboardMatchDayResponse[]> {
+  const liveSnapshotsEnabled = areLiveSnapshotsEnabled(competitionId);
   const days = new Map<string, MatchRow[]>();
   const matches = findLeaderboardMatches(competitionId);
   const latestSnapshotsByMatchId = new Map(
@@ -125,12 +128,13 @@ export async function getLeaderboardMatchDays(competitionId: number): Promise<Le
   return Array.from(days, ([date, matches]) => ({
     date,
     matches: matches.map((match) =>
-      toDayMatchResponse(match, roundLockedByLabel.get(getPredictionRound(match)) ?? false, latestSnapshotsByMatchId.get(match.id))
+      toDayMatchResponse(match, roundLockedByLabel.get(getPredictionRound(match)) ?? false, latestSnapshotsByMatchId.get(match.id), liveSnapshotsEnabled)
     )
   }));
 }
 
 export async function getLeaderboardStats(competitionId: number): Promise<LeaderboardStatsResponse> {
+  const liveSnapshotsEnabled = areLiveSnapshotsEnabled(competitionId);
   const matches = findLeaderboardMatches(competitionId);
   const matchesById = new Map(matches.map((match) => [match.id, match]));
   const latestSnapshotsByMatchId = new Map(
@@ -152,7 +156,7 @@ export async function getLeaderboardStats(competitionId: number): Promise<Leader
       !match ||
       match.final_home_score === null ||
       match.final_away_score === null ||
-      getMatchStatus(match, latestSnapshotsByMatchId.get(match.id)) !== 'finished'
+      getMatchStatus(match, latestSnapshotsByMatchId.get(match.id), liveSnapshotsEnabled) !== 'finished'
     ) {
       continue;
     }
@@ -280,6 +284,7 @@ export async function getLeaderboardMatchPredictions(
   }
 
   const matches = findLeaderboardMatches(competitionId);
+  const liveSnapshotsEnabled = areLiveSnapshotsEnabled(competitionId);
   const latestSnapshotsByMatchId = new Map(
     findLatestLiveScoreSnapshotsForCompetition(competitionId).map((snapshot) => [snapshot.match_id, snapshot])
   );
@@ -297,13 +302,13 @@ export async function getLeaderboardMatchPredictions(
 
   const locked = round.locked;
   const predictionsByUserId = new Map(
-    withLiveSnapshotScores(findLeaderboardPredictions(competitionId), latestSnapshotsByMatchId)
+    withLiveSnapshotScores(findLeaderboardPredictions(competitionId), latestSnapshotsByMatchId, liveSnapshotsEnabled)
       .filter((prediction) => prediction.match_id === match.id)
       .map((prediction) => [prediction.user_id, prediction])
   );
 
   return {
-    match: toDayMatchResponse(match, locked, latestSnapshotsByMatchId.get(match.id)),
+    match: toDayMatchResponse(match, locked, latestSnapshotsByMatchId.get(match.id), liveSnapshotsEnabled),
     locked,
     users: findLeaderboardUsers(competitionId)
       .map((user) => {
@@ -324,7 +329,8 @@ export async function getLeaderboardMatchPredictions(
 
 function getLiveMatches(
   matches: readonly MatchRow[],
-  latestSnapshotsByMatchId: ReadonlyMap<number, LatestLiveScoreSnapshotRow>
+  latestSnapshotsByMatchId: ReadonlyMap<number, LatestLiveScoreSnapshotRow>,
+  liveSnapshotsEnabled: boolean
 ): MatchRow[] {
   const now = Date.now();
 
@@ -333,7 +339,7 @@ function getLiveMatches(
       (match) =>
         match.is_postponed !== 1 &&
         Date.parse(match.kickoff_at) <= now &&
-        (!hasFinalScore(match) || isLiveByProvider(latestSnapshotsByMatchId.get(match.id))) &&
+        (!hasFinalScore(match) || isLiveByProvider(latestSnapshotsByMatchId.get(match.id), liveSnapshotsEnabled)) &&
         !isFinishedByProvider(latestSnapshotsByMatchId.get(match.id))
     )
     .sort(sortMatchesByKickoff);
@@ -365,8 +371,12 @@ function shouldHideComingUpMatches(liveMatches: readonly MatchRow[]): boolean {
   return liveMatches.length > 0;
 }
 
-function toLiveMatchResponse(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined): LeaderboardLiveMatchResponse {
-  const score = getLiveScore(match, snapshot);
+function toLiveMatchResponse(
+  match: MatchRow,
+  snapshot: LatestLiveScoreSnapshotRow | undefined,
+  liveSnapshotsEnabled: boolean
+): LeaderboardLiveMatchResponse {
+  const score = getLiveScore(match, snapshot, liveSnapshotsEnabled);
 
   return {
     matchId: match.id,
@@ -390,15 +400,20 @@ function toComingUpMatchResponse(match: MatchRow): LeaderboardComingUpMatchRespo
   };
 }
 
-function toDayMatchResponse(match: MatchRow, roundLocked: boolean, snapshot: LatestLiveScoreSnapshotRow | undefined) {
-  const score = getLiveScore(match, snapshot);
+function toDayMatchResponse(
+  match: MatchRow,
+  roundLocked: boolean,
+  snapshot: LatestLiveScoreSnapshotRow | undefined,
+  liveSnapshotsEnabled: boolean
+) {
+  const score = getLiveScore(match, snapshot, liveSnapshotsEnabled);
 
   return {
     matchId: match.id,
     matchNumber: match.match_number,
     roundLabel: getPredictionRound(match),
     kickoffAt: match.kickoff_at,
-    status: getMatchStatus(match, snapshot),
+    status: getMatchStatus(match, snapshot, liveSnapshotsEnabled),
     roundLocked,
     homeTeam: toHomeTeamResponse(match),
     awayTeam: toAwayTeamResponse(match),
@@ -525,6 +540,7 @@ export async function getLeaderboardUserRoundDetails(
   }
 
   const matches = findLeaderboardMatches(competitionId);
+  const liveSnapshotsEnabled = areLiveSnapshotsEnabled(competitionId);
   const latestSnapshotsByMatchId = new Map(
     findLatestLiveScoreSnapshotsForCompetition(competitionId).map((snapshot) => [snapshot.match_id, snapshot])
   );
@@ -540,7 +556,7 @@ export async function getLeaderboardUserRoundDetails(
     return null;
   }
 
-  const predictions = withLiveSnapshotScores(findLeaderboardPredictions(competitionId), latestSnapshotsByMatchId).filter(
+  const predictions = withLiveSnapshotScores(findLeaderboardPredictions(competitionId), latestSnapshotsByMatchId, liveSnapshotsEnabled).filter(
     (prediction) => prediction.user_id === userId
   );
   const roundPredictions = predictions.filter((prediction) => getPredictionRound(prediction) === round.label);
@@ -759,19 +775,18 @@ function groupPredictionsByUser(
 
 function withLiveSnapshotScores(
   predictions: readonly LeaderboardPredictionRow[],
-  latestSnapshotsByMatchId: ReadonlyMap<number, LatestLiveScoreSnapshotRow>
+  latestSnapshotsByMatchId: ReadonlyMap<number, LatestLiveScoreSnapshotRow>,
+  liveSnapshotsEnabled: boolean
 ): LeaderboardPredictionRow[] {
   return predictions.map((prediction) => {
     const snapshot = latestSnapshotsByMatchId.get(prediction.match_id);
 
     if (
       prediction.is_postponed === 1 ||
-      prediction.final_home_score !== null ||
-      prediction.final_away_score !== null ||
       snapshot?.home_score === null ||
       snapshot?.away_score === null ||
       !snapshot ||
-      snapshot.status === 'scheduled'
+      !isLiveByProvider(snapshot, liveSnapshotsEnabled)
     ) {
       return prediction;
     }
@@ -784,9 +799,16 @@ function withLiveSnapshotScores(
   });
 }
 
-function getLiveScore(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined) {
+function getLiveScore(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined, liveSnapshotsEnabled: boolean) {
   if (match.is_postponed === 1) {
     return null;
+  }
+
+  if (snapshot && isLiveByProvider(snapshot, liveSnapshotsEnabled) && snapshot.home_score !== null && snapshot.away_score !== null) {
+    return {
+      home: snapshot.home_score,
+      away: snapshot.away_score
+    };
   }
 
   if (hasFinalScore(match)) {
@@ -1015,7 +1037,11 @@ function hiddenPredictionPoints(): LeaderboardPredictionPointsResponse {
   };
 }
 
-function getMatchStatus(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | undefined): LeaderboardMatchStatusResponse {
+function getMatchStatus(
+  match: MatchRow,
+  snapshot: LatestLiveScoreSnapshotRow | undefined,
+  liveSnapshotsEnabled: boolean
+): LeaderboardMatchStatusResponse {
   const now = Date.now();
   const kickoffTime = Date.parse(match.kickoff_at);
 
@@ -1027,7 +1053,7 @@ function getMatchStatus(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | 
     return 'finished';
   }
 
-  if (snapshot?.status === 'live') {
+  if (isLiveByProvider(snapshot, liveSnapshotsEnabled)) {
     return 'live';
   }
 
@@ -1035,19 +1061,25 @@ function getMatchStatus(match: MatchRow, snapshot: LatestLiveScoreSnapshotRow | 
     return 'finished';
   }
 
-  if (kickoffTime <= now) {
+  if (liveSnapshotsEnabled && kickoffTime <= now) {
     return 'live';
   }
 
-  return 'coming_up';
+  return kickoffTime <= now ? 'undecided' : 'coming_up';
 }
 
 function isFinishedByProvider(snapshot: LatestLiveScoreSnapshotRow | undefined): boolean {
   return snapshot?.status === 'finished' && snapshot.home_score !== null && snapshot.away_score !== null;
 }
 
-function isLiveByProvider(snapshot: LatestLiveScoreSnapshotRow | undefined): boolean {
-  return snapshot?.status === 'live';
+function isLiveByProvider(snapshot: LatestLiveScoreSnapshotRow | undefined, liveSnapshotsEnabled: boolean): boolean {
+  return liveSnapshotsEnabled && snapshot?.status === 'live';
+}
+
+function areLiveSnapshotsEnabled(competitionId: number): boolean {
+  const competition = findCompetitionForAdmin(competitionId);
+
+  return competition?.is_finished === 0 && competition.live_score_sync_enabled === 1;
 }
 
 function hasFinalScore(match: Pick<MatchRow, 'final_home_score' | 'final_away_score'>): match is Pick<MatchRow, 'final_home_score' | 'final_away_score'> & {
